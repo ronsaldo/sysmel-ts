@@ -1,0 +1,23 @@
+{
+  "name": "sysmel-ts",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/ronsaldo/sysmel-ts#readme",
+  "bugs": {
+    "url": "https://github.com/ronsaldo/sysmel-ts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ronsaldo/sysmel-ts.git"
+  },
+  "license": "MIT",
+  "author": "Ronie Salgado",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
