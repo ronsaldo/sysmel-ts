@@ -61,3 +61,12 @@ export class Token {
         this.errorMessage = errorMessage;
     }
 }
+
+export function scanSourceCode(sourceCode: SourceCode): Token[] {
+    let endOfSourcePosition = new SourcePosition(sourceCode, 0, 0, 0, 0, 0, 0);
+    return [new Token(TokenKind.EndOfSource, endOfSourcePosition, null)]
+}
+
+export function scanSourceString(sourceString: string): Token[] {
+    return scanSourceCode(new SourceCode(sourceString, '<str>', ''))
+}
