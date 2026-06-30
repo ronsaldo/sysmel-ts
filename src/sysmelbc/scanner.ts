@@ -1,10 +1,11 @@
+import { resourceUsage } from "node:process";
 
 export const enum TokenKind
 {
     EndOfSource,
     Error,
 
-    Character, Float, IDENTIFIER, Nat, Keyword, MultiKeyword, Operator, LowPrecedenceOperator, String, Symbol,
+    Character, Float, Identifier, Nat, Keyword, MultiKeyword, Operator, LowPrecedenceOperator, String, Symbol,
     LeftParent, RightParent, LeftBracket, RightBracket, LeftCurlyBracket, RightCurlyBracket,
     LessThan, GreaterThan, Star, Question, Bang,
     Colon, ColonColon, Bar,
@@ -83,6 +84,13 @@ class ScannerState {
         return cloned
     }
 
+    restore(oldState: ScannerState) : void {
+        this.position = oldState.position;
+        this.line = oldState.line;
+        this.column = oldState.column;
+        this.isPreviousCR = oldState.isPreviousCR;
+    }
+
     atEnd() : boolean {
         return this.position >= this.sourceCode.text.length
     }
@@ -146,6 +154,20 @@ class ScannerState {
     }
 }
 
+function isDigit(c: number) : boolean {
+    return (48 <= c && c <= 57);
+}
+
+function isIdentifierStart(c: number) : boolean {
+    return (65 <= c && c <= 90) ||
+        (97 <= c && c <= 122) ||
+        95 == c;
+}
+
+function isIdentifierMiddle(c: number) : boolean {
+    return isIdentifierStart(c) || isDigit(c);
+}
+
 function skipWhite(state: ScannerState) : Token | null {
     let hasSeenComment = true;
     while (hasSeenComment)
@@ -203,6 +225,24 @@ function skipWhite(state: ScannerState) : Token | null {
     return null
 }
 
+function scanAdvanceKeyword(state: ScannerState) : boolean {
+    if (!isIdentifierStart(state.peek(0)))
+        return false;
+
+    let initialState = state.clone();
+    while(isIdentifierMiddle(state.peek(0)))
+        state.advance();
+
+    if (state.peek(0) !== /*:*/ 58)
+    {
+        state.restore(initialState);
+        return false;
+    }
+
+    state.advance();
+    return true;
+}
+
 function scanNextToken(state: ScannerState) : Token {
     // Skip the whitespaces and comments.
     let whiteErrorToken = skipWhite(state);
@@ -216,6 +256,35 @@ function scanNextToken(state: ScannerState) : Token {
     // Initial state and peek first char.
     let initialState = state.clone();
     let c = state.peek(0);
+
+    // Identifiers, keywords and multi-keywords
+    if(isIdentifierStart(c))
+    {
+        state.advance();
+        while (isIdentifierMiddle(state.peek(0)))
+            state.advance();
+
+        if (state.peek(0) === /*:*/ 58)
+        {
+            state.advance();
+            let isMultiKeyword = false;
+            let hasAdvanced = true;
+            while (hasAdvanced)
+            {
+                hasAdvanced = scanAdvanceKeyword(state);
+                isMultiKeyword = isMultiKeyword || hasAdvanced;
+            }
+
+            if (isMultiKeyword)
+                return state.makeTokenStartingFrom(TokenKind.MultiKeyword, initialState);
+            else
+                return state.makeTokenStartingFrom(TokenKind.Keyword, initialState);
+        }
+
+        return state.makeTokenStartingFrom(TokenKind.Identifier, initialState);
+    }
+
+    
 
     // Unrecognized token.
     state.advance();
