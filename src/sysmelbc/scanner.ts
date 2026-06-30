@@ -389,6 +389,42 @@ function scanNextToken(state: ScannerState) : Token {
         }
     }
 
+    // String literals
+    if(c == /*"*/34)
+    {
+        state.advance();
+        while(!state.atEnd() && state.peek(0) !== /*"*/34) {
+            if (state.peek(0) === /*\*/ 92 && state.peek(1) >= 0)
+                state.advanceCount(2);
+            else
+                state.advance();
+        }
+
+        if (state.peek(0) != /*"*/ 34)
+            return state.makeErrorTokenStartingFrom("Incomplete string literal", initialState);
+
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.String, initialState);
+    }
+
+    // Character literals
+    if(c == /*'*/39)
+    {
+        state.advance();
+        while(!state.atEnd() && state.peek(0) !== /*"*/39) {
+            if (state.peek(0) === /*\*/ 92 && state.peek(1) >= 0)
+                state.advanceCount(2);
+            else
+                state.advance();
+        }
+
+        if (state.peek(0) != /*'*/ 39)
+            return state.makeErrorTokenStartingFrom("Incomplete character literal", initialState);
+
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.Character, initialState);
+    }
+
     // Unrecognized token.
     state.advance();
     let errorToken = state.makeErrorTokenStartingFrom("Unexpected character.", initialState)
@@ -407,8 +443,6 @@ export function scanSourceCode(sourceCode: SourceCode): Token[] {
     }
 
     return tokens;
-    //let endOfSourcePosition = new SourcePosition(sourceCode, 0, 0, 0, 0, 0, 0);
-    //return [new Token(TokenKind.EndOfSource, endOfSourcePosition, null)]
 }
 
 export function scanSourceString(sourceString: string): Token[] {

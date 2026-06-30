@@ -63,17 +63,20 @@ export function runTests() {
     assert.deepStrictEqual(scanTokenKinds('#{'), [scanner.TokenKind.DictionaryStart, scanner.TokenKind.EndOfSource]);
     assert.deepStrictEqual(scanTokenKinds('#('), [scanner.TokenKind.LiteralArrayStart, scanner.TokenKind.EndOfSource]);
 
+    // Strings
+    assert.deepStrictEqual(scanTokenKinds('"My String"'), [scanner.TokenKind.String, scanner.TokenKind.EndOfSource]);
+
+    // Incomplete string
+    assert.deepStrictEqual(scanTokenKinds('"My String'), [scanner.TokenKind.Error, scanner.TokenKind.EndOfSource]);
+
+    // Character
+    assert.deepStrictEqual(scanTokenKinds("'a'"), [scanner.TokenKind.Character, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("'$'"), [scanner.TokenKind.Character, scanner.TokenKind.EndOfSource]);
+
+    // Incomplete Character
+    assert.deepStrictEqual(scanTokenKinds("'a"), [scanner.TokenKind.Error, scanner.TokenKind.EndOfSource]);
+
     /*
-    def testString(self):
-        self.assertEqual(self.scanTokenKinds('"My String"'), [TokenKind.STRING, TokenKind.END_OF_SOURCE])
-
-    def testIncompleteString(self):
-        self.assertEqual(self.scanTokenKinds('"My String'), [TokenKind.ERROR, TokenKind.END_OF_SOURCE])
-
-    def testCharacter(self):
-        self.assertEqual(self.scanTokenKinds("'a'"), [TokenKind.CHARACTER, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("'$'"), [TokenKind.CHARACTER, TokenKind.END_OF_SOURCE])
-
     def testPunctuations(self):
         self.assertEqual(self.scanTokenKinds("( )"), [TokenKind.LEFT_PARENT, TokenKind.RIGHT_PARENT, TokenKind.END_OF_SOURCE])
         self.assertEqual(self.scanTokenKinds("[ ]"), [TokenKind.LEFT_BRACKET, TokenKind.RIGHT_BRACKET, TokenKind.END_OF_SOURCE])
