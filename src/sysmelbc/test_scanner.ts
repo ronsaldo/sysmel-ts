@@ -10,6 +10,9 @@ export function runTests() {
     // Empty source code
     assert.deepStrictEqual(scanTokenKinds(''), [scanner.TokenKind.EndOfSource])
 
+    // Single line comment
+    assert.deepStrictEqual(scanTokenKinds('## A comment'), [scanner.TokenKind.EndOfSource])
+
     // Multi line comment
     assert.deepStrictEqual(scanTokenKinds('#* A comment *#'), [scanner.TokenKind.EndOfSource])
 

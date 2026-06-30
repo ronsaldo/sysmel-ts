@@ -1,3 +1,4 @@
+
 export const enum TokenKind
 {
     EndOfSource,
@@ -62,9 +63,180 @@ export class Token {
     }
 }
 
+class ScannerState {
+    sourceCode: SourceCode;
+    position: number = 0
+    line: number = 1
+    column: number = 1
+    isPreviousCR: boolean = false
+
+    constructor(sourceCode: SourceCode){
+        this.sourceCode = sourceCode;
+    }
+
+    clone() : ScannerState {
+        let cloned = new ScannerState(this.sourceCode);
+        cloned.position = this.position;
+        cloned.line = this.line;
+        cloned.column = this.column;
+        cloned.isPreviousCR = this.isPreviousCR;
+        return cloned
+    }
+
+    atEnd() : boolean {
+        return this.position >= this.sourceCode.text.length
+    }
+
+    peek(peekOffset: number) : number {
+        const peekPosition = this.position + peekOffset;
+        if (peekPosition < this.sourceCode.text.length)
+        {
+            let codePoint = this.sourceCode.text.codePointAt(peekPosition);
+            if(!codePoint)
+                return -1
+            else
+                return codePoint;
+        }
+        else
+            return -1;
+    }
+
+    advance() : void {
+        if (this.position >= this.sourceCode.text.length)
+            throw new Error("ScannerState advance past end");
+
+        const c = this.sourceCode.text.codePointAt(this.position);
+        this.position += 1;
+        if (c === 13){ // CR
+            this.line += 1;
+            this.column = 1;
+            this.isPreviousCR = true;
+        } else if(c === 10) {  // LF
+            if(!this.isPreviousCR) {
+                this.line += 1;
+                this.column = 1;
+            }
+            this.isPreviousCR = false
+        } else if (c === 9)  { // TAB
+            this.column = (this.column + 4) % 4 * 4 +1;
+            this.isPreviousCR = false;
+        } else {
+            this.isPreviousCR = false;
+        }
+    }
+
+    advanceCount(count: number) {
+        for(let i = 0; i < count; ++i)
+            this.advance();
+    }
+
+    makeToken(kind: TokenKind) {
+        const sourcePosition = new SourcePosition(this.sourceCode, this.position, this.position, this.line, this.column, this.line, this.column);
+        return new Token(kind, sourcePosition, null);
+    }
+
+    makeTokenStartingFrom(kind: TokenKind, startingState: ScannerState) {
+        const sourcePosition = new SourcePosition(this.sourceCode, startingState.position, this.position, startingState.line, startingState.column, this.line, this.column);
+        return new Token(kind, sourcePosition, null);
+    }
+
+    makeErrorTokenStartingFrom(errorMessage: string, startingState: ScannerState) {
+        const sourcePosition = new SourcePosition(this.sourceCode, startingState.position, this.position, startingState.line, startingState.column, this.line, this.column);
+        return new Token(TokenKind.Error, sourcePosition, errorMessage);
+    }
+}
+
+function skipWhite(state: ScannerState) : Token | null {
+    let hasSeenComment = true;
+    while (hasSeenComment)
+    {
+        hasSeenComment = false;
+
+        // Skip the white spaces.
+        while(!state.atEnd() && state.peek(0) <= 32)
+            state.advance();
+
+        if (state.peek(0) === 35) // '#'
+        {
+            if (state.peek(1) === 35) // '#'
+            {
+                // Single line comment.
+                state.advanceCount(2);
+                while(!state.atEnd())
+                {
+                    let c = state.peek(0);
+                    if (c === 10 || c == 13) {
+                        break;
+                    }
+
+                    state.advance();
+                }
+                hasSeenComment = true;
+            }
+            else if(state.peek(1) === 42) // '*'
+            {
+                // Multi-line comment.
+                let commentInitialState = state.clone();
+                state.advanceCount(2);
+                let hasCommentEnd = false;
+
+                while (!state.atEnd())
+                {
+                    hasCommentEnd = (state.peek(0) === /***/ 42) && (state.peek(1) === /*#*/ 35);
+                    if (hasCommentEnd)
+                    {
+                        state.advanceCount(2);
+                        break;
+                    }
+
+                    state.advance();
+                }
+
+                if (!hasCommentEnd)
+                    return state.makeErrorTokenStartingFrom('Incomplete multiline comment.', commentInitialState);
+
+                hasSeenComment = true;
+            }
+        }
+
+    }
+    return null
+}
+
+function scanNextToken(state: ScannerState) : Token {
+    // Skip the whitespaces and comments.
+    let whiteErrorToken = skipWhite(state);
+    if (whiteErrorToken !== null)
+        return whiteErrorToken
+
+    if (state.atEnd()) {
+        return state.makeToken(TokenKind.EndOfSource);
+    }
+
+    // Initial state and peek first char.
+    let initialState = state.clone();
+    let c = state.peek(0);
+
+    // Unrecognized token.
+    state.advance();
+    let errorToken = state.makeErrorTokenStartingFrom("Unexpected character.", initialState)
+    return errorToken
+}
+
 export function scanSourceCode(sourceCode: SourceCode): Token[] {
-    let endOfSourcePosition = new SourcePosition(sourceCode, 0, 0, 0, 0, 0, 0);
-    return [new Token(TokenKind.EndOfSource, endOfSourcePosition, null)]
+    let scannerState = new ScannerState(sourceCode)
+    let tokens: Token[] = [];
+    while (true)
+    {
+        let token = scanNextToken(scannerState);
+        tokens.push(token);
+        if (token.kind === TokenKind.EndOfSource)
+            break;
+    }
+
+    return tokens;
+    //let endOfSourcePosition = new SourcePosition(sourceCode, 0, 0, 0, 0, 0, 0);
+    //return [new Token(TokenKind.EndOfSource, endOfSourcePosition, null)]
 }
 
 export function scanSourceString(sourceString: string): Token[] {
