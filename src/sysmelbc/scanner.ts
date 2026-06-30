@@ -168,6 +168,18 @@ function isIdentifierMiddle(c: number) : boolean {
     return isIdentifierStart(c) || isDigit(c);
 }
 
+function isOperatorCharacter(c: number) : boolean {
+    let operatorSet = '+-/\\*~<>=@%|&?!^';
+    for (let i = 0; i < operatorSet.length; ++i)
+    {
+        let char = operatorSet.codePointAt(i);
+        if (char == c)
+            return true;
+    }
+
+    return false;
+}
+
 function skipWhite(state: ScannerState) : Token | null {
     let hasSeenComment = true;
     while (hasSeenComment)
@@ -324,6 +336,57 @@ function scanNextToken(state: ScannerState) : Token {
         }
 
         return state.makeTokenStartingFrom(TokenKind.Nat, initialState)
+    }
+
+    // Symbols
+    if(c === /*#*/35) {
+        let c1 = state.peek(1);
+        if (isIdentifierStart(c1))
+        {
+            state.advanceCount(2);
+            while (isIdentifierMiddle(state.peek(0)))
+                state.advance();
+
+            if (state.peek(0) === /*:*/ 58)
+            {
+                state.advance();
+                let hasAdvanced = true;
+                while (hasAdvanced)
+                    hasAdvanced = scanAdvanceKeyword(state);
+
+                return state.makeTokenStartingFrom(TokenKind.Symbol, initialState);
+            }
+
+            return state.makeTokenStartingFrom(TokenKind.Symbol, initialState);
+        } else if(isOperatorCharacter(c1)) {
+            state.advanceCount(2);
+            while(isOperatorCharacter(state.peek(0)))
+                state.advance();
+            return state.makeTokenStartingFrom(TokenKind.Symbol, initialState);
+        } else if(c1 === /*"*/34) {
+            state.advanceCount(2);
+            while(!state.atEnd() && state.peek(0) !== /*"*/34) {
+                if (state.peek(0) === /*\*/ 92 && state.peek(1) >= 0)
+                    state.advanceCount(2);
+                else
+                    state.advance();
+            }
+
+            if (state.peek(0) != /*"*/ 34)
+                return state.makeErrorTokenStartingFrom("Incomplete symbol string literal", initialState);
+
+            state.advance();
+            return state.makeTokenStartingFrom(TokenKind.Symbol, initialState);
+        } else if(c1 === /* [ */91) {
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.ByteArrayStart, initialState);
+        } else if(c1 === /* { */123) {
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.DictionaryStart, initialState);
+        } else if(c1 === /* ( */40) {
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.LiteralArrayStart, initialState);
+        }
     }
 
     // Unrecognized token.
