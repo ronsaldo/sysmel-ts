@@ -284,7 +284,47 @@ function scanNextToken(state: ScannerState) : Token {
         return state.makeTokenStartingFrom(TokenKind.Identifier, initialState);
     }
 
-    
+    // Numbers
+    if(isDigit(c) || (c === /*-*/45 && isDigit(state.peek(1))))
+    {
+        state.advance();
+        while(isDigit(state.peek(0)))
+            state.advance();
+
+        // Parse the radix.
+        if (state.peek(0) === /* R */ 82 || state.peek(0) === /* r */ 114)
+        {
+            state.advance();
+            while(isIdentifierMiddle(state.peek(0)))
+                state.advance();
+
+            return state.makeTokenStartingFrom(TokenKind.Nat, initialState)
+        }
+
+        // Decimal point
+        if(state.peek(0) === /*.*/ 46 && isDigit(state.peek(1)))
+        {
+            state.advanceCount(2);
+            while(isDigit(state.peek(0)))
+                state.advance();
+
+            if(state.peek(0) === /*E*/69 || state.peek(0) === /*E*/101)
+            {
+                if(isDigit(state.peek(1)) ||
+                    ((state.peek(1) === /*+*/43 || state.peek(1) === /*-*/45) && isDigit(state.peek(2)))
+                )
+                {
+                    state.advanceCount(2);
+                    while (isDigit(state.peek(0)))
+                        state.advance();
+                }
+            }
+
+            return state.makeTokenStartingFrom(TokenKind.Float, initialState)
+        }
+
+        return state.makeTokenStartingFrom(TokenKind.Nat, initialState)
+    }
 
     // Unrecognized token.
     state.advance();

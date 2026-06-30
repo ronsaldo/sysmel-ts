@@ -35,11 +35,11 @@ export function runTests() {
     assert.deepStrictEqual(scanTokenKinds('16rC0DE'), [scanner.TokenKind.Nat, scanner.TokenKind.EndOfSource])
 
     // Float
-    //assert.deepStrictEqual(scanTokenKinds('42.5'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
-    //assert.deepStrictEqual(scanTokenKinds('42.5e+12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])0
-    //assert.deepStrictEqual(scanTokenKinds('42.5E+12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
-    //assert.deepStrictEqual(scanTokenKinds('42.5e-12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])0
-    //assert.deepStrictEqual(scanTokenKinds('42.5E-12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
+    assert.deepStrictEqual(scanTokenKinds('42.5'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
+    assert.deepStrictEqual(scanTokenKinds('42.5e+12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
+    assert.deepStrictEqual(scanTokenKinds('42.5E+12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
+    assert.deepStrictEqual(scanTokenKinds('42.5e-12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
+    assert.deepStrictEqual(scanTokenKinds('42.5E-12'), [scanner.TokenKind.Float, scanner.TokenKind.EndOfSource])
 
     /*
     def testString(self):
