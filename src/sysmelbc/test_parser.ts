@@ -7,5 +7,11 @@ function parseSourceStringWithoutErrors(sourceString: string): parseTree.ParseTr
 }
 
 export function runTests() {
-    console.log('TODO test_parser')
+    // Empty
+    {
+        let ast = parseSourceStringWithoutErrors('');
+        assert.ok(ast.isSequenceNode());
+        assert.strictEqual((ast as parseTree.ParseTreeSequenceNode).elements.length, 0);
+    }
+
 }

@@ -131,11 +131,60 @@ class ParserState {
     }
 }
 
+function parseExpression(state: ParserState) : parseTree.ParseTreeNode {
+    throw new Error('TODO: parseExpression')
+}
+
+function parseExpressionListUntilEndOrDelimiter(state: ParserState, delimiter: scanner.TokenKind) : parseTree.ParseTreeNode[] {
+    let elements : parseTree.ParseTreeNode[] =  [];
+
+    // Chop the initial dots.
+    while(state.peekKind(0) == scanner.TokenKind.Dot)
+        state.advance();
+
+    // Parse the next expression
+    let expectsExpression = true;
+    while (!state.atEnd() && state.peekKind(0) != delimiter) {
+        if (!expectsExpression) {
+            elements.push(new parseTree.ParseTreeErrorNode(state.currentSourcePosition(), "Expected a dot before the expression."));
+        }
+
+        let expression= parseExpression(state);
+        elements.push(expression);
+
+        // Chop the next dot sequence
+        expectsExpression = false;
+        while(state.peekKind(0) == scanner.TokenKind.Dot) {
+            expectsExpression = true;
+            state.advance();
+        }
+    }
+
+
+    return elements;
+}
+
+function parseSequenceUntilEndOrDelimiter(state: ParserState, delimiter: scanner.TokenKind) : parseTree.ParseTreeNode {
+    let initialPosition = state.position;
+    let elements = parseExpressionListUntilEndOrDelimiter(state, delimiter);
+    if(elements.length == 1)
+    {
+        let firstElement = elements[0];
+        if(!firstElement)
+            throw new Error('Expected a valid element.');
+        return firstElement;
+    }
+    
+    return new parseTree.ParseTreeSequenceNode(state.sourcePositionFrom(initialPosition), elements);
+}
+
+function parseTopLevelExpression(state: ParserState) : parseTree.ParseTreeNode {
+    return parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.EndOfSource)
+}
+
 export function parseScannedTokens(tokens: scanner.Token[]) : parseTree.ParseTreeNode {
-    let firstToken = tokens[0]
-    if(!firstToken)
-        throw new Error("Expected at least a single token.");
-    return new parseTree.ParseTreeErrorNode(firstToken.sourcePosition, 'Parser is unimplemented.');
+    let parserState = new ParserState(tokens);
+    return parseTopLevelExpression(parserState)
 }
 
 export function parseSourceCode(sourceCode: SourceCode) : parseTree.ParseTreeNode {
