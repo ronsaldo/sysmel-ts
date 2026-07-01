@@ -15,6 +15,10 @@ export abstract class ParseTreeVisitor {
     abstract visitLiteralSymbolNode(node: ParseTreeLiteralSymbolNode): any;
     abstract visitLiteralValueNode(node: ParseTreeLiteralValueNode): any;
 
+    abstract visitCascadeMessageNode(node: ParseTreeCascadeMessageNode): any;
+    abstract visitMessageCascadeNode(node: ParseTreeMessageCascadeNode): any;
+    abstract visitMessageSendNode(node: ParseTreeMessageSendNode): any;
+
     abstract visitSequenceNode(node: ParseTreeSequenceNode): any;
     abstract visitTupleNode(node: ParseTreeTupleNode): any;
 
@@ -91,6 +95,18 @@ export abstract class ParseTreeNode {
     }
 
     isLiteralValueNode(): boolean {
+        return false;
+    }
+
+    isCascadeMessageNode(): boolean {
+        return false;
+    }
+
+    isMessageCascadeNode(): boolean {
+        return false;
+    }
+
+    isMessageSendNode(): boolean {
         return false;
     }
 
@@ -284,6 +300,65 @@ export class ParseTreeLiteralValueNode extends ParseTreeNode {
     }
     
     isLiteralValueNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeCascadeMessageNode extends ParseTreeNode {
+    selector: ParseTreeNode;
+    sendArguments: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.selector = selector;
+        this.sendArguments = sendArguments;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitCascadeMessageNode(this)
+    }
+    
+    isCascadeMessageNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeMessageCascadeNode extends ParseTreeNode {
+    receiver: ParseTreeNode;
+    cascadedMessages: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, receiver: ParseTreeNode, cascadedMessages: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.receiver = receiver;
+        this.cascadedMessages = cascadedMessages;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitMessageCascadeNode(this);
+    }
+    
+    isCascadeMessageNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeMessageSendNode extends ParseTreeNode {
+    receiver: ParseTreeNode;
+    selector: ParseTreeNode;
+    sendArguments: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, receiver: ParseTreeNode, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.receiver = receiver;
+        this.selector = selector;
+        this.sendArguments = sendArguments;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitMessageSendNode(this)
+    }
+    
+    isMessageSendNode(): boolean {
         return true;
     }
 }
