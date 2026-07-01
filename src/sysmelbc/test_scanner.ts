@@ -76,23 +76,20 @@ export function runTests() {
     // Incomplete Character
     assert.deepStrictEqual(scanTokenKinds("'a"), [scanner.TokenKind.Error, scanner.TokenKind.EndOfSource]);
 
-    /*
-    def testPunctuations(self):
-        self.assertEqual(self.scanTokenKinds("( )"), [TokenKind.LEFT_PARENT, TokenKind.RIGHT_PARENT, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("[ ]"), [TokenKind.LEFT_BRACKET, TokenKind.RIGHT_BRACKET, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("{ }"), [TokenKind.LEFT_CURLY_BRACKET, TokenKind.RIGHT_CURLY_BRACKET, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds(". ... ; : |"), [TokenKind.DOT, TokenKind.ELLIPSIS, TokenKind.SEMICOLON, TokenKind.COLON, TokenKind.BAR, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("< >"), [TokenKind.LESS_THAN, TokenKind.GREATER_THAN, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("`' `` `, `@"), [TokenKind.QUOTE, TokenKind.QUASI_QUOTE, TokenKind.QUASI_UNQUOTE, TokenKind.SPLICE, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("? * !"), [TokenKind.QUESTION, TokenKind.STAR, TokenKind.BANG, TokenKind.END_OF_SOURCE])
+    // Punctuation
+    assert.deepStrictEqual(scanTokenKinds("( )"), [scanner.TokenKind.LeftParent, scanner.TokenKind.RightParent, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("[ ]"), [scanner.TokenKind.LeftBracket, scanner.TokenKind.RightBracket, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("{ }"), [scanner.TokenKind.LeftCurlyBracket, scanner.TokenKind.RightCurlyBracket, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds(". ... ; : |"), [scanner.TokenKind.Dot, scanner.TokenKind.Ellipsis, scanner.TokenKind.Semicolon, scanner.TokenKind.Colon, scanner.TokenKind.Bar, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("` `' `` `, `@"), [scanner.TokenKind.Backtick, scanner.TokenKind.Quote, scanner.TokenKind.QuasiQuote, scanner.TokenKind.QuasiUnquote, scanner.TokenKind.Splice, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("< >"), [scanner.TokenKind.LessThan, scanner.TokenKind.GreaterThan, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("? * !"), [scanner.TokenKind.Question, scanner.TokenKind.Star, scanner.TokenKind.Bang, scanner.TokenKind.EndOfSource]);
 
-    def testOperator(self):
-        self.assertEqual(self.scanTokenKinds("+"), [TokenKind.OPERATOR, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("-"), [TokenKind.OPERATOR, TokenKind.END_OF_SOURCE])
+    // Operator
+    assert.deepStrictEqual(scanTokenKinds("+"), [scanner.TokenKind.Operator, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("-"), [scanner.TokenKind.Operator, scanner.TokenKind.EndOfSource]);
 
-    def testLowPrecedenceOperator(self):
-        self.assertEqual(self.scanTokenKinds("::+"), [TokenKind.LOW_PRECEDENCE_OPERATOR, TokenKind.END_OF_SOURCE])
-        self.assertEqual(self.scanTokenKinds("::-"), [TokenKind.LOW_PRECEDENCE_OPERATOR, TokenKind.END_OF_SOURCE])
-
-*/
+    // Low precedence operator
+    assert.deepStrictEqual(scanTokenKinds("::+"), [scanner.TokenKind.LowPrecedenceOperator, scanner.TokenKind.EndOfSource]);
+    assert.deepStrictEqual(scanTokenKinds("::-"), [scanner.TokenKind.LowPrecedenceOperator, scanner.TokenKind.EndOfSource]);
 }

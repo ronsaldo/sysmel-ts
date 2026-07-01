@@ -10,7 +10,7 @@ export const enum TokenKind
     LessThan, GreaterThan, Star, Question, Bang,
     Colon, ColonColon, Bar,
     Assignment, Semicolon, Comma, Dot, Ellipsis,
-    Quote, QuasiQuote, QuasiUnquote, Splice,
+    Backtick, Quote, QuasiQuote, QuasiUnquote, Splice,
     ByteArrayStart, DictionaryStart, LiteralArrayStart,
 }
 
@@ -50,6 +50,11 @@ export class SourcePosition {
         this.endLine = endLine;
         this.endColumn = endColumn;
     }
+
+    getValue() : string {
+        return this.sourceCode.text.substring(this.startIndex, this.endIndex)
+    }
+
 }
 
 export class Token {
@@ -61,6 +66,10 @@ export class Token {
         this.kind = kind;
         this.sourcePosition = sourcePosition;
         this.errorMessage = errorMessage;
+    }
+
+    getValue() : string {
+        return this.sourcePosition.getValue()
     }
 }
 
@@ -423,6 +432,121 @@ function scanNextToken(state: ScannerState) : Token {
 
         state.advance();
         return state.makeTokenStartingFrom(TokenKind.Character, initialState);
+    }
+
+    switch(c)
+    {
+    case /*(*/40:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.LeftParent, initialState);
+    case /*)*/41:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.RightParent, initialState);
+    case /*[*/91:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.LeftBracket, initialState);
+    case /*]*/93:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.RightBracket, initialState);
+    case /*{*/123:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.LeftCurlyBracket, initialState);
+    case /*}*/125:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.RightCurlyBracket, initialState);
+    case /*;*/59:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.Semicolon, initialState);
+    case /*,*/44:
+        state.advance();
+        return state.makeTokenStartingFrom(TokenKind.Comma, initialState);
+    case /*.*/46:
+        state.advance();
+        // Elipsis (...)
+        if (state.peek(0) === 46 && state.peek(1) === 46)
+        {
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.Ellipsis, initialState);
+        }
+        return state.makeTokenStartingFrom(TokenKind.Dot, initialState);
+    case /*:*/58:
+        state.advance();
+        if (state.peek(0) === /*:*/58)
+        {
+            state.advance();
+            if (isOperatorCharacter(state.peek(0)))
+            {
+                state.advance();
+                while (isOperatorCharacter(state.peek(0)))
+                    state.advance();
+                return state.makeTokenStartingFrom(TokenKind.LowPrecedenceOperator, initialState);    
+            }
+            return state.makeTokenStartingFrom(TokenKind.ColonColon, initialState);    
+        }
+        return state.makeTokenStartingFrom(TokenKind.Colon, initialState);
+    case /*|*/124:
+        state.advance();
+        if (isOperatorCharacter(state.peek(0)))
+        {
+            state.advance();
+            while (isOperatorCharacter(state.peek(0)))
+                state.advance();
+            return state.makeTokenStartingFrom(TokenKind.Operator, initialState);    
+        }
+        return state.makeTokenStartingFrom(TokenKind.Bar, initialState);
+    case /*`*/96:
+        switch(state.peek(1))
+        {
+        case /*'*/39:
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.Quote, initialState);
+        case /*`*/96:
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.QuasiQuote, initialState);
+        case /*,*/44:
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.QuasiUnquote, initialState);
+        case /*,*/64:
+            state.advanceCount(2);
+            return state.makeTokenStartingFrom(TokenKind.Splice, initialState);
+        default:
+            state.advance();
+            return state.makeTokenStartingFrom(TokenKind.Backtick, initialState);
+        }
+
+        break;
+    default:
+        if(isOperatorCharacter(c))
+        {
+            while (isOperatorCharacter(state.peek(0)))
+                state.advance();
+
+            let token = state.makeTokenStartingFrom(TokenKind.Operator, initialState);
+            let tokenValue = token.getValue();
+            switch(tokenValue)
+            {
+            case '<':
+                token.kind = TokenKind.LessThan;
+                break;
+            case '>':
+                token.kind = TokenKind.GreaterThan;
+                break;
+            case '*':
+                token.kind = TokenKind.Star;
+                break;
+            case '?':
+                token.kind = TokenKind.Question;
+                break;
+            case '!':
+                token.kind = TokenKind.Bang;
+                break;
+            default:
+                break;
+            }
+            return token;
+        }
+
+        break
     }
 
     // Unrecognized token.
