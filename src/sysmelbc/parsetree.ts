@@ -67,7 +67,7 @@ export abstract class ParseTreeNode {
         return false;
     }
 
-    isApplictionNode(): boolean {
+    isApplicationNode(): boolean {
         return false;
     }
 
@@ -197,7 +197,7 @@ export class ParseTreeApplicationNode extends ParseTreeNode {
         return visitor.visitApplicationNode(this);
     }
 
-    isApplictionNode(): boolean {
+    isApplicationNode(): boolean {
         return true;
     }
 }
