@@ -300,8 +300,45 @@ function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
+function isUnaryPostfixOperator(kind: scanner.TokenKind) : boolean {
+    switch(kind)
+    {
+    case scanner.TokenKind.Identifier:
+    case scanner.TokenKind.LeftParent:
+        return true;
+    default:
+        return false;
+    }
+}
+
 function parseUnaryPostfixExpression(state: ParserState) : parseTree.ParseTreeNode {
-    return parseTerm(state);
+    let startPosition = state.position;
+    let receiver = parseTerm(state);
+    while(isUnaryPostfixOperator(state.peekKind(0)))
+    {
+        let token = state.peek(0);
+        switch(token?.kind)
+        {
+        case scanner.TokenKind.Identifier: {
+            state.advance();
+            let selector = new parseTree.ParseTreeLiteralSymbolNode(token.sourcePosition, token.getValue());
+            receiver = new parseTree.ParseTreeMessageSendNode(state.sourcePositionFrom(startPosition), receiver, selector, []);
+        } break;
+        case scanner.TokenKind.LeftParent: {
+            state.advance();
+            let applicationArguments = parseExpressionListUntilEndOrDelimiter(state, scanner.TokenKind.RightParent);
+            if (state.peekKind(0) === scanner.TokenKind.RightParent) {
+                state.advance();
+            } else {
+                applicationArguments.push(new parseTree.ParseTreeParseErrorNode(state.currentSourcePosition(), 'Expected a right parenthesis.'));
+            }
+
+            receiver = new parseTree.ParseTreeApplicationNode(state.sourcePositionFrom(startPosition), receiver, applicationArguments);
+        } break;
+
+        }
+    }
+    return receiver;
 }
 
 function parseQuote(state: ParserState) : parseTree.ParseTreeNode {

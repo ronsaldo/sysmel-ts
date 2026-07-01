@@ -14,6 +14,16 @@ export function runTests() {
         assert.strictEqual((ast as parseTree.ParseTreeSequenceNode).elements.length, 0);
     }
 
+    // Application
+    {
+        let node = parseSourceStringWithoutErrors('a()');
+        assert.ok(node.isApplicationNode());
+
+        let application = node as parseTree.ParseTreeApplicationNode;
+        assert.ok(application.functional.isIdentifierReferenceNode());
+        assert.strictEqual(application.applicationArguments.length, 0);
+    }
+
     // Assignment
     {
         let node = parseSourceStringWithoutErrors('a := 42');
@@ -187,6 +197,17 @@ export function runTests() {
         assert.ok(binarySequence.operands[2]?.isLiteralIntegerNode());
         assert.ok(binarySequence.operands[3]?.isLiteralSymbolNode());
         assert.ok(binarySequence.operands[4]?.isLiteralIntegerNode());
+    }
+
+    // Unary message send
+    {
+        let node = parseSourceStringWithoutErrors('a negated');
+        assert.ok(node.isMessageSendNode());
+
+        let messageNode = node as parseTree.ParseTreeMessageSendNode;
+        assert.ok(messageNode.receiver.isIdentifierReferenceNode());
+        assert.ok(messageNode.selector.isLiteralSymbolNode());
+        assert.strictEqual(messageNode.sendArguments.length, 0);
     }
 
     // Quote
