@@ -250,6 +250,17 @@ export function runTests() {
         assert.strictEqual(messageNode.sendArguments.length, 0);
     }
 
+    // Keyword message send
+    {
+        let node = parseSourceStringWithoutErrors('a perform: #yourself');
+        assert.ok(node.isMessageSendNode());
+
+        let messageNode = node as parseTree.ParseTreeMessageSendNode;
+        assert.ok(messageNode.receiver.isIdentifierReferenceNode());
+        assert.ok(messageNode.selector.isLiteralSymbolNode());
+        assert.strictEqual(messageNode.sendArguments.length, 1);
+    }
+
     // Quote
     {
         let node = parseSourceStringWithoutErrors("`'42");
