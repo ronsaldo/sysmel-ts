@@ -33,6 +33,15 @@ export function runTests() {
         assert.ok(assignmentNode.store.isIdentifierReferenceNode());
         assert.ok(assignmentNode.value.isLiteralIntegerNode());
     }
+    
+    // Lexical block
+    {
+        let node = parseSourceStringWithoutErrors('{42}');
+        assert.ok(node.isLexicalBlockNode());
+
+        let blockNode = node as parseTree.ParseTreeLexicalBlockNode;
+        assert.ok(blockNode.body.isLiteralIntegerNode());
+    }
 
     // Literal integer
     {

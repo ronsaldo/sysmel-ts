@@ -290,11 +290,27 @@ function parseParenthesis(state: ParserState) : parseTree.ParseTreeNode {
     return expression;
 }
 
+function parseBlock(state: ParserState) : parseTree.ParseTreeNode {
+    let startingPosition = state.position;
+    // {
+    if (state.peekKind(0) !== scanner.TokenKind.LeftCurlyBracket)
+        throw new Error('Expected a left curly bracket.');
+    state.advance();
+
+    // Expression list
+    let body = parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.RightCurlyBracket);
+
+    // }
+    body = state.expectAddingErrorToNode(scanner.TokenKind.RightCurlyBracket, body);
+    return new parseTree.ParseTreeLexicalBlockNode(state.sourcePositionFrom(startingPosition), body);
+}
+
 function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
-    case scanner.TokenKind.Identifier: return parseIdentifierReference(state);
-    case scanner.TokenKind.LeftParent: return parseParenthesis(state);
+    case scanner.TokenKind.Identifier:       return parseIdentifierReference(state);
+    case scanner.TokenKind.LeftParent:       return parseParenthesis(state);
+    case scanner.TokenKind.LeftCurlyBracket: return parseBlock(state);
     default:
         return parseLiteral(state)
     }
