@@ -4,6 +4,7 @@ export abstract class ParseTreeVisitor {
     abstract visitErrorNode(node: ParseTreeErrorNode): any;
     abstract visitParseErrorNode(node: ParseTreeParseErrorNode): any;
 
+    abstract visitApplicationNode(node: ParseTreeApplicationNode): any;
     abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
     abstract visitAssociationNode(node: ParseTreeAssociationNode): any;
     abstract visitBinaryExpressionSequenceNode(node: ParseTreeBinaryExpressionSequenceNode): any;
@@ -63,6 +64,10 @@ export abstract class ParseTreeNode {
     }
 
     isParseErrorNode(): boolean {
+        return false;
+    }
+
+    isApplictionNode(): boolean {
         return false;
     }
 
@@ -174,6 +179,25 @@ export class ParseTreeParseErrorNode extends ParseTreeErrorNode{
     }
 
     isParseErrorNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeApplicationNode extends ParseTreeNode {
+    functional: ParseTreeNode;
+    applicationArguments: ParseTreeNode[];
+    
+    constructor(sourcePosition: SourcePosition, functional: ParseTreeNode, applicationArguments: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.functional = functional;
+        this.applicationArguments = applicationArguments;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitApplicationNode(this);
+    }
+
+    isApplictionNode(): boolean {
         return true;
     }
 }
