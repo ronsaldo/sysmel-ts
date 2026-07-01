@@ -248,10 +248,53 @@ function parseIdentifierReference(state: ParserState) : parseTree.ParseTreeNode 
     return new parseTree.ParseTreeIdentifierReferenceNode(token.sourcePosition, token.getValue());
 }
 
+function isBinaryExpressionOperator(kind: scanner.TokenKind): boolean {
+    switch(kind)
+    {
+    case scanner.TokenKind.Operator:
+    case scanner.TokenKind.Star:
+    case scanner.TokenKind.LessThan:
+    case scanner.TokenKind.GreaterThan:
+    case scanner.TokenKind.Bar:
+        return true;
+    default:
+        return false;
+    }
+}
+
+function parseParenthesis(state: ParserState) : parseTree.ParseTreeNode {
+    let startingPosition = state.position;
+    // (
+    if (state.peekKind(0) !== scanner.TokenKind.LeftParent)
+        throw new Error('Expected a left parenthesis.');
+    state.advance();
+
+    // Operator identifier.
+    if(isBinaryExpressionOperator(state.peekKind(0)) && state.peekKind(1) == scanner.TokenKind.RightParent) {
+        let token = state.next();
+        state.advance();
+        return new parseTree.ParseTreeIdentifierReferenceNode(token.sourcePosition, token.getValue());
+    }
+
+    // Empty tuple
+    if (state.peekKind(0) == scanner.TokenKind.RightParent) {
+        state.advance();
+        return new parseTree.ParseTreeTupleNode(state.sourcePositionFrom(startingPosition), []);
+    }
+
+    // Expression list
+    let expression = parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.RightParent);
+
+    // )
+    expression = state.expectAddingErrorToNode(scanner.TokenKind.RightParent, expression);
+    return expression;
+}
+
 function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
     case scanner.TokenKind.Identifier: return parseIdentifierReference(state);
+    case scanner.TokenKind.LeftParent: return parseParenthesis(state);
     default:
         return parseLiteral(state)
     }

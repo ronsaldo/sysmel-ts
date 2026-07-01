@@ -16,75 +16,75 @@ export function runTests() {
 
     // Literal integer
     {
-        let node = parseSourceStringWithoutErrors('42')
-        assert.ok(node.isLiteralIntegerNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 42)
+        let node = parseSourceStringWithoutErrors('42');
+        assert.ok(node.isLiteralIntegerNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 42);
 
-        node = parseSourceStringWithoutErrors('2r1010')
-        assert.ok(node.isLiteralIntegerNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 10)
+        node = parseSourceStringWithoutErrors('2r1010');
+        assert.ok(node.isLiteralIntegerNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 10);
 
-        node = parseSourceStringWithoutErrors('16rC0DE')
-        assert.ok(node.isLiteralIntegerNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 49374)
+        node = parseSourceStringWithoutErrors('16rC0DE');
+        assert.ok(node.isLiteralIntegerNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 49374);
     }
 
     // Literal float
     {
-        let node = parseSourceStringWithoutErrors('42.5')
-        assert.ok(node.isLiteralFloatNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5)
+        let node = parseSourceStringWithoutErrors('42.5');
+        assert.ok(node.isLiteralFloatNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5);
 
-        node = parseSourceStringWithoutErrors('42.5e3')
-        assert.ok(node.isLiteralFloatNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3)
+        node = parseSourceStringWithoutErrors('42.5e3');
+        assert.ok(node.isLiteralFloatNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3);
     }
 
     // Lieral character
     {
-        let node = parseSourceStringWithoutErrors("'A'")
-        assert.ok(node.isLiteralCharacterNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralCharacterNode).value, 65)
+        let node = parseSourceStringWithoutErrors("'A'");
+        assert.ok(node.isLiteralCharacterNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralCharacterNode).value, 65);
     }
 
     // Literal string
     {
-        let node = parseSourceStringWithoutErrors('"Hello World"')
-        assert.ok(node.isLiteralStringNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello World')
+        let node = parseSourceStringWithoutErrors('"Hello World"');
+        assert.ok(node.isLiteralStringNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello World');
 
-        node = parseSourceStringWithoutErrors('"Hello \\"World\\""')
-        assert.ok(node.isLiteralStringNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello "World"')
+        node = parseSourceStringWithoutErrors('"Hello \\"World\\""');
+        assert.ok(node.isLiteralStringNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello "World"');
     }
 
     // Literal symbol identifier
     {
-        let node = parseSourceStringWithoutErrors('#symbol')
-        assert.ok(node.isLiteralSymbolNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'symbol')
+        let node = parseSourceStringWithoutErrors('#symbol');
+        assert.ok(node.isLiteralSymbolNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'symbol');
     }
 
     // Literal symbol keyword
     {
-        let node = parseSourceStringWithoutErrors('#keyword:')
-        assert.ok(node.isLiteralSymbolNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:')
+        let node = parseSourceStringWithoutErrors('#keyword:');
+        assert.ok(node.isLiteralSymbolNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:');
 
-        node = parseSourceStringWithoutErrors('#keyword:with:')
-        assert.ok(node.isLiteralSymbolNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:with:')
+        node = parseSourceStringWithoutErrors('#keyword:with:');
+        assert.ok(node.isLiteralSymbolNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:with:');
     }
 
     // Literal symbol string
     {
         let node = parseSourceStringWithoutErrors('#"Hello World"')
-        assert.ok(node.isLiteralSymbolNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello World')
+        assert.ok(node.isLiteralSymbolNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello World');
 
-        node = parseSourceStringWithoutErrors('#"Hello \\"World\\""')
-        assert.ok(node.isLiteralSymbolNode())
-        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello "World"')
+        node = parseSourceStringWithoutErrors('#"Hello \\"World\\""');
+        assert.ok(node.isLiteralSymbolNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello "World"');
     }
 
 
@@ -93,6 +93,27 @@ export function runTests() {
         let ast = parseSourceStringWithoutErrors('identifier');
         assert.ok(ast.isIdentifierReferenceNode());
         assert.strictEqual((ast as parseTree.ParseTreeIdentifierReferenceNode).symbol, 'identifier');
+    }
+
+    // Parenthesis
+    {
+        let node = parseSourceStringWithoutErrors('(42)');
+        assert.ok(node.isLiteralIntegerNode());
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 42);
+    }
+
+    // Parenthesis operator
+    {
+        let node = parseSourceStringWithoutErrors('(+)');
+        assert.ok(node.isIdentifierReferenceNode());
+        assert.strictEqual((node as parseTree.ParseTreeIdentifierReferenceNode).symbol, '+');
+    }
+
+    // Empty tuple
+    {
+        let node = parseSourceStringWithoutErrors('()');
+        assert.ok(node.isTupleNode());
+        assert.strictEqual((node as parseTree.ParseTreeTupleNode).elements.length, 0);
     }
 
 }
