@@ -39,4 +39,19 @@ export class SourcePosition {
         return this.sourceCode.text.substring(this.startIndex, this.endIndex)
     }
 
+    until(endSourcePosition: SourcePosition) : SourcePosition {
+        return new SourcePosition(this.sourceCode,
+                this.startIndex, endSourcePosition.startIndex,
+                this.startLine, this.startColumn,
+                endSourcePosition.startLine, endSourcePosition.startColumn 
+        )
+    }
+
+    to(endSourcePosition: SourcePosition) : SourcePosition {
+        return new SourcePosition(this.sourceCode,
+                this.startIndex, endSourcePosition.endIndex,
+                this.startLine, this.startColumn,
+                endSourcePosition.endLine, endSourcePosition.endColumn,
+        )
+    }
 }

@@ -3,6 +3,7 @@ import * as scanner from "./scanner.js"
 import * as parseTree from "./parsetree.js"
 import { off } from "cluster";
 import { error } from "console";
+import { start } from "repl";
 
 class ParserState {
     tokens: scanner.Token[];
@@ -85,42 +86,50 @@ class ParserState {
             throw new Error('Expected at least a single valid token');
         return lastToken.sourcePosition;
     }
+
+    previousSourcePosition() : SourcePosition {
+        if (this.position == 0)
+            throw new Error("Expected a position of at least 1.");
+
+        let token = this.tokens[this.position - 1];
+        if(!token)
+            throw new Error("Expected a valid token.");
+        return token.sourcePosition;
+    }
+
+    sourcePositionFrom(startingPosition: number) : SourcePosition {
+        if (startingPosition >= this.tokens.length)
+            throw new Error("Expected a valid starting position.");
+        
+        let startSourcePositionToken = this.tokens[startingPosition];
+        if(!startSourcePositionToken)
+            throw new Error("Expected a valid starting position token.");
+        
+        let startSourcePosition = startSourcePositionToken.sourcePosition;
+        if(this.position > 0) {
+            let endSourcePosition = this.previousSourcePosition();
+            return startSourcePosition.to(endSourcePosition);
+        } else {
+            let endSourcePosition = this.currentSourcePosition();
+            return startSourcePosition.until(endSourcePosition);
+
+        }
+    }
+
+    advanceWithExpectedErro(message: string) : parseTree.ParseTreeNode {
+        if (this.peekKind(0) == scanner.TokenKind.Error) {
+            let errorToken = this.next();
+            let errorMessage = errorToken.errorMessage ? errorToken.errorMessage : 'No error message';
+            return new parseTree.ParseTreeParseErrorNode(errorToken.sourcePosition, errorMessage);
+        } else if (this.atEnd()) {
+            return new parseTree.ParseTreeParseErrorNode(this.currentSourcePosition(), message);
+        } else {
+            let errorPosition = this.currentSourcePosition();
+            this.advance();
+            return new parseTree.ParseTreeParseErrorNode(errorPosition, message);
+        }
+    }
 }
-
-/*
-class ParserState:
-    def currentSourcePosition(self) -> SourcePosition:
-        if self.position < len(self.tokens):
-            return self.tokens[self.position].sourcePosition
-
-        assert self.tokens[-1].kind == TokenKind.END_OF_SOURCE 
-        return self.tokens[-1].sourcePosition
-
-    def previousSourcePosition(self) -> SourcePosition:
-        assert self.position > 0
-        return self.tokens[self.position - 1].sourcePosition
-
-    def sourcePositionFrom(self, startingPosition: int) -> SourcePosition:
-        assert startingPosition < len(self.tokens)
-        startSourcePosition = self.tokens[startingPosition].sourcePosition
-        if self.position > 0:
-            endSourcePosition = self.previousSourcePosition()
-            return startSourcePosition.to(endSourcePosition)
-        else:
-            endSourcePosition = self.currentSourcePosition()
-            return startSourcePosition.until(endSourcePosition)
-    
-    def advanceWithExpectedError(self, message: str):
-        if self.peekKind() == TokenKind.ERROR:
-            errorToken = self.next()
-            return self, ParseTreeErrorNode(errorToken.sourcePosition, errorToken.errorMessage)
-        elif self.atEnd():
-            return self, ParseTreeErrorNode(self.currentSourcePosition(), message)
-        else:
-            errorPosition = self.currentSourcePosition()
-            self.advance()
-            return self, ParseTreeErrorNode(errorPosition, message)
-*/
 
 export function parseScannedTokens(tokens: scanner.Token[]) : parseTree.ParseTreeNode {
     let firstToken = tokens[0]
