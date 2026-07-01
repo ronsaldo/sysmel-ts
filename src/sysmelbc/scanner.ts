@@ -1,5 +1,3 @@
-import { resourceUsage } from "node:process";
-
 export const enum TokenKind
 {
     EndOfSource,
