@@ -4,12 +4,24 @@ export abstract class ParseTreeVisitor {
     abstract visitErrorNode(node: ParseTreeErrorNode): any;
     abstract visitParseErrorNode(node: ParseTreeParseErrorNode): any;
 
+    abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
+
+    abstract visitLexicalBlockNode(node: ParseTreeLexicalBlockNode): any;
+
     abstract visitLiteralCharacterNode(node: ParseTreeLiteralCharacterNode): any;
     abstract visitLiteralFloatNode(node: ParseTreeLiteralFloatNode): any;
     abstract visitLiteralIntegerNode(node: ParseTreeLiteralIntegerNode): any;
     abstract visitLiteralStringNode(node: ParseTreeLiteralStringNode): any;
     abstract visitLiteralSymbolNode(node: ParseTreeLiteralSymbolNode): any;
     abstract visitLiteralValueNode(node: ParseTreeLiteralValueNode): any;
+
+    abstract visitSequenceNode(node: ParseTreeSequenceNode): any;
+    abstract visitTupleNode(node: ParseTreeTupleNode): any;
+
+    abstract visitQuoteNode(node: ParseTreeQuoteNode): any;
+    abstract visitQuasiQuoteNode(node: ParseTreeQuasiQuoteNode): any;
+    abstract visitQuasiUnquoteNode(node: ParseTreeQuasiUnquoteNode): any;
+    abstract visitSpliceNode(node: ParseTreeSpliceNode): any;
 
     visitNode(node: ParseTreeNode) : any {
         return node.accept(this)
@@ -46,6 +58,14 @@ export abstract class ParseTreeNode {
         return false;
     }
 
+    isIdentifierReferenceNode(): boolean {
+        return false;
+    }
+
+    isLexicalBlockNode(): boolean {
+        return false;
+    }
+
     isLiteralNode(): boolean {
         return false;
     }
@@ -74,6 +94,29 @@ export abstract class ParseTreeNode {
         return false;
     }
 
+    isSequenceNode(): boolean {
+        return false;
+    }
+
+    isTupleNode(): boolean {
+        return false;
+    }
+
+    isQuoteNode(): boolean {
+        return false;
+    }
+
+    isQuasiQuoteNode(): boolean {
+        return false;
+    }
+
+    isQuasiUnquoteNode(): boolean {
+        return false;
+    }
+
+    isSpliceNode(): boolean {
+        return false;
+    }
 }
 
 export class ParseTreeErrorNode extends ParseTreeNode{
@@ -99,6 +142,40 @@ export class ParseTreeParseErrorNode extends ParseTreeErrorNode{
     }
 
     isParseErrorNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeIdentifierReferenceNode extends ParseTreeNode {
+    symbol: string;
+
+    constructor(sourcePosition: SourcePosition, symbol: string) {
+        super(sourcePosition);
+        this.symbol = symbol;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitIdentifierReferenceNode(this)
+    }
+    
+    isIdentifierReferenceNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeLexicalBlockNode extends ParseTreeNode {
+    body: ParseTreeNode;
+    
+    constructor(sourcePosition: SourcePosition, body: ParseTreeNode) {
+        super(sourcePosition);
+        this.body = body;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitLexicalBlockNode(this)
+    }
+    
+    isLexicalBlockNode(): boolean {
         return true;
     }
 }
@@ -210,3 +287,107 @@ export class ParseTreeLiteralValueNode extends ParseTreeNode {
         return true;
     }
 }
+
+export class ParseTreeSequenceNode extends ParseTreeNode {
+    elements: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.elements = elements;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitSequenceNode(this)
+    }
+    
+    isSequenceNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeTupleNode extends ParseTreeNode {
+    elements: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.elements = elements;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitTupleNode(this)
+    }
+    
+    isTupleNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeQuoteNode extends ParseTreeNode {
+    expression: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+        super(sourcePosition);
+        this.expression = expression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitQuoteNode(this)
+    }
+    
+    isQuoteNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeQuasiQuoteNode extends ParseTreeNode {
+    expression: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+        super(sourcePosition);
+        this.expression = expression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitQuasiQuoteNode(this)
+    }
+    
+    isQuasiQuoteNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeQuasiUnquoteNode extends ParseTreeNode {
+    expression: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+        super(sourcePosition);
+        this.expression = expression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitQuasiUnquoteNode(this);
+    }
+    
+    isQuasiUnquoteNode(): boolean {
+        return true;
+    }
+}
+
+
+export class ParseTreeSpliceNode extends ParseTreeNode {
+    expression: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+        super(sourcePosition);
+        this.expression = expression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitSpliceNode(this)
+    }
+    
+    isSpliceNode(): boolean {
+        return true;
+    }
+}
+
