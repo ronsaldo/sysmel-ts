@@ -8,6 +8,12 @@ export class SourceCode {
         this.name = name;
         this.directory = directory;
     }
+
+    toString(): string {
+        if (this.directory.length !== 0)
+            return this.directory + '/' + this.name;
+        return this.name;
+    }
 }
 
 export class SourcePosition {
@@ -54,4 +60,10 @@ export class SourcePosition {
                 endSourcePosition.endLine, endSourcePosition.endColumn,
         )
     }
+
+    toString(): string {
+        return this.sourceCode.toString()
+            + ':' + this.startLine.toString() + '.' + this.startColumn.toString()
+            + '-' + this.endLine.toString() + '.' + this.endColumn.toString();
+    } 
 }

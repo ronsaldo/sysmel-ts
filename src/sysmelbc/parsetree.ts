@@ -8,7 +8,7 @@ export abstract class ParseTreeVisitor {
     abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
     abstract visitAssociationNode(node: ParseTreeAssociationNode): any;
     abstract visitBinaryExpressionSequenceNode(node: ParseTreeBinaryExpressionSequenceNode): any;
-    abstract visitDictionayNode(node: ParseTreeDictionaryNode): any;
+    abstract visitDictionaryNode(node: ParseTreeDictionaryNode): any;
 
     abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
 
@@ -274,7 +274,7 @@ export class ParseTreeDictionaryNode extends ParseTreeNode {
     }
 
     accept(visitor: ParseTreeVisitor) {
-        return visitor.visitDictionayNode(this);
+        return visitor.visitDictionaryNode(this);
     }
 
     isDictionaryNode(): boolean {
@@ -692,3 +692,130 @@ export class ParseTreeSpliceNode extends ParseTreeNode {
     }
 }
 
+export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
+    visitErrorNode(node: ParseTreeErrorNode): any {
+    }
+
+    visitParseErrorNode(node: ParseTreeParseErrorNode): any {
+    }
+
+    visitApplicationNode(node: ParseTreeApplicationNode): any {
+        this.visitNode(node.functional);
+        this.visitNodes(node.applicationArguments);
+    }
+
+    visitAssignmentNode(node: ParseTreeAssignmentNode): any {
+        this.visitNode(node.store);
+        this.visitNode(node.value);
+    }
+
+    visitAssociationNode(node: ParseTreeAssociationNode): any {
+        this.visitNode(node.key);
+        this.visitOptionalNode(node.value);
+    }
+
+    visitBinaryExpressionSequenceNode(node: ParseTreeBinaryExpressionSequenceNode): any {
+        this.visitNodes(node.operands);
+    }
+
+    visitDictionaryNode(node: ParseTreeDictionaryNode): any {
+        this.visitNodes(node.elements);
+    }
+
+    visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any {
+    }
+
+    visitArgumentDefinitionNode(node: ParseTreeArgumentDefinitionNode): any {
+        this.visitOptionalNode(node.typeExpression);
+    }
+
+    visitFunctionTypeNode(node: ParseTreeFunctionTypeNode): any {
+        this.visitNodes(node.argumentDefinitions);
+        this.visitOptionalNode(node.resultTypeExpression);
+    }
+
+    visitFunctionNode(node: ParseTreeFunctionNode): any {
+        this.visitNode(node.functionType);
+        this.visitNode(node.body);
+    }
+
+    visitLexicalBlockNode(node: ParseTreeLexicalBlockNode): any {
+        this.visitNode(node.body);
+    }
+
+    visitLiteralCharacterNode(node: ParseTreeLiteralCharacterNode): any {
+    }
+    visitLiteralFloatNode(node: ParseTreeLiteralFloatNode): any {
+    }
+    visitLiteralIntegerNode(node: ParseTreeLiteralIntegerNode): any {
+    }
+    visitLiteralStringNode(node: ParseTreeLiteralStringNode): any {
+    }
+    visitLiteralSymbolNode(node: ParseTreeLiteralSymbolNode): any {
+    }
+    visitLiteralValueNode(node: ParseTreeLiteralValueNode): any {
+    }
+
+    visitCascadedMessageNode(node: ParseTreeCascadedMessageNode): any {
+        this.visitNode(node.selector);
+        this.visitNodes(node.sendArguments);
+    }
+
+    visitMessageCascadeNode(node: ParseTreeMessageCascadeNode): any {
+        this.visitNode(node.receiver);
+        this.visitNodes(node.cascadedMessages);
+    }
+
+    visitMessageSendNode(node: ParseTreeMessageSendNode): any {
+        this.visitNode(node.receiver);
+        this.visitNode(node.selector);
+        this.visitNodes(node.sendArguments);
+    }
+
+    visitSequenceNode(node: ParseTreeSequenceNode): any {
+        this.visitNodes(node.elements);
+    }
+    
+    visitTupleNode(node: ParseTreeTupleNode): any {
+        this.visitNodes(node.elements);
+    }
+
+    visitQuoteNode(node: ParseTreeQuoteNode): any {
+        this.visitNode(node.expression);
+    }
+
+    visitQuasiQuoteNode(node: ParseTreeQuasiQuoteNode): any {
+        this.visitNode(node.expression);
+    }
+
+    visitQuasiUnquoteNode(node: ParseTreeQuasiUnquoteNode): any {
+        this.visitNode(node.expression);
+    }
+
+    visitSpliceNode(node: ParseTreeSpliceNode): any {
+        this.visitNode(node.expression);
+    }
+}
+
+export class ParseTreeParseErrorVisitor extends ParseTreeSequentialVisitor {
+    errorNodes: ParseTreeParseErrorNode[];
+
+    constructor() {
+        super();
+        this.errorNodes = []
+    }
+
+    visitErrorNode(node: ParseTreeErrorNode) {
+        this.errorNodes.push(node);
+    }
+
+    checkAndPrintErrors(node: ParseTreeNode) {
+        this.visitNode(node);
+        for (let i = 0; i < this.errorNodes.length; ++i) {
+            let errorNode = this.errorNodes[i] as ParseTreeParseErrorNode;
+            console.log(errorNode.sourcePosition.toString() + ': ' + errorNode.errorMessage)
+        }
+
+        return this.errorNodes.length == 0;
+    }
+}

@@ -3,7 +3,9 @@ import * as parser from "./parser.js"
 import * as assert from 'assert';
 
 function parseSourceStringWithoutErrors(sourceString: string): parseTree.ParseTreeNode {
-    return parser.parseSourceString(sourceString)
+    let ast = parser.parseSourceString(sourceString)
+    assert.ok(new parseTree.ParseTreeParseErrorVisitor().checkAndPrintErrors(ast));
+    return ast;
 }
 
 export function runTests() {
@@ -23,7 +25,6 @@ export function runTests() {
         assert.ok(application.functional.isIdentifierReferenceNode());
         assert.strictEqual(application.applicationArguments.length, 0);
     }
-
 
     // Application
     {
