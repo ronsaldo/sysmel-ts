@@ -162,5 +162,72 @@ export function runTests() {
         assert.ok(assocNode.key.isLiteralIntegerNode());
         assert.ok(assocNode.value.isLiteralIntegerNode());
     }
+
+    // Binary expression.sequence
+    {
+        let node = parseSourceStringWithoutErrors('1 + 2');
+        assert.ok(node.isBinaryExpressionSequenceNode());
+
+        let binarySequence = node as parseTree.ParseTreeBinaryExpressionSequenceNode;
+        assert.strictEqual(binarySequence.operands.length, 3);
+        assert.ok(binarySequence.operands[0]?.isLiteralIntegerNode());
+        assert.ok(binarySequence.operands[1]?.isLiteralSymbolNode());
+        assert.ok(binarySequence.operands[2]?.isLiteralIntegerNode());
+    }
+
+    // Binary expression.sequence
+    {
+        let node = parseSourceStringWithoutErrors('1 + 2 * 3');
+        assert.ok(node.isBinaryExpressionSequenceNode());
+
+        let binarySequence = node as parseTree.ParseTreeBinaryExpressionSequenceNode;
+        assert.strictEqual(binarySequence.operands.length, 5);
+        assert.ok(binarySequence.operands[0]?.isLiteralIntegerNode());
+        assert.ok(binarySequence.operands[1]?.isLiteralSymbolNode());
+        assert.ok(binarySequence.operands[2]?.isLiteralIntegerNode());
+        assert.ok(binarySequence.operands[3]?.isLiteralSymbolNode());
+        assert.ok(binarySequence.operands[4]?.isLiteralIntegerNode());
+    }
+
+    // Quote
+    {
+        let node = parseSourceStringWithoutErrors("`'42");
+        assert.ok(node.isQuoteNode());
+
+        let quoteNode = node as parseTree.ParseTreeQuoteNode;
+        assert.ok(quoteNode.expression.isLiteralIntegerNode());
+        assert.strictEqual((quoteNode.expression as parseTree.ParseTreeLiteralIntegerNode).value, 42);
+    }
+
+    // QuasiQuote
+    {
+        let node = parseSourceStringWithoutErrors("``42");
+        assert.ok(node.isQuasiQuoteNode());
+
+        let quoteNode = node as parseTree.ParseTreeQuasiQuoteNode;
+        assert.ok(quoteNode.expression.isLiteralIntegerNode());
+        assert.strictEqual((quoteNode.expression as parseTree.ParseTreeLiteralIntegerNode).value, 42);
+    }
+
+    // QuasiUnquote
+    {
+        let node = parseSourceStringWithoutErrors("`,42");
+        assert.ok(node.isQuasiUnquoteNode());
+
+        let unquoteNode = node as parseTree.ParseTreeQuasiUnquoteNode;
+        assert.ok(unquoteNode.expression.isLiteralIntegerNode());
+        assert.strictEqual((unquoteNode.expression as parseTree.ParseTreeLiteralIntegerNode).value, 42);
+    }
+
+    // Splice
+    {
+        let node = parseSourceStringWithoutErrors("`@42");
+        assert.ok(node.isSpliceNode());
+
+        let spliceNode = node as parseTree.ParseTreeSpliceNode;
+        assert.ok(spliceNode.expression.isLiteralIntegerNode());
+        assert.strictEqual((spliceNode.expression as parseTree.ParseTreeLiteralIntegerNode).value, 42);
+    }
+
 }
 

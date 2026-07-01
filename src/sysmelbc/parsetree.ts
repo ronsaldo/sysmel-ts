@@ -6,6 +6,7 @@ export abstract class ParseTreeVisitor {
 
     abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
     abstract visitAssociationNode(node: ParseTreeAssociationNode): any;
+    abstract visitBinaryExpressionSequenceNode(node: ParseTreeBinaryExpressionSequenceNode): any;
 
     abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
 
@@ -70,6 +71,10 @@ export abstract class ParseTreeNode {
     }
 
     isAssociationNode(): boolean {
+        return false;
+    }
+
+    isBinaryExpressionSequenceNode(): boolean {
         return false;
     }
 
@@ -192,7 +197,6 @@ export class ParseTreeAssignmentNode extends ParseTreeNode {
     }
 }
 
-
 export class ParseTreeAssociationNode extends ParseTreeNode {
     key: ParseTreeNode;
     value: ParseTreeNode;
@@ -208,6 +212,23 @@ export class ParseTreeAssociationNode extends ParseTreeNode {
     }
 
     isAssociationNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeBinaryExpressionSequenceNode extends ParseTreeNode {
+    operands: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, operands: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.operands = operands;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitBinaryExpressionSequenceNode(this);
+    }
+
+    isBinaryExpressionSequenceNode(): boolean {
         return true;
     }
 }

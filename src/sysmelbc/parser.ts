@@ -300,8 +300,78 @@ function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
-function parseBinaryExpressionSequence(state: ParserState) : parseTree.ParseTreeNode {
+function parseUnaryPostfixExpression(state: ParserState) : parseTree.ParseTreeNode {
     return parseTerm(state);
+}
+
+function parseQuote(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    if (state.next().kind !== scanner.TokenKind.Quote)
+        throw new Error('Expected a quote.');
+
+    let term = parseUnaryPrefixExpression(state);
+    return new parseTree.ParseTreeQuoteNode(state.sourcePositionFrom(startPosition), term);
+}
+
+function parseQuasiQuote(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    if (state.next().kind !== scanner.TokenKind.QuasiQuote)
+        throw new Error('Expected a quasi quote.');
+
+    let term = parseUnaryPrefixExpression(state);
+    return new parseTree.ParseTreeQuasiQuoteNode(state.sourcePositionFrom(startPosition), term);
+}
+
+function parseQuasiUnquote(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    if (state.next().kind !== scanner.TokenKind.QuasiUnquote)
+        throw new Error('Expected a quasi unquote.');
+
+    let term = parseUnaryPrefixExpression(state);
+    return new parseTree.ParseTreeQuasiUnquoteNode(state.sourcePositionFrom(startPosition), term);
+}
+
+function parseSplice(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    if (state.next().kind !== scanner.TokenKind.Splice)
+        throw new Error('Expected a splice.');
+
+    let term = parseUnaryPrefixExpression(state);
+    return new parseTree.ParseTreeSpliceNode(state.sourcePositionFrom(startPosition), term);
+}
+
+function parseUnaryPrefixExpression(state: ParserState) : parseTree.ParseTreeNode {
+    switch(state.peekKind(0))
+    {
+    case scanner.TokenKind.Quote:        return parseQuote(state);
+    case scanner.TokenKind.QuasiQuote:   return parseQuasiQuote(state);
+    case scanner.TokenKind.QuasiUnquote: return parseQuasiUnquote(state);
+    case scanner.TokenKind.Splice:       return parseSplice(state);
+    default: return parseUnaryPostfixExpression(state);
+    }
+    
+}
+
+
+function parseBinaryExpressionSequence(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let operand = parseUnaryPrefixExpression(state);
+    if (!isBinaryExpressionOperator(state.peekKind(0)))
+        return operand;
+
+    let operands: parseTree.ParseTreeNode[] = []
+    operands.push(operand);
+
+    while(isBinaryExpressionOperator(state.peekKind(0))) {
+        let operatorToken = state.next();
+        let operator = new parseTree.ParseTreeLiteralSymbolNode(operatorToken.sourcePosition, operatorToken.getValue());
+        operand = parseUnaryPrefixExpression(state);
+
+        operands.push(operator);
+        operands.push(operand);
+    }
+
+    return new parseTree.ParseTreeBinaryExpressionSequenceNode(state.sourcePositionFrom(startPosition), operands);
 }
 
 function parseAssociationExpression(state: ParserState) : parseTree.ParseTreeNode {
