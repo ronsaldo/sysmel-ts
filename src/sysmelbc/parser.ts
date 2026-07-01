@@ -197,12 +197,44 @@ function parseLiteralString(state: ParserState) : parseTree.ParseTreeNode {
     return new parseTree.ParseTreeLiteralStringNode(token.sourcePosition, stringValue)
 }
 
+function parseLiteralCharacter(state: ParserState) : parseTree.ParseTreeNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.Character)
+        throw new Error('Expected a character literal.');
+    
+    let stringValue = token.getValue();
+    stringValue = stringValue.substring(1, stringValue.length - 1);
+    stringValue = parseCEscapedString(stringValue);
+    let character = stringValue.codePointAt(0)
+    if (!character)
+        return new parseTree.ParseTreeParseErrorNode(token.sourcePosition, 'Empty character literal.');
+
+    return new parseTree.ParseTreeLiteralCharacterNode(token.sourcePosition, character);
+}
+
+function parseLiteralSymbol(state: ParserState) : parseTree.ParseTreeNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.Symbol)
+        throw new Error('Expected a symbol literal.');
+    
+    let symbolValue = token.getValue();
+    symbolValue = symbolValue.substring(1);
+    if (symbolValue.startsWith('"')) {
+        symbolValue = symbolValue.substring(1, symbolValue.length - 1);
+        symbolValue = parseCEscapedString(symbolValue);
+    }
+
+    return new parseTree.ParseTreeLiteralSymbolNode(token.sourcePosition, symbolValue);
+}
+
 function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
-    case scanner.TokenKind.Nat: return parseLiteralInteger(state);
-    case scanner.TokenKind.Float: return parseLiteralFloat(state);
-    case scanner.TokenKind.String: return parseLiteralString(state);
+    case scanner.TokenKind.Nat:       return parseLiteralInteger(state);
+    case scanner.TokenKind.Float:     return parseLiteralFloat(state);
+    case scanner.TokenKind.String:    return parseLiteralString(state);
+    case scanner.TokenKind.Character: return parseLiteralCharacter(state);
+    case scanner.TokenKind.Symbol:    return parseLiteralSymbol(state);
     default:
         return state.advanceWithExpectedError('Expected a literal.');
     }

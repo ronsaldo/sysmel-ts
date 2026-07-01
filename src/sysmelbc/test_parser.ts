@@ -40,6 +40,13 @@ export function runTests() {
         assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3)
     }
 
+    // Lieral character
+    {
+        let node = parseSourceStringWithoutErrors("'A'")
+        assert.ok(node.isLiteralCharacterNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralCharacterNode).value, 65)
+    }
+
     // Literal string
     {
         let node = parseSourceStringWithoutErrors('"Hello World"')
@@ -50,6 +57,36 @@ export function runTests() {
         assert.ok(node.isLiteralStringNode())
         assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello "World"')
     }
+
+    // Literal symbol identifier
+    {
+        let node = parseSourceStringWithoutErrors('#symbol')
+        assert.ok(node.isLiteralSymbolNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'symbol')
+    }
+
+    // Literal symbol keyword
+    {
+        let node = parseSourceStringWithoutErrors('#keyword:')
+        assert.ok(node.isLiteralSymbolNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:')
+
+        node = parseSourceStringWithoutErrors('#keyword:with:')
+        assert.ok(node.isLiteralSymbolNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'keyword:with:')
+    }
+
+    // Literal symbol string
+    {
+        let node = parseSourceStringWithoutErrors('#"Hello World"')
+        assert.ok(node.isLiteralSymbolNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello World')
+
+        node = parseSourceStringWithoutErrors('#"Hello \\"World\\""')
+        assert.ok(node.isLiteralSymbolNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralSymbolNode).value, 'Hello "World"')
+    }
+
 
     // Identifier reference
     {
