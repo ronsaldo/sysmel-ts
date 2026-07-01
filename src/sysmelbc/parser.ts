@@ -59,6 +59,7 @@ class ParserState {
         let token = this.tokens[this.position];
         if(!token)
             throw new Error("Cannot advance beyond the limit.")
+        this.position += 1;
         return token
     }
 
@@ -116,7 +117,7 @@ class ParserState {
         }
     }
 
-    advanceWithExpectedErro(message: string) : parseTree.ParseTreeNode {
+    advanceWithExpectedError(message: string) : parseTree.ParseTreeNode {
         if (this.peekKind(0) == scanner.TokenKind.Error) {
             let errorToken = this.next();
             let errorMessage = errorToken.errorMessage ? errorToken.errorMessage : 'No error message';
@@ -131,8 +132,47 @@ class ParserState {
     }
 }
 
+function parseIntegerConstant(constant: string): number {
+    let radixIndex = constant.indexOf('r');
+    if (radixIndex < 0)
+        radixIndex = constant.indexOf('R');
+    if (radixIndex >= 0)
+    {
+        let radix = constant.substring(0, radixIndex);
+        let number = constant.substring(radixIndex + 1);
+        return parseInt(number, parseInt(radix));
+    }
+    else
+    {
+        return parseInt(constant);
+    }
+}
+
+function parseLiteralInteger(state: ParserState) : parseTree.ParseTreeLiteralIntegerNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.Nat)
+        throw new Error('Expected an integer literal.');
+
+    return new parseTree.ParseTreeLiteralIntegerNode(token.sourcePosition, parseIntegerConstant(token.getValue()))
+}
+
+function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
+    switch(state.peekKind(0))
+    {
+    case scanner.TokenKind.Nat: return parseLiteralInteger(state);
+    default:
+        return state.advanceWithExpectedError('Expected a literal.');
+    }
+}
+
+
+function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
+    return parseLiteral(state)
+}
+
+
 function parseExpression(state: ParserState) : parseTree.ParseTreeNode {
-    throw new Error('TODO: parseExpression')
+    return parseTerm(state);
 }
 
 function parseExpressionListUntilEndOrDelimiter(state: ParserState, delimiter: scanner.TokenKind) : parseTree.ParseTreeNode[] {
@@ -149,7 +189,7 @@ function parseExpressionListUntilEndOrDelimiter(state: ParserState, delimiter: s
             elements.push(new parseTree.ParseTreeErrorNode(state.currentSourcePosition(), "Expected a dot before the expression."));
         }
 
-        let expression= parseExpression(state);
+        let expression = parseExpression(state);
         elements.push(expression);
 
         // Chop the next dot sequence

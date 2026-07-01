@@ -14,4 +14,18 @@ export function runTests() {
         assert.strictEqual((ast as parseTree.ParseTreeSequenceNode).elements.length, 0);
     }
 
+    // Literal integer
+    {
+        let node = parseSourceStringWithoutErrors('42')
+        assert.ok(node.isLiteralIntegerNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 42)
+
+        node = parseSourceStringWithoutErrors('2r1010')
+        assert.ok(node.isLiteralIntegerNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 10)
+
+        node = parseSourceStringWithoutErrors('16rC0DE')
+        assert.ok(node.isLiteralIntegerNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 49374)
+    }
 }
