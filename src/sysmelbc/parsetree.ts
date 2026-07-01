@@ -8,6 +8,7 @@ export abstract class ParseTreeVisitor {
     abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
     abstract visitAssociationNode(node: ParseTreeAssociationNode): any;
     abstract visitBinaryExpressionSequenceNode(node: ParseTreeBinaryExpressionSequenceNode): any;
+    abstract visitDictionayNode(node: ParseTreeDictionaryNode): any;
 
     abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
 
@@ -24,7 +25,7 @@ export abstract class ParseTreeVisitor {
     abstract visitLiteralSymbolNode(node: ParseTreeLiteralSymbolNode): any;
     abstract visitLiteralValueNode(node: ParseTreeLiteralValueNode): any;
 
-    abstract visitCascadeMessageNode(node: ParseTreeCascadedMessageNode): any;
+    abstract visitCascadedMessageNode(node: ParseTreeCascadedMessageNode): any;
     abstract visitMessageCascadeNode(node: ParseTreeMessageCascadeNode): any;
     abstract visitMessageSendNode(node: ParseTreeMessageSendNode): any;
 
@@ -84,6 +85,10 @@ export abstract class ParseTreeNode {
     }
 
     isBinaryExpressionSequenceNode(): boolean {
+        return false;
+    }
+
+    isDictionaryNode(): boolean {
         return false;
     }
 
@@ -243,19 +248,36 @@ export class ParseTreeAssignmentNode extends ParseTreeNode {
 
 export class ParseTreeAssociationNode extends ParseTreeNode {
     key: ParseTreeNode;
-    value: ParseTreeNode;
+    value: ParseTreeNode | null;
 
-    constructor(sourcePosition: SourcePosition, key: ParseTreeNode, value: ParseTreeNode) {
+    constructor(sourcePosition: SourcePosition, key: ParseTreeNode, value: ParseTreeNode | null) {
         super(sourcePosition);
         this.key = key;
         this.value = value;
     }
 
     accept(visitor: ParseTreeVisitor) {
-        return visitor.visitAssociationNode
+        return visitor.visitAssociationNode(this)
     }
 
     isAssociationNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeDictionaryNode extends ParseTreeNode {
+    elements: ParseTreeNode[];
+
+    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+        super(sourcePosition);
+        this.elements = elements;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitDictionayNode(this);
+    }
+
+    isDictionaryNode(): boolean {
         return true;
     }
 }
@@ -515,7 +537,7 @@ export class ParseTreeCascadedMessageNode extends ParseTreeNode {
     }
 
     accept(visitor: ParseTreeVisitor) {
-        return visitor.visitCascadeMessageNode(this)
+        return visitor.visitCascadedMessageNode(this)
     }
     
     isCascadeMessageNode(): boolean {

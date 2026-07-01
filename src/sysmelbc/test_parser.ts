@@ -257,7 +257,7 @@ export function runTests() {
 
         let assocNode = node as parseTree.ParseTreeAssociationNode;
         assert.ok(assocNode.key.isLiteralIntegerNode());
-        assert.ok(assocNode.value.isLiteralIntegerNode());
+        assert.ok(assocNode.value?.isLiteralIntegerNode());
     }
 
     // Binary expression.sequence
@@ -349,6 +349,33 @@ export function runTests() {
         let cascadeNode = node as parseTree.ParseTreeMessageCascadeNode;
         assert.ok(cascadeNode.receiver.isIdentifierReferenceNode());
         assert.strictEqual(cascadeNode.cascadedMessages.length, 4);
+    }
+
+    // Empty dictionary
+    {
+        let node = parseSourceStringWithoutErrors('#{}');
+        assert.ok(node.isDictionaryNode());
+
+        let dictionaryNode = node as parseTree.ParseTreeDictionaryNode;
+        assert.strictEqual(dictionaryNode.elements.length, 0);
+    }
+
+    // Dictionary
+    {
+        let node = parseSourceStringWithoutErrors('#{First: 1}');
+        assert.ok(node.isDictionaryNode());
+
+        let dictionaryNode = node as parseTree.ParseTreeDictionaryNode;
+        assert.strictEqual(dictionaryNode.elements.length, 1);
+    }
+
+    // Dictionary 2
+    {
+        let node = parseSourceStringWithoutErrors('#{First: 1. #Second : 2. Third:}');
+        assert.ok(node.isDictionaryNode());
+
+        let dictionaryNode = node as parseTree.ParseTreeDictionaryNode;
+        assert.strictEqual(dictionaryNode.elements.length, 3);
     }
 
     // Quote

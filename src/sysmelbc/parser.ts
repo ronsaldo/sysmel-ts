@@ -1,9 +1,6 @@
 import {SourceCode, SourcePosition} from "./source_code.js"
 import * as scanner from "./scanner.js"
 import * as parseTree from "./parsetree.js"
-import { off } from "cluster";
-import { error } from "console";
-import { start } from "repl";
 
 class ParserState {
     tokens: scanner.Token[];
@@ -371,12 +368,80 @@ function parseBlock(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
+function parseDictionaryAssociation(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let key: parseTree.ParseTreeNode | null = null 
+    let value: parseTree.ParseTreeNode | null = null;
+
+    if (state.peekKind(0) === scanner.TokenKind.Keyword) {
+        let keyToken = state.next();
+        let keyTokenValue = keyToken.getValue();
+        keyTokenValue = keyTokenValue.substring(0, keyTokenValue.length - 1);
+
+        key = new parseTree.ParseTreeLiteralSymbolNode(keyToken.sourcePosition, keyTokenValue)
+        let nextKind = state.peekKind(0);
+        if (!state.atEnd() && nextKind != scanner.TokenKind.Dot && nextKind != scanner.TokenKind.RightCurlyBracket) {
+            value = parseAssociationExpression(state);
+        }
+    } else {
+        key = parseBinaryExpressionSequence(state);
+        if (state.peekKind(0) === scanner.TokenKind.Colon) {
+            state.advance();
+            value = parseAssociationExpression(state);
+        }
+    }
+
+    return new parseTree.ParseTreeAssociationNode(state.sourcePositionFrom(startPosition), key as parseTree.ParseTreeNode, value);
+}
+    
+function parseDictionary(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+
+    // #{
+    if (state.peekKind(0) !== scanner.TokenKind.DictionaryStart)
+        throw new Error('Expected a dictionary')
+    state.advance();
+
+    // Chop the initial dots.
+    while(state.peekKind(0) == scanner.TokenKind.Dot)
+        state.advance();
+        
+    // Parse the next expression.
+    let expectsExpression = true;
+    let elements: parseTree.ParseTreeNode[] = [];
+    while(!state.atEnd() && state.peekKind(0) != scanner.TokenKind.RightCurlyBracket) {
+        if (!expectsExpression) {
+            elements.push(new parseTree.ParseTreeParseErrorNode(state.currentSourcePosition(), 'Expected dot before association.'));
+        }
+
+        let expression = parseDictionaryAssociation(state);
+        elements.push(expression);
+
+        expectsExpression = false;
+        // Chop the next dots.
+        while(state.peekKind(0) == scanner.TokenKind.Dot)
+        {
+            state.advance();
+            expectsExpression = true;
+        }            
+    }
+
+    if(state.peekKind(0) == scanner.TokenKind.RightCurlyBracket){
+        state.advance();
+    } else {
+        elements.push(new parseTree.ParseTreeParseErrorNode(state.currentSourcePosition(), "Expected a right curly bracket (})."))
+    }
+
+    return new parseTree.ParseTreeDictionaryNode(state.sourcePositionFrom(startPosition), elements);
+}
+
 function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
     case scanner.TokenKind.Identifier:       return parseIdentifierReference(state);
     case scanner.TokenKind.LeftParent:       return parseParenthesis(state);
     case scanner.TokenKind.LeftCurlyBracket: return parseBlock(state);
+    case scanner.TokenKind.DictionaryStart:  return parseDictionary(state);
     default:
         return parseLiteral(state)
     }
