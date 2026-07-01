@@ -441,6 +441,9 @@ function scanNextToken(state: ScannerState) : Token {
                 return state.makeTokenStartingFrom(TokenKind.LowPrecedenceOperator, initialState);    
             }
             return state.makeTokenStartingFrom(TokenKind.ColonColon, initialState);    
+        } else if (state.peek(0) === /*=*/61) {
+            state.advance();
+            return state.makeTokenStartingFrom(TokenKind.Assignment, initialState);
         }
         return state.makeTokenStartingFrom(TokenKind.Colon, initialState);
     case /*|*/124:

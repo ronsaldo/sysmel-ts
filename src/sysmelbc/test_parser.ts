@@ -14,6 +14,16 @@ export function runTests() {
         assert.strictEqual((ast as parseTree.ParseTreeSequenceNode).elements.length, 0);
     }
 
+    // Assignment
+    {
+        let node = parseSourceStringWithoutErrors('a := 42');
+        assert.ok(node.isAssignmentNode());
+
+        let assignmentNode = node as parseTree.ParseTreeAssignmentNode;
+        assert.ok(assignmentNode.store.isIdentifierReferenceNode());
+        assert.ok(assignmentNode.value.isLiteralIntegerNode());
+    }
+
     // Literal integer
     {
         let node = parseSourceStringWithoutErrors('42');
@@ -114,6 +124,21 @@ export function runTests() {
         let node = parseSourceStringWithoutErrors('()');
         assert.ok(node.isTupleNode());
         assert.strictEqual((node as parseTree.ParseTreeTupleNode).elements.length, 0);
+    }
+
+    // Tuple
+    {
+        let node = parseSourceStringWithoutErrors('4, 2');
+        assert.ok(node.isTupleNode());
+
+        let elements = (node as parseTree.ParseTreeTupleNode).elements;
+        assert.strictEqual(elements.length, 2);
+
+        assert.ok(elements[0]?.isLiteralIntegerNode());
+        assert.strictEqual((elements[0] as parseTree.ParseTreeLiteralIntegerNode).value, 4);
+
+        assert.ok(elements[1]?.isLiteralIntegerNode());
+        assert.strictEqual((elements[1] as parseTree.ParseTreeLiteralIntegerNode).value, 2);
     }
 
 }

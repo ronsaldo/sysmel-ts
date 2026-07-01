@@ -89,6 +89,9 @@ export function runTests() {
     assert.deepStrictEqual(scanTokenKinds("+"), [scanner.TokenKind.Operator, scanner.TokenKind.EndOfSource]);
     assert.deepStrictEqual(scanTokenKinds("-"), [scanner.TokenKind.Operator, scanner.TokenKind.EndOfSource]);
 
+    // Assignment
+    assert.deepStrictEqual(scanTokenKinds(":="), [scanner.TokenKind.Assignment, scanner.TokenKind.EndOfSource]);
+
     // Low precedence operator
     assert.deepStrictEqual(scanTokenKinds("::+"), [scanner.TokenKind.LowPrecedenceOperator, scanner.TokenKind.EndOfSource]);
     assert.deepStrictEqual(scanTokenKinds("::-"), [scanner.TokenKind.LowPrecedenceOperator, scanner.TokenKind.EndOfSource]);

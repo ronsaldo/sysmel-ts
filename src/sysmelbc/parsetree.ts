@@ -4,6 +4,8 @@ export abstract class ParseTreeVisitor {
     abstract visitErrorNode(node: ParseTreeErrorNode): any;
     abstract visitParseErrorNode(node: ParseTreeParseErrorNode): any;
 
+    abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
+
     abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
 
     abstract visitLexicalBlockNode(node: ParseTreeLexicalBlockNode): any;
@@ -59,6 +61,10 @@ export abstract class ParseTreeNode {
     }
 
     isParseErrorNode(): boolean {
+        return false;
+    }
+
+    isAssignmentNode(): boolean {
         return false;
     }
 
@@ -158,6 +164,25 @@ export class ParseTreeParseErrorNode extends ParseTreeErrorNode{
     }
 
     isParseErrorNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeAssignmentNode extends ParseTreeNode {
+    store: ParseTreeNode;
+    value: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, store: ParseTreeNode, value: ParseTreeNode) {
+        super(sourcePosition);
+        this.store = store;
+        this.value = value;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitAssignmentNode(this);
+    }
+
+    isAssignmentNode(): boolean {
         return true;
     }
 }

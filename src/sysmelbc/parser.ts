@@ -300,9 +300,50 @@ function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
+function parseLowPrecedenceExpression(state: ParserState) : parseTree.ParseTreeNode {
+    return parseTerm(state);
+}
+
+function parseAssignmentExpression(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let assignedStore = parseLowPrecedenceExpression(state);
+
+    if (state.peekKind(0) === scanner.TokenKind.Assignment) {
+        let operatorToken = state.next();
+        let assignedValue = parseAssignmentExpression(state);
+        return new parseTree.ParseTreeAssignmentNode(state.sourcePositionFrom(startPosition), assignedStore, assignedValue);
+    } else {
+        return assignedStore
+    }
+}
+
+function parseCommaExpression(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let element = parseAssignmentExpression(state);
+    if (state.peekKind(0) !== scanner.TokenKind.Comma)
+        return element;
+
+    let elements: parseTree.ParseTreeNode[] = [];
+    elements.push(element);
+
+    while (state.peekKind(0) === scanner.TokenKind.Comma)
+    {
+        state.advance();
+        let memento = state.memento();
+        element = parseAssignmentExpression(state);
+        if (element.isParseErrorNode()) {
+            state.restore(memento);
+            break
+        }
+
+        elements.push(element);
+    }
+
+    return new parseTree.ParseTreeTupleNode(state.sourcePositionFrom(startPosition), elements);
+}
 
 function parseExpression(state: ParserState) : parseTree.ParseTreeNode {
-    return parseTerm(state);
+    return parseCommaExpression(state);
 }
 
 function parseExpressionListUntilEndOrDelimiter(state: ParserState, delimiter: scanner.TokenKind) : parseTree.ParseTreeNode[] {
