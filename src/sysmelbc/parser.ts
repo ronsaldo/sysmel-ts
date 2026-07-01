@@ -156,10 +156,18 @@ function parseLiteralInteger(state: ParserState) : parseTree.ParseTreeLiteralInt
     return new parseTree.ParseTreeLiteralIntegerNode(token.sourcePosition, parseIntegerConstant(token.getValue()))
 }
 
+function parseLiteralFloat(state: ParserState) : parseTree.ParseTreeLiteralIntegerNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.Float)
+        throw new Error('Expected a float literal.');
+
+    return new parseTree.ParseTreeLiteralFloatNode(token.sourcePosition, parseFloat(token.getValue()))
+}
 function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
     case scanner.TokenKind.Nat: return parseLiteralInteger(state);
+    case scanner.TokenKind.Float: return parseLiteralFloat(state);
     default:
         return state.advanceWithExpectedError('Expected a literal.');
     }

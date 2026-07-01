@@ -28,4 +28,17 @@ export function runTests() {
         assert.ok(node.isLiteralIntegerNode())
         assert.strictEqual((node as parseTree.ParseTreeLiteralIntegerNode).value, 49374)
     }
+
+    // Literal float
+    {
+        let node = parseSourceStringWithoutErrors('42.5')
+        assert.ok(node.isLiteralFloatNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5)
+
+        node = parseSourceStringWithoutErrors('42.5e3')
+        assert.ok(node.isLiteralFloatNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3)
+    }
+
 }
+
