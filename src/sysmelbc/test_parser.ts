@@ -261,7 +261,6 @@ export function runTests() {
         assert.strictEqual(messageNode.sendArguments.length, 1);
     }
 
-
     // Keyword message send
     {
         let node = parseSourceStringWithoutErrors('a perform: #doSomethingWith: with: 42');
@@ -271,6 +270,38 @@ export function runTests() {
         assert.ok(messageNode.receiver.isIdentifierReferenceNode());
         assert.ok(messageNode.selector.isLiteralSymbolNode());
         assert.strictEqual(messageNode.sendArguments.length, 2);
+    }
+
+    // Cascade message send
+    {
+        let node = parseSourceStringWithoutErrors('a + 2; - 3; with: 5; yourself');
+        assert.ok(node.isCascadeMessageNode());
+
+        let cascadeNode = node as parseTree.ParseTreeMessageCascadeNode;
+        assert.ok(cascadeNode.receiver.isIdentifierReferenceNode());
+        assert.strictEqual((cascadeNode.receiver as parseTree.ParseTreeIdentifierReferenceNode).symbol, 'a');
+
+        assert.strictEqual(cascadeNode.cascadedMessages.length, 4);
+    }
+
+    // Cascade message send 2
+    {
+        let node = parseSourceStringWithoutErrors('a + 2 * 3; - 3; with: 5; yourself');
+        assert.ok(node.isCascadeMessageNode());
+
+        let cascadeNode = node as parseTree.ParseTreeMessageCascadeNode;
+        assert.ok(cascadeNode.receiver.isBinaryExpressionSequenceNode());
+        assert.strictEqual(cascadeNode.cascadedMessages.length, 4);
+    }
+
+    // Cascade message send 3
+    {
+        let node = parseSourceStringWithoutErrors('a with: 42; - 3; with: 5; yourself');
+        assert.ok(node.isCascadeMessageNode());
+
+        let cascadeNode = node as parseTree.ParseTreeMessageCascadeNode;
+        assert.ok(cascadeNode.receiver.isIdentifierReferenceNode());
+        assert.strictEqual(cascadeNode.cascadedMessages.length, 4);
     }
 
     // Quote

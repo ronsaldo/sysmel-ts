@@ -20,7 +20,7 @@ export abstract class ParseTreeVisitor {
     abstract visitLiteralSymbolNode(node: ParseTreeLiteralSymbolNode): any;
     abstract visitLiteralValueNode(node: ParseTreeLiteralValueNode): any;
 
-    abstract visitCascadeMessageNode(node: ParseTreeCascadeMessageNode): any;
+    abstract visitCascadeMessageNode(node: ParseTreeCascadedMessageNode): any;
     abstract visitMessageCascadeNode(node: ParseTreeMessageCascadeNode): any;
     abstract visitMessageSendNode(node: ParseTreeMessageSendNode): any;
 
@@ -154,6 +154,10 @@ export abstract class ParseTreeNode {
     isSpliceNode(): boolean {
         return false;
     }
+
+    asMessageSendCascadeReceiverAndFirstMessage(): [ParseTreeNode, ParseTreeNode | null] {
+        return [this, null]
+    }
 }
 
 export class ParseTreeErrorNode extends ParseTreeNode{
@@ -254,6 +258,23 @@ export class ParseTreeBinaryExpressionSequenceNode extends ParseTreeNode {
 
     isBinaryExpressionSequenceNode(): boolean {
         return true;
+    }
+
+    asMessageSendCascadeReceiverAndFirstMessage(): [ParseTreeNode, ParseTreeNode | null] {
+        if (this.operands.length < 3)
+            throw new Error('Expected at least 3 binary expression operands');
+        
+        if (this.operands.length === 3) {
+            return [this.operands[0] as ParseTreeNode, new ParseTreeCascadedMessageNode(this.sourcePosition, this.operands[1] as ParseTreeNode, [this.operands[2] as ParseTreeNode])];
+        }
+
+        let binarySequenceOperands = this.operands.slice(0, this.operands.length - 2);
+        let cascadeSelector = this.operands[this.operands.length - 2] as ParseTreeNode;
+        let cascadeArgument = this.operands[this.operands.length - 1] as ParseTreeNode;
+
+        return [new ParseTreeBinaryExpressionSequenceNode(this.sourcePosition, binarySequenceOperands),
+            new ParseTreeCascadedMessageNode(this.sourcePosition, cascadeSelector, [cascadeArgument])
+        ];
     }
 }
 
@@ -399,7 +420,7 @@ export class ParseTreeLiteralValueNode extends ParseTreeNode {
     }
 }
 
-export class ParseTreeCascadeMessageNode extends ParseTreeNode {
+export class ParseTreeCascadedMessageNode extends ParseTreeNode {
     selector: ParseTreeNode;
     sendArguments: ParseTreeNode[];
 
@@ -455,6 +476,10 @@ export class ParseTreeMessageSendNode extends ParseTreeNode {
     
     isMessageSendNode(): boolean {
         return true;
+    }
+
+    asMessageSendCascadeReceiverAndFirstMessage(): [ParseTreeNode, ParseTreeNode | null] {
+        return [this.receiver, new ParseTreeCascadedMessageNode(this.sourcePosition, this.selector, this.sendArguments)];
     }
 }
 

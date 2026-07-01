@@ -486,8 +486,58 @@ function parseKeywordMessageSend(state: ParserState) : parseTree.ParseTreeNode {
     return new parseTree.ParseTreeMessageSendNode(state.sourcePositionFrom(startPosition), receiver, selector, sendArguments);
 }
 
+function parseCascadedMessage(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let token = state.peek(0) as scanner.Token;
+    if (token.kind == scanner.TokenKind.Identifier) {
+        state.advance();
+        let selector = new parseTree.ParseTreeLiteralSymbolNode(token.sourcePosition, token.getValue());
+        return new parseTree.ParseTreeCascadedMessageNode(state.sourcePositionFrom(startPosition), selector, []);
+    } else if(token.kind == scanner.TokenKind.Keyword) {
+        let symbolValue = '';
+        let sendArguments: parseTree.ParseTreeNode[] = [];
+        let firstKeywordSourcePosition = state.peek(0)?.sourcePosition as SourcePosition;
+        let lastKeywordSourcePosition = firstKeywordSourcePosition as SourcePosition;
+
+        while(state.peekKind(0) === scanner.TokenKind.Keyword)
+        {
+            let keywordToken = state.next();
+            lastKeywordSourcePosition = keywordToken.sourcePosition;
+            symbolValue += keywordToken.getValue()
+            let argument = parseAssociationExpression(state);
+            sendArguments.push(argument);
+        }
+
+        let selector = new parseTree.ParseTreeLiteralSymbolNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue);
+        return new parseTree.ParseTreeCascadedMessageNode(state.sourcePositionFrom(startPosition), selector, sendArguments);
+    } else if(isBinaryExpressionOperator(token.kind)) {
+        state.advance();
+        let selector = new parseTree.ParseTreeLiteralSymbolNode(token.sourcePosition, token.getValue());
+        let argument = parseUnaryPostfixExpression(state);
+        return new parseTree.ParseTreeCascadedMessageNode(state.sourcePositionFrom(startPosition), selector, [argument]);
+    } else {
+        return new parseTree.ParseTreeParseErrorNode(state.currentSourcePosition(), 'Expected a cascaded message send.');
+    }
+}
+
 function parseMessageCascade(state: ParserState) : parseTree.ParseTreeNode {
-    return parseKeywordMessageSend(state);
+    let startPosition = state.position;
+    let firstMessage = parseKeywordMessageSend(state);
+    if (state.peekKind(0) !== scanner.TokenKind.Semicolon)
+        return firstMessage;
+
+    let [cascadeReceiver, firstCascadedMessage] = firstMessage.asMessageSendCascadeReceiverAndFirstMessage();
+    let cascadedMessages: parseTree.ParseTreeNode[] = [];
+    if (firstCascadedMessage)
+        cascadedMessages.push(firstCascadedMessage);
+
+    while(state.peekKind(0) === scanner.TokenKind.Semicolon) {
+        state.advance();
+        let cascadeMessage = parseCascadedMessage(state);
+        cascadedMessages.push(cascadeMessage)
+    }
+
+    return new parseTree.ParseTreeMessageCascadeNode(state.sourcePositionFrom(startPosition), cascadeReceiver, cascadedMessages);
 }
 
 function parseChainExpression(state: ParserState) : parseTree.ParseTreeNode {
