@@ -2,6 +2,7 @@ import {SourceCode, SourcePosition} from "./source_code.js"
 import * as scanner from "./scanner.js"
 import * as parseTree from "./parsetree.js"
 import { off } from "cluster";
+import { error } from "console";
 
 class ParserState {
     tokens: scanner.Token[];
@@ -59,19 +60,35 @@ class ParserState {
             throw new Error("Cannot advance beyond the limit.")
         return token
     }
+
+    expectAddingErrorToNode(expectedKind: scanner.TokenKind, node: parseTree.ParseTreeNode) : parseTree.ParseTreeNode {
+        if (this.peekKind(0) === expectedKind) {
+            this.advance();
+            return node;
+        }
+
+        let errorPosition = this.currentSourcePosition();
+        let errorNode = new parseTree.ParseTreeParseErrorNode(errorPosition, 'Expected a tokend of kind ' + expectedKind);
+        return new parseTree.ParseTreeSequenceNode(node.sourcePosition, [node, errorNode])
+    }
+
+    currentSourcePosition() : SourcePosition {
+        if (this.position < this.tokens.length) {
+            let token = this.tokens[this.position];
+            if(!token)
+                throw new Error('Expected a valid token');
+            return token.sourcePosition;
+        }
+
+        let lastToken = this.tokens[this.tokens.length - 1]
+        if(!lastToken)
+            throw new Error('Expected at least a single valid token');
+        return lastToken.sourcePosition;
+    }
 }
 
 /*
 class ParserState:
-    def expectAddingErrorToNode(self, expectedKind: TokenKind, node: ParseTreeNode) -> ParseTreeNode:
-        if self.peekKind() == expectedKind:
-            self.advance()
-            return node
-        
-        errorPosition = self.currentSourcePosition()
-        errorNode = ParseTreeErrorNode(errorPosition, "Expected token of kind %s." % str(expectedKind))
-        return ParseTreeSequenceNode(node.sourcePosition.to(errorPosition), [node, errorNode])
-
     def currentSourcePosition(self) -> SourcePosition:
         if self.position < len(self.tokens):
             return self.tokens[self.position].sourcePosition
