@@ -290,6 +290,56 @@ function parseParenthesis(state: ParserState) : parseTree.ParseTreeNode {
     return expression;
 }
 
+function parseBlockArgument(state: ParserState) : parseTree.ParseTreeArgumentDefinitionNode {
+    let startingPosition = state.position;
+    if (state.peekKind(0) !== scanner.TokenKind.Colon)
+        throw new Error('Expecting the argument colon.');
+    state.advance();
+
+    let typeExpression : parseTree.ParseTreeNode | null = null;
+    if(state.peekKind(0) === scanner.TokenKind.LeftParent) {
+        typeExpression = parseParenthesis(state);
+    }
+
+    let optionalName: string | null = null;
+    if (state.peekKind(0) === scanner.TokenKind.Identifier) {
+        let token = state.next()
+        optionalName = token.getValue();
+    }
+
+    return new parseTree.ParseTreeArgumentDefinitionNode(state.sourcePositionFrom(startingPosition), optionalName, typeExpression, false);
+}
+
+function parseBlockType(state: ParserState) : parseTree.ParseTreeFunctionTypeNode | null {
+    let startingPosition = state.position;
+    let shouldEmitHeader = false;
+    let argumentDefinitions: parseTree.ParseTreeArgumentDefinitionNode[] = [];
+    let resultTypeExpression: parseTree.ParseTreeNode | null = null;
+
+    // Aruments
+    while(state.peekKind(0) === scanner.TokenKind.Colon) {
+        let argument = parseBlockArgument(state);
+        argumentDefinitions.push(argument);
+        shouldEmitHeader = true;
+    }
+
+    // Result type
+    if(state.peekKind(0) === scanner.TokenKind.ColonColon) {
+        state.advance();
+        resultTypeExpression = parseUnaryPrefixExpression(state);
+        shouldEmitHeader = true;
+    }
+
+    // Bar
+    if (state.peekKind(0) === scanner.TokenKind.Bar)
+        shouldEmitHeader = true;
+
+    if(!shouldEmitHeader)
+        return null;
+
+    return new parseTree.ParseTreeFunctionTypeNode(state.sourcePositionFrom(startingPosition), argumentDefinitions, resultTypeExpression);
+};
+
 function parseBlock(state: ParserState) : parseTree.ParseTreeNode {
     let startingPosition = state.position;
     // {
@@ -297,12 +347,28 @@ function parseBlock(state: ParserState) : parseTree.ParseTreeNode {
         throw new Error('Expected a left curly bracket.');
     state.advance();
 
-    // Expression list
-    let body = parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.RightCurlyBracket);
+    let blockType = parseBlockType(state);
 
-    // }
-    body = state.expectAddingErrorToNode(scanner.TokenKind.RightCurlyBracket, body);
-    return new parseTree.ParseTreeLexicalBlockNode(state.sourcePositionFrom(startingPosition), body);
+    let shouldEmitFunction = false;
+    if (state.peekKind(0) == scanner.TokenKind.Bar) {
+        state.advance();
+        shouldEmitFunction = true;
+    }
+
+    // Expression list
+    if (blockType) {
+        if(shouldEmitFunction) {
+            let body = parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.RightCurlyBracket);
+            body = state.expectAddingErrorToNode(scanner.TokenKind.RightCurlyBracket, body);
+            return new parseTree.ParseTreeFunctionNode(state.sourcePositionFrom(startingPosition), null, blockType, body, false, false);
+        } else {
+            return state.expectAddingErrorToNode(scanner.TokenKind.RightCurlyBracket, blockType);
+        }
+    } else {
+        let body = parseSequenceUntilEndOrDelimiter(state, scanner.TokenKind.RightCurlyBracket);
+        body = state.expectAddingErrorToNode(scanner.TokenKind.RightCurlyBracket, body);
+        return new parseTree.ParseTreeLexicalBlockNode(state.sourcePositionFrom(startingPosition), body);
+    }
 }
 
 function parseTerm(state: ParserState) : parseTree.ParseTreeNode {

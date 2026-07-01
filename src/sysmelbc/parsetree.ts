@@ -11,6 +11,10 @@ export abstract class ParseTreeVisitor {
 
     abstract visitIdentifierReferenceNode(node: ParseTreeIdentifierReferenceNode): any;
 
+    abstract visitArgumentDefinitionNode(node: ParseTreeArgumentDefinitionNode): any;
+    abstract visitFunctionTypeNode(node: ParseTreeFunctionTypeNode): any;
+    abstract visitFunctionNode(node: ParseTreeFunctionNode): any;
+
     abstract visitLexicalBlockNode(node: ParseTreeLexicalBlockNode): any;
 
     abstract visitLiteralCharacterNode(node: ParseTreeLiteralCharacterNode): any;
@@ -84,6 +88,18 @@ export abstract class ParseTreeNode {
     }
 
     isIdentifierReferenceNode(): boolean {
+        return false;
+    }
+
+    isArgumentDefinitionNode(): boolean {
+        return false;
+    }
+    
+    isFunctionTypeNode(): boolean {
+        return false;
+    }
+
+    isFunctionNode(): boolean {
         return false;
     }
 
@@ -294,6 +310,74 @@ export class ParseTreeIdentifierReferenceNode extends ParseTreeNode {
         return true;
     }
 }
+
+export class ParseTreeArgumentDefinitionNode extends ParseTreeNode {
+    name: string | null;
+    typeExpression: ParseTreeNode | null;
+    isSelf: boolean;
+
+    constructor(sourcePosition: SourcePosition, name: string | null, typeExpression: ParseTreeNode | null, isSelf: boolean = false) {
+        super(sourcePosition);
+        this.name = name;
+        this.typeExpression = typeExpression;
+        this.isSelf = isSelf;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitArgumentDefinitionNode(this);
+    }
+    
+    isArgumentDefinitionNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeFunctionTypeNode extends ParseTreeNode {
+    argumentDefinitions: ParseTreeArgumentDefinitionNode[];
+    resultTypeExpression: ParseTreeNode | null;
+
+    constructor(sourcePosition: SourcePosition, argumentDefinitions: ParseTreeArgumentDefinitionNode[], resultTypeExpression: ParseTreeNode | null) {
+        super(sourcePosition);
+        this.argumentDefinitions = argumentDefinitions;
+        this.resultTypeExpression = resultTypeExpression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitFunctionTypeNode(this);
+    }
+    
+    isFunctionTypeNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeFunctionNode extends ParseTreeNode {
+    nameExpression: ParseTreeNode | null;
+    functionType: ParseTreeFunctionTypeNode;
+    body: ParseTreeNode;
+    isPublic: boolean;
+    isMethod: boolean;
+
+    constructor(sourcePosition: SourcePosition,
+        nameExpression: ParseTreeNode | null, functionType: ParseTreeFunctionTypeNode,
+        body: ParseTreeNode, isPublic: boolean, isMethod: boolean) {
+        super(sourcePosition);
+        this.nameExpression = nameExpression;
+        this.functionType = functionType;
+        this.body = body;
+        this.isPublic = isPublic;
+        this.isMethod = isMethod;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitFunctionNode(this);
+    }
+    
+    isFunctionNode(): boolean {
+        return true;
+    }
+}
+
 
 export class ParseTreeLexicalBlockNode extends ParseTreeNode {
     body: ParseTreeNode;

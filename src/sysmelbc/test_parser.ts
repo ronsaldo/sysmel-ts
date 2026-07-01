@@ -64,7 +64,54 @@ export function runTests() {
         assert.ok(assignmentNode.store.isIdentifierReferenceNode());
         assert.ok(assignmentNode.value.isLiteralIntegerNode());
     }
+
+    // Empty block
+    {
+        let node = parseSourceStringWithoutErrors('{|}');
+        assert.ok(node.isFunctionNode());
+        
+        let functionNode = node as parseTree.ParseTreeFunctionNode;
+        assert.strictEqual(functionNode.functionType.argumentDefinitions.length, 0);
+        assert.ok(functionNode.body.isSequenceNode());
+    }
     
+    // Block single argument
+    {
+        let node = parseSourceStringWithoutErrors('{:a |}');
+        assert.ok(node.isFunctionNode());
+        
+        let functionNode = node as parseTree.ParseTreeFunctionNode;
+        assert.strictEqual(functionNode.functionType.argumentDefinitions.length, 1);
+        assert.strictEqual(functionNode.functionType.argumentDefinitions[0]?.name, 'a');
+        assert.ok(functionNode.body.isSequenceNode());
+    }
+
+    // Block dependent type
+    {
+        let node = parseSourceStringWithoutErrors('{:(Integer)a :: Integer}');
+        assert.ok(node.isFunctionTypeNode());
+        
+        let functionTypeNode = node as parseTree.ParseTreeFunctionTypeNode;
+        assert.strictEqual(functionTypeNode.argumentDefinitions.length, 1);
+        assert.strictEqual(functionTypeNode.argumentDefinitions[0]?.name, 'a');
+        assert.ok(functionTypeNode.argumentDefinitions[0]?.typeExpression?.isIdentifierReferenceNode());
+        
+        assert.ok(functionTypeNode.resultTypeExpression?.isIdentifierReferenceNode());
+    }
+
+    // Block with body
+    {
+        let node = parseSourceStringWithoutErrors('{:(Integer)a :: Integer | a}');
+        assert.ok(node.isFunctionNode());
+        
+        let functionNode = node as parseTree.ParseTreeFunctionNode;
+        assert.strictEqual(functionNode.functionType.argumentDefinitions.length, 1);
+        assert.strictEqual(functionNode.functionType.argumentDefinitions[0]?.name, 'a');
+        assert.ok(functionNode.functionType.argumentDefinitions[0]?.typeExpression?.isIdentifierReferenceNode());
+        
+        assert.ok(functionNode.body.isIdentifierReferenceNode());
+    }
+
     // Lexical block
     {
         let node = parseSourceStringWithoutErrors('{42}');
