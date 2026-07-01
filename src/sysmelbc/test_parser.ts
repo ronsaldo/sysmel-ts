@@ -40,5 +40,12 @@ export function runTests() {
         assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3)
     }
 
+    // Identifier reference
+    {
+        let ast = parseSourceStringWithoutErrors('identifier');
+        assert.ok(ast.isIdentifierReferenceNode());
+        assert.strictEqual((ast as parseTree.ParseTreeIdentifierReferenceNode).symbol, 'identifier');
+    }
+
 }
 

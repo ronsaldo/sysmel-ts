@@ -163,6 +163,7 @@ function parseLiteralFloat(state: ParserState) : parseTree.ParseTreeLiteralInteg
 
     return new parseTree.ParseTreeLiteralFloatNode(token.sourcePosition, parseFloat(token.getValue()))
 }
+
 function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
@@ -173,9 +174,21 @@ function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
+function parseIdentifierReference(state: ParserState) : parseTree.ParseTreeNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.Identifier)
+        throw new Error('Expected an identifer.');
+
+    return new parseTree.ParseTreeIdentifierReferenceNode(token.sourcePosition, token.getValue());
+}
 
 function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
-    return parseLiteral(state)
+    switch(state.peekKind(0))
+    {
+    case scanner.TokenKind.Identifier: return parseIdentifierReference(state);
+    default:
+        return parseLiteral(state)
+    }
 }
 
 
