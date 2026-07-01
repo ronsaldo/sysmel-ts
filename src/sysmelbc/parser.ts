@@ -300,8 +300,24 @@ function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
-function parseChainExpression(state: ParserState) : parseTree.ParseTreeNode {
+function parseBinaryExpressionSequence(state: ParserState) : parseTree.ParseTreeNode {
     return parseTerm(state);
+}
+
+function parseAssociationExpression(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let key = parseBinaryExpressionSequence(state);
+
+    if (state.peekKind(0) != scanner.TokenKind.Colon)
+        return key;
+
+    state.advance();
+    let value = parseAssociationExpression(state);
+    return new parseTree.ParseTreeAssociationNode(state.sourcePositionFrom(startPosition), key, value);
+}
+
+function parseChainExpression(state: ParserState) : parseTree.ParseTreeNode {
+    return parseAssociationExpression(state);
 }
 
 function parseLowPrecedenceExpression(state: ParserState) : parseTree.ParseTreeNode {

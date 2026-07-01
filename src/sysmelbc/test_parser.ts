@@ -152,5 +152,15 @@ export function runTests() {
         assert.strictEqual(sendNode.sendArguments.length, 1);
         assert.ok(sendNode.sendArguments[0]?.isLiteralIntegerNode());
     }
+
+    // Association
+    {
+        let node = parseSourceStringWithoutErrors('1 : 2');
+        assert.ok(node.isAssociationNode());
+
+        let assocNode = node as parseTree.ParseTreeAssociationNode;
+        assert.ok(assocNode.key.isLiteralIntegerNode());
+        assert.ok(assocNode.value.isLiteralIntegerNode());
+    }
 }
 
