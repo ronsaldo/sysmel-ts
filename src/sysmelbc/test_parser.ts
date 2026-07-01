@@ -24,6 +24,37 @@ export function runTests() {
         assert.strictEqual(application.applicationArguments.length, 0);
     }
 
+
+    // Application
+    {
+        let node = parseSourceStringWithoutErrors('a(42)');
+        assert.ok(node.isApplicationNode());
+
+        let application = node as parseTree.ParseTreeApplicationNode;
+        assert.ok(application.functional.isIdentifierReferenceNode());
+        assert.strictEqual(application.applicationArguments.length, 1);
+    }
+
+    // Application
+    {
+        let node = parseSourceStringWithoutErrors('a(42. 5)');
+        assert.ok(node.isApplicationNode());
+
+        let application = node as parseTree.ParseTreeApplicationNode;
+        assert.ok(application.functional.isIdentifierReferenceNode());
+        assert.strictEqual(application.applicationArguments.length, 2);
+    }
+
+    // Keyword application
+    {
+        let node = parseSourceStringWithoutErrors('let: #x with: 42');
+        assert.ok(node.isApplicationNode());
+
+        let application = node as parseTree.ParseTreeApplicationNode;
+        assert.ok(application.functional.isIdentifierReferenceNode());
+        assert.strictEqual(application.applicationArguments.length, 2);
+    }
+
     // Assignment
     {
         let node = parseSourceStringWithoutErrors('a := 42');

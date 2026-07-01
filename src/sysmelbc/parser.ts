@@ -439,7 +439,32 @@ function parseAssociationExpression(state: ParserState) : parseTree.ParseTreeNod
     return new parseTree.ParseTreeAssociationNode(state.sourcePositionFrom(startPosition), key, value);
 }
 
+function parseKeywordApplication(state: ParserState) : parseTree.ParseTreeNode {
+    if (state.peekKind(0) !== scanner.TokenKind.Keyword)
+        throw new Error('Expected a keyword application.');
+
+    let startPosition = state.position;
+    let symbolValue = '';
+    let applicationArguments: parseTree.ParseTreeNode[] = [];
+    let firstKeywordSourcePosition = state.peek(0)?.sourcePosition as SourcePosition;
+    let lastKeywordSourcePosition = firstKeywordSourcePosition as SourcePosition;
+
+    while(state.peekKind(0) === scanner.TokenKind.Keyword)
+    {
+        let keywordToken = state.next();
+        lastKeywordSourcePosition = keywordToken.sourcePosition;
+        symbolValue += keywordToken.getValue()
+        let argument = parseAssociationExpression(state);
+        applicationArguments.push(argument);
+    }
+
+    let identifier = new parseTree.ParseTreeIdentifierReferenceNode(firstKeywordSourcePosition.to(lastKeywordSourcePosition), symbolValue);
+    return new parseTree.ParseTreeApplicationNode(state.sourcePositionFrom(startPosition), identifier, applicationArguments);
+}
+
 function parseChainExpression(state: ParserState) : parseTree.ParseTreeNode {
+    if (state.peekKind(0) == scanner.TokenKind.Keyword)
+        return parseKeywordApplication(state);
     return parseAssociationExpression(state);
 }
 
