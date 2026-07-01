@@ -300,8 +300,23 @@ function parseTerm(state: ParserState) : parseTree.ParseTreeNode {
     }
 }
 
-function parseLowPrecedenceExpression(state: ParserState) : parseTree.ParseTreeNode {
+function parseChainExpression(state: ParserState) : parseTree.ParseTreeNode {
     return parseTerm(state);
+}
+
+function parseLowPrecedenceExpression(state: ParserState) : parseTree.ParseTreeNode {
+    let startPosition = state.position;
+    let receiver = parseChainExpression(state);
+    while(state.peekKind(0) == scanner.TokenKind.LowPrecedenceOperator) {
+        let operatorToken = state.next();
+        let operatorSelector = operatorToken.getValue().substring(2);
+
+        let selectorNode = new parseTree.ParseTreeLiteralSymbolNode(operatorToken.sourcePosition, operatorSelector);
+        let argument = parseChainExpression(state);
+
+        receiver = new parseTree.ParseTreeMessageSendNode(state.sourcePositionFrom(startPosition), receiver, selectorNode, [argument]);
+    }
+    return receiver;
 }
 
 function parseAssignmentExpression(state: ParserState) : parseTree.ParseTreeNode {

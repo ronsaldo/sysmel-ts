@@ -141,5 +141,16 @@ export function runTests() {
         assert.strictEqual((elements[1] as parseTree.ParseTreeLiteralIntegerNode).value, 2);
     }
 
+    // Low precedence binary operator.
+    {
+        let node = parseSourceStringWithoutErrors('1 ::+ 2');
+        assert.ok(node.isMessageSendNode());
+
+        let sendNode = node as parseTree.ParseTreeMessageSendNode;
+        assert.ok(sendNode.receiver.isLiteralIntegerNode());
+        assert.ok(sendNode.selector.isLiteralSymbolNode());
+        assert.strictEqual(sendNode.sendArguments.length, 1);
+        assert.ok(sendNode.sendArguments[0]?.isLiteralIntegerNode());
+    }
 }
 
