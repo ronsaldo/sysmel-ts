@@ -40,6 +40,17 @@ export function runTests() {
         assert.strictEqual((node as parseTree.ParseTreeLiteralFloatNode).value, 42.5e3)
     }
 
+    // Literal string
+    {
+        let node = parseSourceStringWithoutErrors('"Hello World"')
+        assert.ok(node.isLiteralStringNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello World')
+
+        node = parseSourceStringWithoutErrors('"Hello \\"World\\""')
+        assert.ok(node.isLiteralStringNode())
+        assert.strictEqual((node as parseTree.ParseTreeLiteralStringNode).value, 'Hello "World"')
+    }
+
     // Identifier reference
     {
         let ast = parseSourceStringWithoutErrors('identifier');

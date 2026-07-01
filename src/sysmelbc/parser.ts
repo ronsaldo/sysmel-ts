@@ -132,6 +132,27 @@ class ParserState {
     }
 }
 
+function parseCEscapedString(str: string) : string {
+    let result = '';
+    for(let i = 0; i < str.length; ++i) {
+        let c = str[i];
+        if (c == '\\') {
+            ++i;
+            c = str[i];
+            switch(c)
+            {
+            case 'n': c = '\n'; break;
+            case 'r': c = '\r'; break;
+            case 't': c = '\t'; break;
+            default: break;
+            }
+        }
+
+        result += c;
+    }
+    return result;
+}
+
 function parseIntegerConstant(constant: string): number {
     let radixIndex = constant.indexOf('r');
     if (radixIndex < 0)
@@ -148,7 +169,7 @@ function parseIntegerConstant(constant: string): number {
     }
 }
 
-function parseLiteralInteger(state: ParserState) : parseTree.ParseTreeLiteralIntegerNode {
+function parseLiteralInteger(state: ParserState) : parseTree.ParseTreeNode {
     let token = state.next();
     if (token.kind !== scanner.TokenKind.Nat)
         throw new Error('Expected an integer literal.');
@@ -156,7 +177,7 @@ function parseLiteralInteger(state: ParserState) : parseTree.ParseTreeLiteralInt
     return new parseTree.ParseTreeLiteralIntegerNode(token.sourcePosition, parseIntegerConstant(token.getValue()))
 }
 
-function parseLiteralFloat(state: ParserState) : parseTree.ParseTreeLiteralIntegerNode {
+function parseLiteralFloat(state: ParserState) : parseTree.ParseTreeNode {
     let token = state.next();
     if (token.kind !== scanner.TokenKind.Float)
         throw new Error('Expected a float literal.');
@@ -164,11 +185,24 @@ function parseLiteralFloat(state: ParserState) : parseTree.ParseTreeLiteralInteg
     return new parseTree.ParseTreeLiteralFloatNode(token.sourcePosition, parseFloat(token.getValue()))
 }
 
+function parseLiteralString(state: ParserState) : parseTree.ParseTreeNode {
+    let token = state.next();
+    if (token.kind !== scanner.TokenKind.String)
+        throw new Error('Expected a string literal.');
+    
+    let stringValue = token.getValue();
+    stringValue = stringValue.substring(1, stringValue.length - 1);
+    stringValue = parseCEscapedString(stringValue);
+
+    return new parseTree.ParseTreeLiteralStringNode(token.sourcePosition, stringValue)
+}
+
 function parseLiteral(state: ParserState) : parseTree.ParseTreeNode {
     switch(state.peekKind(0))
     {
     case scanner.TokenKind.Nat: return parseLiteralInteger(state);
     case scanner.TokenKind.Float: return parseLiteralFloat(state);
+    case scanner.TokenKind.String: return parseLiteralString(state);
     default:
         return state.advanceWithExpectedError('Expected a literal.');
     }
