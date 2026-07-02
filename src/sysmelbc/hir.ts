@@ -46,6 +46,13 @@ export class HIRUniverseType extends HIRType {
     isUniverseType(): boolean {
         return true;
     }
+
+    toString(): string {
+        if (this.level == 0) {
+            return 'Type'
+        }
+        return 'Type@' + this.level;
+    }
 }
 
 export class HIRCoreTypes {

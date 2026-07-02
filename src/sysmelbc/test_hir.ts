@@ -10,6 +10,7 @@ export function runTests() {
         assert.ok(coreTypes.getUniverseAtLevel(0).isType())
         assert.ok(coreTypes.getUniverseAtLevel(0).isUniverseType())
         assert.strictEqual(coreTypes.getUniverseAtLevel(0), coreTypes.getUniverseAtLevel(0))
+        console.log(coreTypes.getUniverseAtLevel(0).toString())
     }
     
 } 
