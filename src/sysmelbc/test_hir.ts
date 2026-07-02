@@ -71,44 +71,100 @@ export function runTests() {
         let context = new hir.HIRContext();
         let argument = new hir.HIRArgument(context.coreTypes.boolean8Type, 'x', getOrMakeEmptySourcePosition());
         let functionType = new hir.HIRDependentFunctionType([argument], context.coreTypes.int32Type, context.coreTypes, getOrMakeEmptySourcePosition())
-        let identity = new hir.HIRFunction('identity', functionType, getOrMakeEmptySourcePosition());
+        let branchingFunction = new hir.HIRFunction('branchingFunction', functionType, getOrMakeEmptySourcePosition());
 
         let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
-        identity.addBasicBlock(entryBlock)
+        branchingFunction.addBasicBlock(entryBlock)
 
         let trueBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'true', getOrMakeEmptySourcePosition());
-        identity.addBasicBlock(trueBlock)
+        branchingFunction.addBasicBlock(trueBlock)
 
         let falseBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'false', getOrMakeEmptySourcePosition());
-        identity.addBasicBlock(falseBlock)
+        branchingFunction.addBasicBlock(falseBlock)
 
         {
-            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIREmptyEnvironment());
             builder.conditionalBranch(argument, trueBlock, falseBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(identity, context, trueBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIREmptyEnvironment());
             builder.returnValue(new hir.HIRConstantLiteralIntegerValue(1, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(identity, context, falseBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIREmptyEnvironment());
             builder.returnValue(new hir.HIRConstantLiteralIntegerValue(0, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
         }
 
-        console.log(identity.fullPrintString());
+        //console.log(branchingFunction.fullPrintString());
 
         // False result
         {
-            let result = identity.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(false, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
+            let result = branchingFunction.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(false, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
             assert.ok(result.isConstantLiteralIntegerValue());
             assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 0);
         }
 
         // True result
         {
-            let result = identity.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(true, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
+            let result = branchingFunction.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(true, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
+            assert.ok(result.isConstantLiteralIntegerValue());
+            assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 1);
+        }
+    }
+
+    // Phi
+    {
+        let context = new hir.HIRContext();
+        let argument = new hir.HIRArgument(context.coreTypes.boolean8Type, 'x', getOrMakeEmptySourcePosition());
+        let functionType = new hir.HIRDependentFunctionType([argument], context.coreTypes.int32Type, context.coreTypes, getOrMakeEmptySourcePosition())
+        let branchingFunction = new hir.HIRFunction('branchingFunction', functionType, getOrMakeEmptySourcePosition());
+
+        let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
+        branchingFunction.addBasicBlock(entryBlock)
+
+        let trueBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'true', getOrMakeEmptySourcePosition());
+        branchingFunction.addBasicBlock(trueBlock)
+
+        let falseBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'false', getOrMakeEmptySourcePosition());
+        branchingFunction.addBasicBlock(falseBlock)
+
+        let mergeBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'merge', getOrMakeEmptySourcePosition());
+        branchingFunction.addBasicBlock(mergeBlock)
+
+        let mergeBuilder = new hir.HIRBuilder(branchingFunction, context, mergeBlock, new hir.HIREmptyEnvironment());
+        let phi = mergeBuilder.phi(context.coreTypes.int32Type, getOrMakeEmptySourcePosition());
+
+        {
+            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIREmptyEnvironment());
+            builder.conditionalBranch(argument, trueBlock, falseBlock, getOrMakeEmptySourcePosition());
+        }
+
+        {
+            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIREmptyEnvironment());
+            builder.phiSource(phi, new hir.HIRConstantLiteralIntegerValue(1, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
+            builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
+        }
+
+        {
+            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIREmptyEnvironment());
+            builder.phiSource(phi, new hir.HIRConstantLiteralIntegerValue(0, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
+            builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
+        }
+
+        mergeBuilder.returnValue(phi, getOrMakeEmptySourcePosition());
+
+        // False result
+        {
+            let result = branchingFunction.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(false, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
+            assert.ok(result.isConstantLiteralIntegerValue());
+            assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 0);
+        }
+
+        // True result
+        {
+            let result = branchingFunction.evaluateWithArguments([new hir.HIRConstantLiteralBooleanValue(true, context.coreTypes.boolean8Type, getOrMakeEmptySourcePosition())]);
             assert.ok(result.isConstantLiteralIntegerValue());
             assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 1);
         }

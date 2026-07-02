@@ -139,6 +139,13 @@ export class HIRType extends HIRValue {
         return null;
     }
 
+    toString(): string {
+        let name = this.getName();
+        if(!name)
+            return '<AnonType>';
+        return name;
+    }
+
     getType(): HIRType {
         return this.coreTypes.getUniverseAtLevel(0);
     }
@@ -639,7 +646,11 @@ export class HIRFunctionActivationContext {
         this.instructionValues = new Array(instructions.length).fill(coreTypes.voidValue);
     }
 
-    setCallArgumentsAndCaptures(argumentValues: HIRValue[], captureValues: HIRValue[]) {
+    atPCSetValue(valuePC: number, value: HIRValue): void {
+        this.instructionValues[valuePC] = value;
+    }
+
+    setCallArgumentsAndCaptures(argumentValues: HIRValue[], captureValues: HIRValue[]): void {
         // Arguments
         for(let i = 0; i < argumentValues.length; ++i) {
             let argument = argumentValues[i];
@@ -704,6 +715,8 @@ export abstract class HIRFunctionLocalValue extends HIRValue {
     }
 
     toString():string {
+        if(!this.name)
+            return '$' + this.index;
         return `$${this.index}|${this.name}`;
     }
 
@@ -859,6 +872,45 @@ export class HIRConditionalBranchInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRPhiInstruction extends HIRInstruction  {
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition)
+    }
+
+    isPhiInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return this.toString() + ' := phi ' + this.type.toString();
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        // Nothing is required here.
+    }
+}
+
+export class HIRPhiSourceInstruction extends HIRInstruction  {
+    targetPhi: HIRPhiInstruction;
+    sourceValue: HIRValue;
+
+    constructor(targetPhi: HIRPhiInstruction, sourceValue: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.targetPhi = targetPhi;
+        this.sourceValue = sourceValue;
+    }
+
+    fullPrintString(): string {
+        return `phi: ${this.targetPhi.toString()} source: ${this.sourceValue.toString()}`;
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let sourceEvaluatedValue = this.sourceValue.getValueInEvaluationContext(context);
+        context.atPCSetValue(this.targetPhi.index, sourceEvaluatedValue);
+    }
+}
+
+
 export class HIRReturnInstruction extends HIRInstruction  {
     valueToReturn: HIRValue;
 
@@ -932,6 +984,18 @@ export class HIRBuilder {
 
     conditionalBranch(condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRConditionalBranchInstruction {
         let instruction = new HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    phi(type: HIRType, sourcePosition: AbstractSourcePosition) : HIRPhiInstruction {
+        let instruction = new HIRPhiInstruction(type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    phiSource(targetPhi: HIRPhiInstruction, sourceValue: HIRValue, sourcePosition: AbstractSourcePosition) : HIRPhiSourceInstruction {
+        let instruction = new HIRPhiSourceInstruction(targetPhi, sourceValue, this.context.coreTypes.voidType, null, sourcePosition);
         this.addInstruction(instruction);
         return instruction;
     }
