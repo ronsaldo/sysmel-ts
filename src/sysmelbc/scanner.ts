@@ -97,6 +97,7 @@ class ScannerState {
             this.column = (this.column + 4) % 4 * 4 +1;
             this.isPreviousCR = false;
         } else {
+            ++this.column;
             this.isPreviousCR = false;
         }
     }

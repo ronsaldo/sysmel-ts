@@ -16,7 +16,15 @@ export class SourceCode {
     }
 }
 
-export class SourcePosition {
+export abstract class AbstractSourcePosition {
+
+};
+
+export class EmptySourcePosition extends AbstractSourcePosition {
+    // Nothing is required here
+}
+
+export class SourcePosition extends AbstractSourcePosition{
     sourceCode: SourceCode;
     startIndex: number;
     endIndex: number;
@@ -30,6 +38,7 @@ export class SourcePosition {
         startIndex: number, endIndex: number,
         startLine: number, startColumn: number,
         endLine: number, endColumn: number) {
+        super();
 
         this.sourceCode = sourceCode;
         this.startIndex = startIndex;
