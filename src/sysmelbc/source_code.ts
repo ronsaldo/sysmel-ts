@@ -76,3 +76,9 @@ export class SourcePosition extends AbstractSourcePosition{
             + '-' + this.endLine.toString() + '.' + this.endColumn.toString();
     } 
 }
+
+let emptySourcePosition = new EmptySourcePosition;
+export function getOrMakeEmptySourcePosition()
+{
+    return emptySourcePosition;
+}
