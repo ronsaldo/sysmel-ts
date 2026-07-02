@@ -10,6 +10,10 @@ export abstract class HIRValue {
 
     abstract getType(): HIRType;
 
+    evaluateAsBoolean(): boolean {
+        throw new Error(this.sourcePosition.formatMessage('Not a boolean value'))
+    }
+
     isType(): boolean {
         return false;
     }
@@ -361,6 +365,10 @@ export class HIRConstantLiteralIntegerValue extends HIRConstantLiteralValue {
     isConstantLiteralIntegerValue() : boolean {
         return true
     }
+
+    toString(): string {
+        return 'constantLiteralInteger ' + this.value;
+    }
 }
 
 export class HIRConstantLiteralFloatValue extends HIRConstantLiteralValue {
@@ -374,6 +382,11 @@ export class HIRConstantLiteralFloatValue extends HIRConstantLiteralValue {
     isConstantLiteralFloatValue() : boolean {
         return true
     }
+    
+    toString(): string {
+        return 'constantLiteralFloat ' + this.value;
+    }
+
 }
 
 export class HIRConstantLiteralBooleanValue extends HIRConstantLiteralValue {
@@ -384,8 +397,16 @@ export class HIRConstantLiteralBooleanValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    evaluateAsBoolean(): boolean {
+        return this.value;
+    }
+
     isConstantLiteralBooleanValue() : boolean {
         return true
+    }
+
+    toString(): string {
+        return 'constantLiteralBoolean ' + this.value;
     }
 }
 
@@ -400,6 +421,10 @@ export class HIRConstantLiteralCharacterValue extends HIRConstantLiteralValue {
     isConstantLiteralCharacterValue() : boolean {
         return true
     }
+
+    toString(): string {
+        return 'constantLiteralCharacter ' + this.value;
+    }
 }
 
 export class isConstantLiteralStringValue extends HIRConstantLiteralValue {
@@ -412,6 +437,10 @@ export class isConstantLiteralStringValue extends HIRConstantLiteralValue {
 
     isConstantLiteralStringValue() : boolean {
         return true
+    }
+
+    toString(): string {
+        return 'constantLiteralString ' + this.value;
     }
 }
 
@@ -426,6 +455,11 @@ export class isConstantLiteralSymbolValue extends HIRConstantLiteralValue {
     isConstantLiteralSymbolValue() : boolean {
         return true
     }
+
+
+    toString(): string {
+        return 'constantLiteralSymbol ' + this.value;
+    }
 }
 
 export class HIRConstantLiteralVoidValue extends HIRConstantLiteralValue {
@@ -436,6 +470,10 @@ export class HIRConstantLiteralVoidValue extends HIRConstantLiteralValue {
     isConstantLiteralVoidValue() : boolean {
         return true
     }
+
+    toString(): string {
+        return 'constantLiteralVoid';
+    }
 }
 
 export class HIRConstantLiteralNilValue extends HIRConstantLiteralValue {
@@ -445,6 +483,11 @@ export class HIRConstantLiteralNilValue extends HIRConstantLiteralValue {
 
     isConstantLiteralNilValue() : boolean {
         return true
+    }
+
+
+    toString(): string {
+        return 'constantLiteralNil';
     }
 }
 
@@ -458,6 +501,10 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
 
     isConstantLiteralParseTree(): boolean {
         return true;
+    }
+
+    toString(): string {
+        return 'constantLiteralParseTree';
     }
 }
 
@@ -760,6 +807,58 @@ export abstract class HIRInstruction extends HIRFunctionLocalValue {
     abstract fullPrintString(): string;
 }
 
+export class HIRBranchInstruction extends HIRInstruction  {
+    destination: HIRBasicBlock;
+
+    constructor(destination: HIRBasicBlock, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.destination = destination
+    }
+
+    isTerminatorInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return 'branch ' + this.destination.toString()
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        context.pc = this.destination.index;
+    }
+}
+
+export class HIRConditionalBranchInstruction extends HIRInstruction  {
+    condition: HIRValue;
+    trueDestination: HIRBasicBlock;
+    falseDestination: HIRBasicBlock;
+
+    constructor(condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.condition = condition;
+        this.trueDestination = trueDestination;
+        this.falseDestination = falseDestination;
+    }
+
+    isTerminatorInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return 'conditinalBranch ' + this.condition.toString()
+            + ' ifTrue: ' + this.trueDestination.toString()
+            + ' ifFalse: ' + this.falseDestination.toString();
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let condition = this.condition.getValueInEvaluationContext(context);
+        if(condition.evaluateAsBoolean())
+            context.pc = this.trueDestination.index;
+        else 
+            context.pc = this.falseDestination.index;
+    }
+}
+
 export class HIRReturnInstruction extends HIRInstruction  {
     valueToReturn: HIRValue;
 
@@ -823,6 +922,18 @@ export class HIRBuilder {
         if(!lastInstruction)
             return false;
         return lastInstruction.isTerminatorInstruction();
+    }
+
+    branch(destination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRBranchInstruction {
+        let instruction = new HIRBranchInstruction(destination, this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    conditionalBranch(condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRConditionalBranchInstruction {
+        let instruction = new HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
     }
 
     returnValue(valueToReturn: HIRValue, sourcePosition: AbstractSourcePosition): HIRReturnInstruction {

@@ -17,6 +17,9 @@ export class SourceCode {
 }
 
 export abstract class AbstractSourcePosition {
+    formatMessage(message: string) : string {
+        return message;
+    }
 
 };
 
@@ -75,6 +78,10 @@ export class SourcePosition extends AbstractSourcePosition{
             + ':' + this.startLine.toString() + '.' + this.startColumn.toString()
             + '-' + this.endLine.toString() + '.' + this.endColumn.toString();
     } 
+    
+    formatMessage(message: string) : string {
+        return this.toString() + ': ' + message;
+    }
 }
 
 let emptySourcePosition = new EmptySourcePosition;
