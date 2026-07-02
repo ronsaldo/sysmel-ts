@@ -402,6 +402,7 @@ export class HIRCoreTypes {
     undefinedType: HIRUndefinedType = new HIRUndefinedType('Undefined', this, getOrMakeEmptySourcePosition());
     voidType: HIRVoidType           = new HIRVoidType('Void', this, getOrMakeEmptySourcePosition());
 
+    packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
 
     constructor() {
         this.coreTypeList.push(this.boolean8Type);
@@ -427,6 +428,8 @@ export class HIRCoreTypes {
         this.coreTypeList.push(this.undefinedType);
         this.coreTypeList.push(this.voidType);
 
+        this.coreTypeList.push(this.packageType);
+
         this.coreValueList.push(['void',  new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['false', new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['true',  new HIRConstantLiteralBooleanValue(true, this.boolean8Type, getOrMakeEmptySourcePosition())]);
@@ -442,5 +445,64 @@ export class HIRCoreTypes {
         this.universeLevels[level] = universe;
         return universe;
     }
+}
 
+export class HIRPackage extends HIRValue {
+    coreTypes: HIRCoreTypes;
+    children: HIRValue[] = []
+    publicSymbolTable: Record<string, HIRValue> = {};
+
+    constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.coreTypes = coreTypes;
+    }
+
+    getType(): HIRType {
+        return this.coreTypes.packageType;
+    }
+
+    addCoreTypeMembers(): void {
+        this.addCoreTypeListMembers();
+        this.addCoreTypeValueList();
+    }
+
+    addCoreTypeListMembers(): void {
+        for(let i = 0; i < this.coreTypes.coreTypeList.length; ++i)
+        {
+            let coreType = this.coreTypes.coreTypeList[i];
+            let typeName = coreType?.getName();
+            if(typeName && coreType) {
+                this.addSymbolWithBinding(typeName, coreType);
+            }
+        }
+    }
+
+    addCoreTypeValueList(): void {
+        for(let i = 0; i < this.coreTypes.coreValueList.length; ++i)
+        {
+            let coreValueTuple = this.coreTypes.coreValueList[i];
+            if(!coreValueTuple) continue;
+
+            let [name, coreValue] = coreValueTuple;
+            this.addSymbolWithBinding(name, coreValue)
+        }
+    }
+
+    addSymbolWithBinding(symbol: string, binding: HIRValue) {
+        this.children.push(binding);
+        this.publicSymbolTable[symbol] = binding;
+    }
+}
+
+export class HIRContext {
+    coreTypes: HIRCoreTypes;
+    corePackage: HIRPackage;
+    currentPackage: HIRPackage;
+
+    constructor() {
+        this.coreTypes = new HIRCoreTypes();
+        this.corePackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
+        this.currentPackage = this.corePackage;
+        this.corePackage.addCoreTypeMembers();
+    }
 }
