@@ -1,4 +1,5 @@
 import {AbstractSourcePosition, getOrMakeEmptySourcePosition} from "./source_code.js"
+import * as parseTree from "./parsetree.js"
 
 export abstract class HIRValue {
     sourcePosition: AbstractSourcePosition;
@@ -7,7 +8,7 @@ export abstract class HIRValue {
         this.sourcePosition = sourcePosition;
     }
 
-    abstract getType(): HIRValue;
+    abstract getType(): HIRType;
 
     isType(): boolean {
         return false;
@@ -36,6 +37,51 @@ export abstract class HIRValue {
     isVoidType() : boolean {
         return false;
     }
+
+    isConstant() : boolean {
+        return false
+    }
+
+    isConstantLiteralValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralIntegerValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralFloatValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralBooleanValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralCharacterValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralStringValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralSymbolValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralVoidValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralNilValue() : boolean {
+        return false
+    }
+
+    isConstantLiteralParseTree() : boolean {
+        return false
+    }
+
 }
 
 export class HIRType extends HIRValue {
@@ -50,7 +96,7 @@ export class HIRType extends HIRValue {
         return null;
     }
 
-    getType(): HIRValue {
+    getType(): HIRType {
         return this.coreTypes.getUniverseAtLevel(0);
     }
 
@@ -188,6 +234,144 @@ export class HIRUniverseType extends HIRType {
     }
 }
 
+export abstract class HIRConstant extends HIRValue {
+    constructor(sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+    }
+
+    isConstantValue() : boolean {
+        return true
+    }
+}
+
+export abstract class HIRConstantLiteralValue extends HIRValue {
+    type: HIRType;
+
+    constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    isConstantLiteralValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralIntegerValue extends HIRConstantLiteralValue {
+    value: number;
+
+    constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralIntegerValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralFloatValue extends HIRConstantLiteralValue {
+    value: number;
+
+    constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralFloatValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralBooleanValue extends HIRConstantLiteralValue {
+    value: boolean;
+
+    constructor(value: boolean, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralBooleanValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralCharacterValue extends HIRConstantLiteralValue {
+    value: number;
+
+    constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralCharacterValue() : boolean {
+        return true
+    }
+}
+
+export class isConstantLiteralStringValue extends HIRConstantLiteralValue {
+    value: string;
+
+    constructor(value:string, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralStringValue() : boolean {
+        return true
+    }
+}
+
+export class isConstantLiteralSymbolValue extends HIRConstantLiteralValue {
+    value: string;
+
+    constructor(value:string, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralSymbolValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralVoidValue extends HIRConstantLiteralValue {
+    constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+    }
+
+    isConstantLiteralVoidValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralNilValue extends HIRConstantLiteralValue {
+    constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+    }
+
+    isConstantLiteralNilValue() : boolean {
+        return true
+    }
+}
+
+export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
+    value: parseTree.ParseTreeNode;
+
+    constructor(value: parseTree.ParseTreeNode, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+        this.value = value;
+    }
+
+    isConstantLiteralParseTree(): boolean {
+        return true;
+    }
+}
+
 export class HIRCoreTypes {
     pointerSize = 8;
     pointerAlignment = 8;
@@ -242,6 +426,11 @@ export class HIRCoreTypes {
         this.coreTypeList.push(this.dynamicType);
         this.coreTypeList.push(this.undefinedType);
         this.coreTypeList.push(this.voidType);
+
+        this.coreValueList.push(['void',  new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['false', new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['true',  new HIRConstantLiteralBooleanValue(true, this.boolean8Type, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['nil',   new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition())]);
     }
 
     getUniverseAtLevel(level: number): HIRUniverseType {
