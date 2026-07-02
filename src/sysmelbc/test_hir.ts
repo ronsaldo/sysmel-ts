@@ -31,15 +31,11 @@ export function runTests() {
 
         let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
         builder.returnValue(argument, getOrMakeEmptySourcePosition());
+        //console.log(identity.fullPrintString());
 
-        console.log(identity.fullPrintString());
-
-/*
-        result = identity.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
-        self.assertEqual(result.value, 42)
-*/
-
-
+        let result = identity.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.int32Type, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 42);
     }
     
 } 

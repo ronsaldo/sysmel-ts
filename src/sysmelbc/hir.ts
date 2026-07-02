@@ -117,6 +117,10 @@ export abstract class HIRValue {
     isTerminatorInstruction() : boolean {
         return false;
     }
+
+    getValueInEvaluationContext(context: HIRFunctionActivationContext): HIRValue {
+        return this;
+    }
 }
 
 export class HIRType extends HIRValue {
@@ -560,9 +564,84 @@ export class HIRFunction extends HIRConstant {
         return result
     }
 
+    evaluateWithArgumentsAndCaptures(callArguments: HIRValue[], captures: HIRValue[]): HIRValue {
+        let instructions = this.enumerateInstructions();
+        let activationContext = new HIRFunctionActivationContext(instructions, this.dependentFunctionType.coreTypes, this.sourcePosition);
+        activationContext.setCallArgumentsAndCaptures(callArguments, captures);
+        return activationContext.evaluateInstructions();
+    }
+
+    evaluateWithArguments(callArguments: HIRValue[]): HIRValue {
+        return this.evaluateWithArgumentsAndCaptures(callArguments, []);
+    }
 }
 
-export class HIRFunctionLocalValue extends HIRValue {
+export class HIRFunctionActivationContext {
+    instructions: HIRFunctionLocalValue[];
+    instructionValues: HIRValue[];
+    coreTypes: HIRCoreTypes;
+    sourcePosition: AbstractSourcePosition;
+    instructionPC: number = 0;
+    pc: number = 0;
+    returnValue: HIRValue | null = null;
+
+    constructor(instructions: HIRFunctionLocalValue[], coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        this.instructions = instructions;
+        this.coreTypes = coreTypes;
+        this.sourcePosition = sourcePosition;
+        this.instructionValues = new Array(instructions.length).fill(coreTypes.voidValue);
+    }
+
+    setCallArgumentsAndCaptures(argumentValues: HIRValue[], captureValues: HIRValue[]) {
+        // Arguments
+        for(let i = 0; i < argumentValues.length; ++i) {
+            let argument = argumentValues[i];
+            if(!argument)
+                throw new Error('Expected an argument.');
+
+            this.instructionValues[i] = argument;
+        }
+
+        // Captures
+        for(let i = 0; i < captureValues.length; ++i) {
+            let capture = captureValues[i];
+            if(!capture)
+                throw new Error('Expected an argument.');
+
+            this.instructionValues[argumentValues.length + i] = capture;
+        }
+
+        // Set initial PC
+        this.pc = argumentValues.length + captureValues.length;
+    }
+
+    setCurrentInstructionValue(valueToSet: HIRValue): void {
+        this.instructionValues[this.instructionPC] = valueToSet;
+    }
+
+    evaluateInstructions(): HIRValue {
+        let instructionCount = this.instructions.length;
+        while (this.pc < instructionCount) {
+            // Fetch the instruction
+            this.instructionPC = this.pc;
+            this.pc = this.pc + 1;
+            let instruction = this.instructions[this.instructionPC];
+            if(!instruction)
+                throw new Error('Expected a valid instruction.');
+
+            // Evaluate the instruction
+            instruction.evaluateInActivationContext(this);
+
+            if(this.returnValue !== null) {
+                return this.returnValue
+            }
+        }
+        throw new Error('Reached the end of a function instructions');
+    }
+
+}
+
+export abstract class HIRFunctionLocalValue extends HIRValue {
     type: HIRType;
     name: string | null;
     index: number = -1;
@@ -580,6 +659,16 @@ export class HIRFunctionLocalValue extends HIRValue {
     toString():string {
         return `$${this.index}|${this.name}`;
     }
+
+    abstract evaluateInActivationContext(context: HIRFunctionActivationContext) : void;
+
+    getValueInEvaluationContext(context: HIRFunctionActivationContext): HIRValue {
+        let value = context.instructionValues[this.index];
+        if(!value)
+            throw new Error('Expected a function local value.');
+        return value;
+    }
+
 }
 
 export class HIRArgument extends HIRFunctionLocalValue {
@@ -597,6 +686,10 @@ export class HIRArgument extends HIRFunctionLocalValue {
         return this.toString() + ' argument';
     }
 
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        // Nothing is required here
+    }
+
 }
 
 export class HIRCapture extends HIRFunctionLocalValue {
@@ -610,6 +703,10 @@ export class HIRCapture extends HIRFunctionLocalValue {
 
     fullPrintString():string {
         return this.toString() + ' capture';
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        // Nothing is required here
     }
 }
 
@@ -647,6 +744,9 @@ export class HIRBasicBlock extends HIRFunctionLocalValue {
         return result
     }
 
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        // Nothing is required here
+    }
 }
 
 export abstract class HIRInstruction extends HIRFunctionLocalValue {
@@ -675,6 +775,11 @@ export class HIRReturnInstruction extends HIRInstruction  {
     fullPrintString(): string {
         return 'return ' + this.valueToReturn.toString()
     }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let value = this.valueToReturn.getValueInEvaluationContext(context);
+        context.returnValue = value;
+    }
 }
 
 export class HIRUnreachableInstruction extends HIRInstruction  {
@@ -688,6 +793,10 @@ export class HIRUnreachableInstruction extends HIRInstruction  {
 
     fullPrintString(): string {
         return 'unreachable'
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        throw new Error(this.sourcePosition.toString() + ': Reached unreachable instruction')
     }
 }
 
