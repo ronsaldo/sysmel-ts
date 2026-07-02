@@ -14,6 +14,14 @@ export abstract class HIRValue {
         return false;
     }
 
+    isDependentFunctionType(): boolean {
+        return false;
+    }
+
+    isSimpleFunctionType(): boolean {
+        return false;
+    }
+
     isNominalType(): boolean {
         return false;
     }
@@ -82,6 +90,33 @@ export abstract class HIRValue {
         return false
     }
 
+    isFunctionLocalValue() : boolean {
+        return false;
+    }
+
+    isArgument() : boolean {
+        return false;
+    }
+
+    isCapture() : boolean {
+        return false;
+    }
+
+    isBasicBlock() : boolean {
+        return false;
+    }
+
+    isInstruction() : boolean {
+        return false;
+    }
+
+    isPhiInstruction() : boolean {
+        return false;
+    }
+
+    isTerminatorInstruction() : boolean {
+        return false;
+    }
 }
 
 export class HIRType extends HIRValue {
@@ -234,6 +269,56 @@ export class HIRUniverseType extends HIRType {
     }
 }
 
+export class HIRDependentFunctionType extends HIRType {
+    functionArguments: HIRArgument[];
+    resultType: HIRType;
+
+    constructor(functionArguments: HIRArgument[], resultType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.functionArguments = functionArguments;
+        this.resultType = resultType;
+    }
+
+    canSimplifiy(): boolean {
+        return true;
+    }
+
+    asSimplifiedType() : HIRType {
+        if (!this.canSimplifiy())
+            return this;
+
+        let argumentTypes: HIRType[] = [];
+        for(let i = 0; i < this.functionArguments.length; ++i) {
+            let argument = this.functionArguments[i];
+            if(!argument)
+                throw new Error("Expected an argument.");
+
+            argumentTypes.push(argument.getType());
+        }
+
+        return new HIRSimpleFunctionType(argumentTypes, this.resultType, this.coreTypes, this.sourcePosition);
+    }
+
+    isDependentFunctionType(): boolean {
+        return true;
+    }
+}
+
+export class HIRSimpleFunctionType extends HIRType {
+    argumentTypes: HIRType[];
+    resultType: HIRType;
+
+    constructor(argumentTypes: HIRType[], resultType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.argumentTypes = argumentTypes;
+        this.resultType = resultType;
+    }
+
+    isSimpleFunctionType(): boolean {
+        return true;
+    }
+}
+
 export abstract class HIRConstant extends HIRValue {
     constructor(sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
@@ -372,6 +457,290 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
     }
 }
 
+export class HIRFunction extends HIRConstant {
+    name: string | null;
+    dependentFunctionType: HIRDependentFunctionType;
+    simplifiedType: HIRType;
+    captures: HIRCapture[] = [];
+
+    firstBasicBlock: HIRBasicBlock | null = null;
+    lastBasicBlock: HIRBasicBlock | null = null;
+    enumeratedInstructions: HIRFunctionLocalValue[] | null = null; 
+
+    constructor(name: string | null, dependentFunctionType: HIRDependentFunctionType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.name = name;
+        this.dependentFunctionType = dependentFunctionType;
+        this.simplifiedType = dependentFunctionType.asSimplifiedType();
+    }
+
+    getType(): HIRType {
+        return this.simplifiedType;
+    }
+
+    addBasicBlock(basicBlock: HIRBasicBlock): void {
+        if(this.lastBasicBlock === null) {
+            this.firstBasicBlock = this.lastBasicBlock = basicBlock;
+        } else {
+            basicBlock.previousBasicBlock = this.lastBasicBlock;
+            this.lastBasicBlock.nextBasicBlock = basicBlock;
+            this.lastBasicBlock = basicBlock;
+        }
+    }
+
+    enumerateInstructions(): HIRFunctionLocalValue[] {
+        if(this.enumeratedInstructions !== null)
+            return this.enumeratedInstructions;
+
+        let instructions: HIRFunctionLocalValue[] = [];
+        this.enumeratedInstructions = instructions;
+
+        function addLocalValue(localValue: HIRFunctionLocalValue): void {
+            localValue.index = instructions.length;
+            instructions.push(localValue);
+        }
+
+        // Arguments.
+        for(let i = 0; i < this.dependentFunctionType.functionArguments.length; ++i) {
+            let argument = this.dependentFunctionType.functionArguments[i];
+            if(!argument)
+                throw new Error('Expected an argument value');
+            addLocalValue(argument);
+        }
+
+        // Captures
+        for(let i = 0; i < this.captures.length; ++i) {
+            let capture = this.captures[i];
+            if(!capture)
+                throw new Error('Expected a capture value value');
+            addLocalValue(capture);
+        }
+
+        // Basic blocks
+        let basicBlock = this.firstBasicBlock;
+        while(basicBlock) {
+            addLocalValue(basicBlock);
+            let instruction = basicBlock.firstInstruction;
+
+            // Instructions
+            while(instruction) {
+                addLocalValue(instruction);
+                instruction = instruction.nextInstruction;
+            }
+
+            basicBlock = basicBlock.nextBasicBlock;
+        }
+
+        return instructions;
+    }
+
+    fullPrintString(): string {
+        this.enumerateInstructions();
+        let result = "HIRFunction ";
+        if (this.name)
+            result += this.name;
+        result += " {\n"
+
+        for(let i = 0; i < this.dependentFunctionType.functionArguments.length; ++i) {
+            let argument = this.dependentFunctionType.functionArguments[i];
+            if(!argument)
+                throw new Error('Expected a valid argument');
+            result += argument.fullPrintString();
+            result += '\n';
+        }
+
+        let basicBlock = this.firstBasicBlock;
+        while(basicBlock)
+        {
+            result += basicBlock.fullPrintString();
+            basicBlock = basicBlock.nextBasicBlock;
+        }
+
+        result += '}'
+        return result
+    }
+
+}
+
+export class HIRFunctionLocalValue extends HIRValue {
+    type: HIRType;
+    name: string | null;
+    index: number = -1;
+
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+        this.name = name;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    toString():string {
+        return `$${this.index}|${this.name}`;
+    }
+}
+
+export class HIRArgument extends HIRFunctionLocalValue {
+    isSelf: boolean = false;
+
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+    }
+
+    isArgument(): boolean {
+        return true;
+    }
+
+    fullPrintString():string {
+        return this.toString() + ' argument';
+    }
+
+}
+
+export class HIRCapture extends HIRFunctionLocalValue {
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+    }
+
+    isCapture(): boolean {
+        return true;
+    }
+
+    fullPrintString():string {
+        return this.toString() + ' capture';
+    }
+}
+
+export class HIRBasicBlock extends HIRFunctionLocalValue {
+    previousBasicBlock: HIRBasicBlock | null = null;
+    nextBasicBlock: HIRBasicBlock | null = null;
+
+    firstInstruction: HIRInstruction | null = null;
+    lastInstruction: HIRInstruction | null = null;
+
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+    }
+
+    addInstruction(instruction: HIRInstruction) : void {
+        if(this.lastInstruction === null) {
+            this.firstInstruction = this.lastInstruction = instruction;
+        } else {
+            instruction.previousInstruction = this.lastInstruction;
+            this.lastInstruction.nextInstruction = instruction;
+            this.lastInstruction = instruction;
+        }
+    }
+
+    fullPrintString(): string {
+        let result = this.toString() + ':';
+        let instruction = this.firstInstruction;
+        while(instruction) {
+            result += '\n    ';
+            result += instruction.fullPrintString();
+            instruction = instruction.nextInstruction;
+        }
+
+        result += '\n';
+        return result
+    }
+
+}
+
+export abstract class HIRInstruction extends HIRFunctionLocalValue {
+    previousInstruction: HIRInstruction | null = null;
+    nextInstruction: HIRInstruction | null = null;
+
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+    }
+
+    abstract fullPrintString(): string;
+}
+
+export class HIRReturnInstruction extends HIRInstruction  {
+    valueToReturn: HIRValue;
+
+    constructor(valueToReturn: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.valueToReturn = valueToReturn
+    }
+
+    isTerminatorInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return 'return ' + this.valueToReturn.toString()
+    }
+}
+
+export class HIRUnreachableInstruction extends HIRInstruction  {
+    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition)
+    }
+
+    isTerminatorInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return 'unreachable'
+    }
+}
+
+export class HIRBuilder {
+    hirFunction: HIRFunction;
+    context: HIRContext;
+    basicBlock: HIRBasicBlock;
+    allocaBuilder: HIRBuilder | null = null;
+    environment: HIREnvironment;
+
+    constructor(hirFunction: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIREnvironment) {
+        this.hirFunction = hirFunction;
+        this.context = context;
+        this.basicBlock = basicBlock;
+        this.environment = environment;
+    }
+
+    addInstruction(instruction: HIRInstruction): void {
+        this.basicBlock.addInstruction(instruction);
+    }
+
+    isLastTerminator(): boolean {
+        let lastInstruction = this.basicBlock.lastInstruction;
+        if(!lastInstruction)
+            return false;
+        return lastInstruction.isTerminatorInstruction();
+    }
+
+    returnValue(valueToReturn: HIRValue, sourcePosition: AbstractSourcePosition): HIRReturnInstruction {
+        let instruction = new HIRReturnInstruction(valueToReturn, this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    returnVoid(sourcePosition: AbstractSourcePosition): HIRReturnInstruction {
+        return this.returnValue(this.context.coreTypes.voidValue, sourcePosition);
+    }
+
+    unreachable(sourcePosition: AbstractSourcePosition): HIRUnreachableInstruction {
+        let instruction = new HIRUnreachableInstruction(this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+}
+
+export abstract class HIREnvironment {
+
+}
+
+export class HIREmptyEnvironment extends HIREnvironment{
+
+}
+
 export class HIRCoreTypes {
     pointerSize = 8;
     pointerAlignment = 8;
@@ -403,7 +772,13 @@ export class HIRCoreTypes {
     voidType: HIRVoidType           = new HIRVoidType('Void', this, getOrMakeEmptySourcePosition());
 
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
+    basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
 
+    voidValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition());
+    falseValue: HIRConstantLiteralBooleanValue = new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition());
+    trueValue: HIRConstantLiteralBooleanValue = new HIRConstantLiteralBooleanValue(true, this.boolean8Type, getOrMakeEmptySourcePosition());
+    nilValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition());
+    
     constructor() {
         this.coreTypeList.push(this.boolean8Type);
 
@@ -429,11 +804,12 @@ export class HIRCoreTypes {
         this.coreTypeList.push(this.voidType);
 
         this.coreTypeList.push(this.packageType);
+        this.coreTypeList.push(this.basicBlockType);
 
-        this.coreValueList.push(['void',  new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition())]);
-        this.coreValueList.push(['false', new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition())]);
-        this.coreValueList.push(['true',  new HIRConstantLiteralBooleanValue(true, this.boolean8Type, getOrMakeEmptySourcePosition())]);
-        this.coreValueList.push(['nil',   new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['void',  this.voidValue]);
+        this.coreValueList.push(['false', this.falseValue]);
+        this.coreValueList.push(['true',  this.trueValue]);
+        this.coreValueList.push(['nil',   this.nilValue]);
     }
 
     getUniverseAtLevel(level: number): HIRUniverseType {
