@@ -133,4 +133,98 @@ export function runTests() {
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 2);
     }
 
+    // While do macro
+    {
+        let topLevelResult = evaluateTopLevelSourceString('while: false do: {}')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    // While do continue with macro
+    {
+        let topLevelResult = evaluateTopLevelSourceString('while: false do: {} continueWith: ()')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    // Do while macro
+    {
+        let topLevelResult = evaluateTopLevelSourceString('do: {} while: false')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    // Do continue with while macro
+    {
+        let topLevelResult = evaluateTopLevelSourceString('do: {} continueWith: () while: false')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    /*
+    def testAssociation(self):
+        association = self.evaluateTopLevelSourceString('#first : 1')
+        self.assertTrue(association.key.isSymbolConstant())
+        self.assertEqual(association.key.value, 'first')
+
+        self.assertTrue(association.value.isIntegerConstant())
+        self.assertEqual(association.value.value, 1)
+    */
+
+    // Association type
+    {
+        let value = evaluateTopLevelSourceString('Symbol : Integer')
+        assert.ok(value.isAssociationType());
+
+        let assocType = value as hir.HIRAssociationType;
+        assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
+        assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+    }
+
+    // Association value
+    {
+        let value = evaluateTopLevelSourceString('#first : 1')
+        assert.ok(value.isConstantAssociation());
+
+        let assoc = value as hir.HIRConstantAssociation;
+        assert.ok(assoc.key.isConstantLiteralSymbolValue());
+        assert.strictEqual((assoc.key as hir.HIRConstantLiteralSymbolValue).value, 'first');
+
+        assert.ok(assoc.value.isConstantLiteralIntegerValue());
+        assert.strictEqual((assoc.value as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        let assocType = value.getType() as hir.HIRAssociationType;
+        assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
+        assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+    }
+
+    // Tuple type
+    {
+        let value = evaluateTopLevelSourceString('Integer, Float, Character')
+        assert.ok(value.isTupleType());
+
+        let tupleType = value as hir.HIRTupleType;
+        assert.strictEqual(tupleType.elements.length, 3);
+        assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
+        assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
+        assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+    }
+   
+    // Tuple
+    {
+        let value = evaluateTopLevelSourceString("1, 2.5, 'A'")
+        assert.ok(value.isConstantTuple());
+
+        let tuple = value as hir.HIRConstantTuple;
+        assert.ok(tuple.elements[0]?.isConstantLiteralIntegerValue());
+        assert.strictEqual((tuple.elements[0] as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        assert.ok(tuple.elements[1]?.isConstantLiteralFloatValue());
+        assert.strictEqual((tuple.elements[1] as hir.HIRConstantLiteralFloatValue).value, 2.5);
+
+        assert.ok(tuple.elements[2]?.isConstantLiteralCharacterValue());
+        assert.strictEqual((tuple.elements[2] as hir.HIRConstantLiteralCharacterValue).value, 65);
+
+        let tupleType = value.getType() as hir.HIRTupleType;
+        assert.strictEqual(tupleType.elements.length, 3);
+        assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
+        assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
+        assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+    }
 }

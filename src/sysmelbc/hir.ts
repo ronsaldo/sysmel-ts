@@ -90,6 +90,14 @@ export abstract class HIRValue {
         return false;
     }
 
+    isAssociationType() : boolean {
+        return false;
+    }
+
+    isTupleType() : boolean {
+        return false;
+    }
+
     isConstant() : boolean {
         return false;
     }
@@ -135,6 +143,14 @@ export abstract class HIRValue {
     }
     
     isConstantLiteralParseTree() : boolean {
+        return false;
+    }
+
+    isConstantAssociation() : boolean {
+        return false;
+    }
+
+    isConstantTuple() : boolean {
         return false;
     }
 
@@ -434,6 +450,40 @@ export class HIRMutableValueBoxType extends HIRPointerLikeType {
     }
 }
 
+/*
+    isTupleType() : boolean {
+        return false;
+    }
+*/
+
+export class HIRAssociationType extends HIRType {
+    keyType: HIRType;
+    valueType: HIRType;
+
+    constructor(keyType: HIRType, valueType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.keyType = keyType;
+        this.valueType = valueType;
+    }
+
+    isAssociationType(): boolean {
+        return true;
+    }
+}
+
+export class HIRTupleType extends HIRType {
+    elements: HIRType[];
+
+    constructor(elements: HIRType[], coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.elements = elements;
+    }
+
+    isTupleType(): boolean {
+        return true;
+    }
+}
+
 export class HIRDependentFunctionType extends HIRType {
     functionArguments: HIRArgument[];
     resultType: HIRType;
@@ -680,6 +730,54 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
 
     toString(): string {
         return 'constantLiteralParseTree';
+    }
+}
+
+export class HIRConstantAssociation extends HIRConstant {
+    key: HIRValue;
+    value: HIRValue;
+    type: HIRType;
+
+    constructor(key: HIRValue, value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.key = key;
+        this.value = value;
+        this.type = type;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    isConstantAssociation(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return `association ${this.key.toString()} `;
+    }
+}
+
+export class HIRConstantTuple extends HIRConstant {
+    elements: HIRValue[];
+    type: HIRType;
+
+    constructor(elements: HIRValue[], type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.elements = elements;
+        this.type = type;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    isConstantTuple(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return `tuple ${this.elements.toString()} `;
     }
 }
 
@@ -1602,12 +1700,38 @@ export class HIRCoreTypes {
             return new parseTree.ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, null);
         }
 
+        function whileDo(macroContext: HIRMacroContext, conditionExpression: parseTree.ParseTreeNode, bodyExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, null);
+        }
+        function whileDoContinueWith(macroContext: HIRMacroContext, conditionExpression: parseTree.ParseTreeNode, bodyExpression: parseTree.ParseTreeNode, continueExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, continueExpression);
+        }
+
+        function doWhile(macroContext: HIRMacroContext, bodyExpression: parseTree.ParseTreeNode, conditionExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeDoWhileNode(macroContext.sourcePosition,bodyExpression, null, conditionExpression);
+        }
+        function doContinueWithWhile(macroContext: HIRMacroContext, bodyExpression: parseTree.ParseTreeNode, continueExpression: parseTree.ParseTreeNode, conditionExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeDoWhileNode(macroContext.sourcePosition,bodyExpression, continueExpression, conditionExpression);
+        }
+
+        function returnWithValue(macroContext: HIRMacroContext, valueExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeReturnNode(macroContext.sourcePosition, valueExpression);
+        }
+
         this.corePrimitiveMacros = [
             new HIRPrimitiveMacro('let:with:', this.primitiveMacroType, letWith, getOrMakeEmptySourcePosition()),
             new HIRPrimitiveMacro('let:mutableWith:', this.primitiveMacroType, letMutableWith, getOrMakeEmptySourcePosition()),
 
             new HIRPrimitiveMacro('if:then:else:', this.primitiveMacroType, ifThenElse, getOrMakeEmptySourcePosition()),
             new HIRPrimitiveMacro('if:then:', this.primitiveMacroType, ifThen, getOrMakeEmptySourcePosition()),
+
+            new HIRPrimitiveMacro('while:do:', this.primitiveMacroType, whileDo, getOrMakeEmptySourcePosition()),
+            new HIRPrimitiveMacro('while:do:continueWith:', this.primitiveMacroType, whileDoContinueWith, getOrMakeEmptySourcePosition()),
+
+            new HIRPrimitiveMacro('do:while:', this.primitiveMacroType, doWhile, getOrMakeEmptySourcePosition()),
+            new HIRPrimitiveMacro('do:continueWith:while:', this.primitiveMacroType, doContinueWithWhile, getOrMakeEmptySourcePosition()),
+
+            new HIRPrimitiveMacro('return:', this.primitiveMacroType, returnWithValue, getOrMakeEmptySourcePosition()),
         ]
     }
 
@@ -1717,6 +1841,14 @@ export class HIRContext {
         return new HIREvaluationContext(this, this.createTopLevelEnvironment(sourceCode));
     }
 
+    getOrCreateAssociationType(keyType: HIRType, valueType: HIRType) {
+        return new HIRAssociationType(keyType, valueType, this.coreTypes, getOrMakeEmptySourcePosition())
+    }
+
+    getOrCreateTupleType(elements: HIRType[]) {
+        return new HIRTupleType(elements, this.coreTypes, getOrMakeEmptySourcePosition())
+    }
+
     getOrCreatePointerType(baseType: HIRType) : HIRPointerType {
         return new HIRPointerType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
     }
@@ -1797,7 +1929,19 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
-        throw new Error('TODO ParseTreeAssociationNode AnalysisAndEvaluationPass');
+        let key = this.visitDecayedNode(node.key);
+        let value: HIRValue = this.evaluationContext.context.coreTypes.nilValue;
+        if(node.value)
+            value = this.visitDecayedNode(node.value);
+
+        if(key.isType() && value.isType()) {
+            return this.evaluationContext.context.getOrCreateAssociationType(key as HIRType, value as HIRType);
+        }
+
+        let keyType = key.getType();
+        let valueType = value.getType();
+        let associationType = this.evaluationContext.context.getOrCreateAssociationType(keyType, valueType);
+        return new HIRConstantAssociation(key, value, associationType, node.sourcePosition);
     }
 
     visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
@@ -1885,7 +2029,32 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
-        throw new Error('TODO visitTupleNode AnalysisAndEvaluationPass');
+        // The empty tuple is void.
+        if(node.elements.length == 0)
+            return this.evaluationContext.context.coreTypes.voidValue;
+
+        let tupleElements: HIRValue[] = [];
+        let tupleTypes: HIRType[] = [];
+        let hasOnlyTypes: boolean = true;
+        for(let i = 0; i < node.elements.length; ++i) {
+            let elementNode = node.elements[i];
+            if(!elementNode)
+                throw new Error('Expected an element node.');
+
+            let elementValue = this.visitDecayedNode(elementNode);
+            tupleElements.push(elementValue);
+            tupleTypes.push(elementValue.getType());
+            if(!elementValue.isType())
+                hasOnlyTypes = false;
+
+        }
+
+        if(hasOnlyTypes) {
+            return this.evaluationContext.context.getOrCreateTupleType(tupleElements as HIRType[]);
+        }
+
+        let tupleType = this.evaluationContext.context.getOrCreateTupleType(tupleTypes);
+        return new HIRConstantTuple(tupleElements, tupleType, node.sourcePosition);
     }
 
     visitQuoteNode(node: parseTree.ParseTreeQuoteNode): any {
@@ -1962,16 +2131,26 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         throw new Error(node.sourcePosition.formatMessage('visitSwitchSelectionNode.'));
     }
 
-    visitReturnNode(node: parseTree.ParseReturnNode): any {
+    visitReturnNode(node: parseTree.ParseTreeReturnNode): any {
         throw new Error(node.sourcePosition.formatMessage('Invalid location for a return expression.'));
     }
 
-    visitWhileDoNode(node: parseTree.ParseWhileDoNode): any {
-        throw new Error(node.sourcePosition.formatMessage('visitWhileDoNode.'));
+    visitWhileDoNode(node: parseTree.ParseTreeWhileDoNode): any {
+        while(this.visitBooleanNode(node.condition)) {
+            this.visitOptionalNode(node.bodyExpression)
+            this.visitOptionalNode(node.continueExpression)
+        }
+
+        return this.evaluationContext.context.coreTypes.voidValue;
     }
 
-    visitDoWhileNode(node: parseTree.ParseDoWhileNode): any {
-        throw new Error(node.sourcePosition.formatMessage('visitDoWhileNode.'));
+    visitDoWhileNode(node: parseTree.ParseTreeDoWhileNode): any {
+        do {
+            this.visitOptionalNode(node.bodyExpression)
+            this.visitOptionalNode(node.continueExpression)
+        } while(this.visitBooleanNode(node.condition));
+
+        return this.evaluationContext.context.coreTypes.voidValue;
     }
 
 }

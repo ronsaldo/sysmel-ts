@@ -40,9 +40,9 @@ export abstract class ParseTreeVisitor {
     abstract visitVariableDefinitionNode(node: ParseTreeVariableDefinitionNode): any;
     abstract visitIfSelectionNode(node: ParseTreeIfSelectionNode): any;
     abstract visitSwitchSelectionNode(node: ParseTreeSwitchSelectionNode): any;
-    abstract visitReturnNode(node: ParseReturnNode): any;
-    abstract visitWhileDoNode(node: ParseWhileDoNode): any;
-    abstract visitDoWhileNode(node: ParseDoWhileNode): any;
+    abstract visitReturnNode(node: ParseTreeReturnNode): any;
+    abstract visitWhileDoNode(node: ParseTreeWhileDoNode): any;
+    abstract visitDoWhileNode(node: ParseTreeDoWhileNode): any;
 
     visitNode(node: ParseTreeNode) : any {
         return node.accept(this)
@@ -785,7 +785,7 @@ export class ParseTreeSwitchSelectionNode extends ParseTreeNode {
     }
 }
 
-export class ParseReturnNode extends ParseTreeNode {
+export class ParseTreeReturnNode extends ParseTreeNode {
     valueExpression: ParseTreeNode;
 
     constructor(sourcePosition: AbstractSourcePosition, valueExpression: ParseTreeNode) {
@@ -802,7 +802,7 @@ export class ParseReturnNode extends ParseTreeNode {
     }
 }
 
-export class ParseWhileDoNode extends ParseTreeNode {
+export class ParseTreeWhileDoNode extends ParseTreeNode {
     condition: ParseTreeNode;
     bodyExpression: ParseTreeNode;
     continueExpression: ParseTreeNode | null;
@@ -823,7 +823,7 @@ export class ParseWhileDoNode extends ParseTreeNode {
     }
 }
 
-export class ParseDoWhileNode extends ParseTreeNode {
+export class ParseTreeDoWhileNode extends ParseTreeNode {
     bodyExpression: ParseTreeNode;
     continueExpression: ParseTreeNode | null;
     condition: ParseTreeNode;
@@ -965,18 +965,18 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
         this.visitNode(node.cases);
     }
 
-    visitReturnNode(node: ParseReturnNode): any {
+    visitReturnNode(node: ParseTreeReturnNode): any {
         this.visitNode(node.valueExpression);
     }
 
-    visitWhileDoNode(node: ParseWhileDoNode): any {
+    visitWhileDoNode(node: ParseTreeWhileDoNode): any {
         this.visitNode(node.condition);
         this.visitNode(node.bodyExpression);
         this.visitOptionalNode(node.continueExpression);
 
     }
 
-    visitDoWhileNode(node: ParseDoWhileNode): any {
+    visitDoWhileNode(node: ParseTreeDoWhileNode): any {
         this.visitNode(node.bodyExpression);
         this.visitOptionalNode(node.continueExpression);
         this.visitNode(node.condition);
