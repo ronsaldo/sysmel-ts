@@ -55,7 +55,14 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {
-        throw new Error('TODO ParseTreeLexicalBlockNode AnalysisAndEvaluationPass');
+        let childEnvironment = new hir.HIRLexicalEnvironment(this.evaluationContext.environment);
+        let oldEnvironment = this.evaluationContext.environment;
+
+        let result = this.visitNode(node.body) as hir.HIRValue;
+
+        this.evaluationContext.environment = oldEnvironment;
+        
+        return result;
     }
 
     visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {

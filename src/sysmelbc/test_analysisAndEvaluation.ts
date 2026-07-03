@@ -27,6 +27,22 @@ export function runTests() {
         assert.ok(value.isConstantLiteralVoidValue());
     }
 
+    // Sequence
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('5 . 42');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+    }
+
+    // Lexical block
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('{42}');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+    }
+    
     // Literal integer
     {
         setUp();
