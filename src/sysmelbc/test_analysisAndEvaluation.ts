@@ -122,6 +122,20 @@ export function runTests() {
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
     }
 
+    // Message send
+    {
+        let value = evaluateTopLevelSourceString('42 negated')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, -42);
+    }
+
+    // Message send 2
+    {
+        //let value = evaluateTopLevelSourceString('1 + 2')
+        //assert.ok(value.isConstantLiteralIntegerValue())
+        //assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 3);
+    }
+
     // If then else
     {
         let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')
@@ -156,16 +170,6 @@ export function runTests() {
         let topLevelResult = evaluateTopLevelSourceString('do: {} continueWith: () while: false')
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
     }
-
-    /*
-    def testAssociation(self):
-        association = self.evaluateTopLevelSourceString('#first : 1')
-        self.assertTrue(association.key.isSymbolConstant())
-        self.assertEqual(association.key.value, 'first')
-
-        self.assertTrue(association.value.isIntegerConstant())
-        self.assertEqual(association.value.value, 1)
-    */
 
     // Association type
     {

@@ -14,6 +14,18 @@ export abstract class HIRValue {
         throw new Error(this.sourcePosition.formatMessage('Not a boolean value'))
     }
 
+    evaluateAsInteger(): number {
+        throw new Error(this.sourcePosition.formatMessage('Not an integer value'))
+    }
+
+    evaluateAsFloat(): number {
+        throw new Error(this.sourcePosition.formatMessage('Not a float value'))
+    }
+
+    evaluateAsNumber(): number {
+        throw new Error(this.sourcePosition.formatMessage('Not a numerical value'))
+    }
+
     evaluateAsSymbol(): string {
         throw new Error(this.sourcePosition.formatMessage('Not a symbol value'))
     }
@@ -217,6 +229,11 @@ export abstract class HIRValue {
     analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
         throw new Error(node.sourcePosition.formatMessage('Value does not support assignment.'))
     }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
+        let selfType = this.getType();
+        return selfType.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
+    }
     
 }
 
@@ -258,10 +275,33 @@ export class HIRType extends HIRValue {
     isSatisfiedByType(subtype: HIRValue) {
         return this === subtype;
     }
+
+    analyzeAndEvaluateMessageSendNodeOnType(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
+        let selector = evaluator.visitSymbolNode(node.selector);
+
+        // FIXME: remove this hack
+        if(selector == 'yourself')
+            return receiver;
+
+        let foundMethod = this.lookupSelector(selector);
+        if(!foundMethod)
+            throw new Error(node.sourcePosition.formatMessage(`type '${this.toString()}' does not have method with selector #${selector}.`))
+
+        return foundMethod.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    }
+
+    evaluateAndTypecheckArguments(evaluator: AnalysisAndEvaluationPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
+        throw new Error(sourcePosition.formatMessage('Receiver type is non-functional.'))
+    }
+
+    lookupSelector(selector: string) : HIRValue | null {
+        return null;
+    }
 }
 
 export class HIRNominalType extends HIRType {
     name: string | null;
+    methodDictionary: Record<string, HIRValue> = {}
 
     constructor(name:string | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
@@ -274,6 +314,20 @@ export class HIRNominalType extends HIRType {
 
     isNominalType(): boolean {
         return true;
+    }
+
+    addPrimitiveMethod(method: HIRPrimitiveFunction) {
+        this.withSelectorAddMethod(method.selector, method)
+    }
+
+    withSelectorAddMethod(selector: string, method: HIRValue) {
+        this.methodDictionary[selector] = method;
+    }
+
+    lookupSelector(selector: string): HIRValue | null {
+        if (selector in this.methodDictionary)
+            return this.methodDictionary[selector] as HIRValue;
+        return null;
     }
 
     toString(): string {
@@ -435,6 +489,14 @@ export class HIRReferenceType extends HIRPointerLikeType {
         return true;
     }
 
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        return this.baseType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
+    lookupSelector(selector: string): HIRValue | null {
+        return this.baseType.lookupSelector(selector)
+    }
+
     toString(): string {
         return this.baseType.toString() + ' ref';
     }
@@ -532,6 +594,24 @@ export class HIRSimpleFunctionType extends HIRType {
     isSimpleFunctionType(): boolean {
         return true;
     }
+
+    evaluateAndTypecheckArguments(evaluator: AnalysisAndEvaluationPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
+        if(callArguments.length !== this.argumentTypes.length) {
+            throw new Error(sourcePosition.formatMessage(`Expected ${this.argumentTypes.length.toString()} arguments instead of ${callArguments.length.toString()}.`))
+        }
+
+        let typecheckedArguments: HIRValue[] = [];
+        for(let i = 0; i < callArguments.length; ++i) {
+            let callArgument = callArguments[i];
+            let expectedType = this.argumentTypes[i];
+            if(!callArgument || !expectedType)
+                throw new Error('Expected a valid argument.');
+
+            let typecheckedArgument = evaluator.visitNodeWithExpectedType(callArgument, expectedType);
+            typecheckedArguments.push(typecheckedArgument)
+        }
+        return [typecheckedArguments, this.resultType];
+    }
 }
 
 export abstract class HIRConstant extends HIRValue {
@@ -569,6 +649,14 @@ export class HIRConstantLiteralIntegerValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    evaluateAsInteger(): number {
+        return this.value;
+    }
+
+    evaluateAsNumber(): number {
+        return this.value;
+    }
+
     isConstantLiteralIntegerValue() : boolean {
         return true
     }
@@ -584,6 +672,14 @@ export class HIRConstantLiteralFloatValue extends HIRConstantLiteralValue {
     constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+    
+    evaluateAsFloat(): number {
+        return this.value;
+    }
+
+    evaluateAsNumber(): number {
+        return this.value;
     }
 
     isConstantLiteralFloatValue() : boolean {
@@ -623,6 +719,14 @@ export class HIRConstantLiteralCharacterValue extends HIRConstantLiteralValue {
     constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+    
+    evaluateAsInteger(): number {
+        return this.value;
+    }
+
+    evaluateAsNumber(): number {
+        return this.value;
     }
 
     isConstantLiteralCharacterValue() : boolean {
@@ -810,10 +914,49 @@ export class HIRPrimitiveMacro extends HIRConstant {
         return this.type;
     }
 
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        throw new Error('TODO: HIRPrimitiveMacro analyzeAndEvaluateMessageSendNode')
+    }
+
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
         let macroContext = new HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition);
         let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
         return evaluator.visitNode(expandedMacro);
+    }
+}
+
+export class HIRPrimitiveFunction extends HIRConstant {
+    selector: string;
+    name: string;
+    type: HIRType;
+    primitiveFunction: any;
+    isCompileTime: boolean;
+    isPure: boolean;
+
+    constructor(selector: string, name: string, type: HIRType, primitiveFunction: any, isCompileTime: boolean, isPure: boolean, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.selector = selector;
+        this.name = name;
+        this.type = type;
+        this.primitiveFunction = primitiveFunction;
+        this.isCompileTime = isCompileTime;
+        this.isPure = isPure;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let allArguments: parseTree.ParseTreeNode[] = [receiverNode];
+        allArguments.push(...node.sendArguments);
+        let [typecheckedArguments, resultType] = this.type.evaluateAndTypecheckArguments(evaluator, allArguments, node.sourcePosition);
+        return this.primitiveFunction(...typecheckedArguments, resultType, node.sourcePosition)
+    }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+        throw new Error('TODO: HIRPrimitiveFunction analyzeAndEvaluateApplicationNode')
     }
 }
 
@@ -1683,6 +1826,7 @@ export class HIRCoreTypes {
         this.coreValueList.push(['nil',   this.nilValue]);
 
         this.createCorePrimitiveMacros();
+        this.createCorePrimitiveFunctions();
     }
 
     createCorePrimitiveMacros() {
@@ -1733,6 +1877,27 @@ export class HIRCoreTypes {
 
             new HIRPrimitiveMacro('return:', this.primitiveMacroType, returnWithValue, getOrMakeEmptySourcePosition()),
         ]
+    }
+    
+    createCorePrimitiveFunctions() {
+        this.createIntegerPrimitiveFunctions(this.integerType);
+        this.createIntegerPrimitiveFunctions(this.int32Type);
+        this.createIntegerPrimitiveFunctions(this.uint32Type);
+        this.createIntegerPrimitiveFunctions(this.int64Type);
+        this.createIntegerPrimitiveFunctions(this.uint64Type);
+    }
+
+    createIntegerPrimitiveFunctions(integerType: HIRNominalType) {
+        function integerNegated(operand: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(-operand.evaluateAsInteger(), resultType, sourcePosition)
+        }
+
+        let primitivePrefix = integerType.toString() + "::";
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('negated', primitivePrefix + 'negated', this.getOrCreateSimpleFunctionType([integerType], integerType), integerNegated, true, true, getOrMakeEmptySourcePosition()))
+    }
+
+    getOrCreateSimpleFunctionType(argumentTypes: HIRType[], resultType: HIRType) : HIRSimpleFunctionType {
+        return new HIRSimpleFunctionType(argumentTypes, resultType, this, getOrMakeEmptySourcePosition());
     }
 
     getUniverseAtLevel(level: number): HIRUniverseType {
@@ -2016,7 +2181,8 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
-        throw new Error('TODO visitMessageSendNode AnalysisAndEvaluationPass');
+        let receiver = this.visitNode(node.receiver) as HIRValue;
+        return receiver.analyzeAndEvaluateMessageSendNode(this, node, receiver)
     }
 
     visitSequenceNode(node: parseTree.ParseTreeSequenceNode): any {
