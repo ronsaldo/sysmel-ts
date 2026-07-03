@@ -19,6 +19,10 @@ function setUp() {
     context = new hir.HIRContext();
 }
 
+function tearDown() {
+    context.finishPendingAnalysis();
+}
+
 export function runTests() {
     // Empty
     {
@@ -294,18 +298,20 @@ export function runTests() {
 
     // Function
     {
+        setUp();
         let functionValue = evaluateTopLevelSourceString('{:(Integer)x :: Integer | x}');
         assert.ok(functionValue.isFunction())
-        //console.log((functionValue as hir.HIRFunction).fullPrintString())
         let result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
         assert.ok(result.isConstantLiteralIntegerValue());
         assert.strictEqual(result.evaluateAsInteger(), 42);
 
-        //functionValue = evaluateTopLevelSourceString('{:(Integer)x :: Integer | x negated}');
-        //assert.ok(functionValue.isFunction())
-        //result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
-        //assert.ok(result.isConstantLiteralIntegerValue());
-        //assert.strictEqual(result.evaluateAsInteger(), -42);
+        functionValue = evaluateTopLevelSourceString('{:(Integer)x :: Integer | x negated}');
+        assert.ok(functionValue.isFunction())
+        result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), -42);
+
+        tearDown();
     }
 
     // If then else

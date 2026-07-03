@@ -255,6 +255,11 @@ export abstract class HIRValue {
         return selfType.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
     }
 
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
+        let selfType = this.getType();
+        return selfType.analyzeAndBuildMessageSendNodeOnType(builder, node, receiver)
+    }
+
     asArrowArguments(): HIRType[] {
         throw new Error(this.sourcePosition.formatMessage('Not a valid type for the arrow arguments'));
     }
@@ -314,7 +319,25 @@ export class HIRType extends HIRValue {
         return foundMethod.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
     }
 
+    analyzeAndBuildMessageSendNodeOnType(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
+        let selector = buildPass.evaluateSymbolNode(node.selector);
+
+        // FIXME: remove this hack
+        if(selector == 'yourself')
+            return receiver;
+
+        let foundMethod = this.lookupSelector(selector);
+        if(!foundMethod)
+            throw new Error(node.sourcePosition.formatMessage(`type '${this.toString()}' does not have method with selector #${selector}.`))
+
+        return foundMethod.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+    }
+
     evaluateAndTypecheckArguments(evaluator: AnalysisAndEvaluationPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
+        throw new Error(sourcePosition.formatMessage('Receiver type is non-functional.'))
+    }
+
+    analyzeBuildAndTypecheckArguments(buildPass: AnalysisAndBuildPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
         throw new Error(sourcePosition.formatMessage('Receiver type is non-functional.'))
     }
 
@@ -538,6 +561,10 @@ export class HIRReferenceType extends HIRPointerLikeType {
         return this.baseType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
     }
 
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        return this.baseType.analyzeAndBuildMessageSendNode(builder, node, receiver);
+    }
+
     lookupSelector(selector: string): HIRValue | null {
         return this.baseType.lookupSelector(selector)
     }
@@ -661,6 +688,26 @@ export class HIRSimpleFunctionType extends HIRType {
         }
         return [typecheckedArguments, this.resultType];
     }
+
+    analyzeBuildAndTypecheckArguments(buildPass: AnalysisAndBuildPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
+        if(callArguments.length !== this.argumentTypes.length) {
+            throw new Error(sourcePosition.formatMessage(`Expected ${this.argumentTypes.length.toString()} arguments instead of ${callArguments.length.toString()}.`))
+        }
+
+        let typecheckedArguments: HIRValue[] = [];
+        for(let i = 0; i < callArguments.length; ++i) {
+            let callArgument = callArguments[i];
+            let expectedType = this.argumentTypes[i];
+            if(!callArgument || !expectedType)
+                throw new Error('Expected a valid argument.');
+
+            let typecheckedArgument = buildPass.visitNodeWithExpectedType(callArgument, expectedType);
+            typecheckedArguments.push(typecheckedArgument)
+        }
+
+        return [typecheckedArguments, this.resultType];
+    }
+
 }
 
 export abstract class HIRConstant extends HIRValue {
@@ -1011,8 +1058,24 @@ export class HIRPrimitiveFunction extends HIRConstant {
         return this.primitiveFunction(...typecheckedArguments, resultType, node.sourcePosition)
     }
 
+    analyzeAndBuildMessageSendNode(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let allArguments: parseTree.ParseTreeNode[] = [receiverNode];
+        allArguments.push(...node.sendArguments);
+        let [typecheckedArguments, resultType] = this.type.analyzeBuildAndTypecheckArguments(buildPass, allArguments, node.sourcePosition);
+        return buildPass.builder.call(this, typecheckedArguments, resultType, node.sourcePosition);
+    }
+
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
         throw new Error('TODO: HIRPrimitiveFunction analyzeAndEvaluateApplicationNode')
+    }
+
+    evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
+        return this.primitiveFunction(...callArguments);
+    }
+
+    toString(): string {
+        return this.name
     }
 }
 
@@ -2945,6 +3008,14 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         return value;
     }
 
+    evaluateSymbolNode(symbolNode: parseTree.ParseTreeNode) : string {
+        let symbolValue = this.visitDecayedNode(symbolNode);
+        if (!symbolValue.isConstantLiteralSymbolValue()) {
+            throw new Error(symbolNode.sourcePosition.formatMessage('Expected a symbol value.'));
+        }
+        return symbolValue.evaluateAsSymbol();
+    }
+
     visitNodeExpectingType(node: parseTree.ParseTreeNode) : HIRType {
         let value = this.visitDecayedNode(node);
         if(!value.isType())
@@ -3009,22 +3080,27 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {
-        throw new Error('visitLiteralCharacterNode')
+        return new HIRConstantLiteralCharacterValue(node.value, this.builder.context.coreTypes.characterType, node.sourcePosition);
     }
+
     visitLiteralFloatNode(node: parseTree.ParseTreeLiteralFloatNode): any {
-        throw new Error('visitLiteralFloatNode')
+        return new HIRConstantLiteralFloatValue(node.value, this.builder.context.coreTypes.floatType, node.sourcePosition);
     }
+
     visitLiteralIntegerNode(node: parseTree.ParseTreeLiteralIntegerNode): any {
-        throw new Error('visitLiteralIntegerNode')
+        return new HIRConstantLiteralIntegerValue(node.value, this.builder.context.coreTypes.integerType, node.sourcePosition);
     }
+
     visitLiteralStringNode(node: parseTree.ParseTreeLiteralStringNode): any {
-        throw new Error('visitLiteralStringNode')
+        return new HIRConstantLiteralStringValue(node.value, this.builder.context.coreTypes.stringType, node.sourcePosition);
     }
+
     visitLiteralSymbolNode(node: parseTree.ParseTreeLiteralSymbolNode): any {
-        throw new Error('visitLiteralSymbolNode')
+        return new HIRConstantLiteralSymbolValue(node.value, this.builder.context.coreTypes.symbolType, node.sourcePosition);
     }
+
     visitLiteralValueNode(node: parseTree.ParseTreeLiteralValueNode): any {
-        throw new Error('visitLiteralValueNode')
+        return node.value as HIRValue;
     }
 
     visitCascadedMessageNode(node: parseTree.ParseTreeCascadedMessageNode): any {
@@ -3034,12 +3110,18 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error('visitMessageCascadeNode')
     }
     visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
-        throw new Error('visitMessageSendNode')
+        let receiver = this.visitNode(node.receiver) as HIRValue;
+        return receiver.analyzeAndBuildMessageSendNode(this, node, receiver);
     }
 
     visitSequenceNode(node: parseTree.ParseTreeSequenceNode): any {
-        throw new Error('visitSequenceNode')
+        let result: HIRValue = this.builder.context.coreTypes.voidValue
+        for(let i = 0; i < node.elements.length; ++i) {
+            result = this.visitNode(node.elements[i] as parseTree.ParseTreeNode) as HIRValue
+        }
+        return result;
     }
+
     visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
         throw new Error('visitTupleNode')
     }
