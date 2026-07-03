@@ -21,6 +21,10 @@ export abstract class AbstractSourcePosition {
         return message;
     }
 
+    getSourceCode(): SourceCode | null {
+        return null;
+    }
+
 };
 
 export class EmptySourcePosition extends AbstractSourcePosition {
@@ -82,6 +86,11 @@ export class SourcePosition extends AbstractSourcePosition{
     formatMessage(message: string) : string {
         return this.toString() + ': ' + message;
     }
+
+    getSourceCode(): SourceCode | null {
+        return this.sourceCode;
+    }
+
 }
 
 let emptySourcePosition = new EmptySourcePosition;

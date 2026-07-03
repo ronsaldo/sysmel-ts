@@ -1,4 +1,4 @@
-import {SourceCode, SourcePosition} from "./source_code.js"
+import {SourceCode, AbstractSourcePosition, SourcePosition} from "./source_code.js"
 
 export abstract class ParseTreeVisitor {
     abstract visitErrorNode(node: ParseTreeErrorNode): any;
@@ -64,8 +64,8 @@ export abstract class ParseTreeVisitor {
 };
 
 export abstract class ParseTreeNode {
-    sourcePosition: SourcePosition;
-    constructor(sourcePosition: SourcePosition) {
+    sourcePosition: AbstractSourcePosition;
+    constructor(sourcePosition: AbstractSourcePosition) {
         this.sourcePosition = sourcePosition
     }
 
@@ -214,7 +214,7 @@ export abstract class ParseTreeNode {
 
 export class ParseTreeErrorNode extends ParseTreeNode{
     errorMessage: string;
-    constructor(sourcePosition: SourcePosition, errorMessage: string) {
+    constructor(sourcePosition: AbstractSourcePosition, errorMessage: string) {
         super(sourcePosition);
         this.errorMessage = errorMessage;
     }
@@ -243,7 +243,7 @@ export class ParseTreeApplicationNode extends ParseTreeNode {
     functional: ParseTreeNode;
     applicationArguments: ParseTreeNode[];
     
-    constructor(sourcePosition: SourcePosition, functional: ParseTreeNode, applicationArguments: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, functional: ParseTreeNode, applicationArguments: ParseTreeNode[]) {
         super(sourcePosition);
         this.functional = functional;
         this.applicationArguments = applicationArguments;
@@ -262,7 +262,7 @@ export class ParseTreeAssignmentNode extends ParseTreeNode {
     store: ParseTreeNode;
     value: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, store: ParseTreeNode, value: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, store: ParseTreeNode, value: ParseTreeNode) {
         super(sourcePosition);
         this.store = store;
         this.value = value;
@@ -281,7 +281,7 @@ export class ParseTreeAssociationNode extends ParseTreeNode {
     key: ParseTreeNode;
     value: ParseTreeNode | null;
 
-    constructor(sourcePosition: SourcePosition, key: ParseTreeNode, value: ParseTreeNode | null) {
+    constructor(sourcePosition: AbstractSourcePosition, key: ParseTreeNode, value: ParseTreeNode | null) {
         super(sourcePosition);
         this.key = key;
         this.value = value;
@@ -299,7 +299,7 @@ export class ParseTreeAssociationNode extends ParseTreeNode {
 export class ParseTreeDictionaryNode extends ParseTreeNode {
     elements: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, elements: ParseTreeNode[]) {
         super(sourcePosition);
         this.elements = elements;
     }
@@ -316,7 +316,7 @@ export class ParseTreeDictionaryNode extends ParseTreeNode {
 export class ParseTreeBinaryExpressionSequenceNode extends ParseTreeNode {
     operands: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, operands: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, operands: ParseTreeNode[]) {
         super(sourcePosition);
         this.operands = operands;
     }
@@ -350,7 +350,7 @@ export class ParseTreeBinaryExpressionSequenceNode extends ParseTreeNode {
 export class ParseTreeIdentifierReferenceNode extends ParseTreeNode {
     symbol: string;
 
-    constructor(sourcePosition: SourcePosition, symbol: string) {
+    constructor(sourcePosition: AbstractSourcePosition, symbol: string) {
         super(sourcePosition);
         this.symbol = symbol;
     }
@@ -369,7 +369,7 @@ export class ParseTreeArgumentDefinitionNode extends ParseTreeNode {
     typeExpression: ParseTreeNode | null;
     isSelf: boolean;
 
-    constructor(sourcePosition: SourcePosition, name: string | null, typeExpression: ParseTreeNode | null, isSelf: boolean = false) {
+    constructor(sourcePosition: AbstractSourcePosition, name: string | null, typeExpression: ParseTreeNode | null, isSelf: boolean = false) {
         super(sourcePosition);
         this.name = name;
         this.typeExpression = typeExpression;
@@ -389,7 +389,7 @@ export class ParseTreeFunctionTypeNode extends ParseTreeNode {
     argumentDefinitions: ParseTreeArgumentDefinitionNode[];
     resultTypeExpression: ParseTreeNode | null;
 
-    constructor(sourcePosition: SourcePosition, argumentDefinitions: ParseTreeArgumentDefinitionNode[], resultTypeExpression: ParseTreeNode | null) {
+    constructor(sourcePosition: AbstractSourcePosition, argumentDefinitions: ParseTreeArgumentDefinitionNode[], resultTypeExpression: ParseTreeNode | null) {
         super(sourcePosition);
         this.argumentDefinitions = argumentDefinitions;
         this.resultTypeExpression = resultTypeExpression;
@@ -411,7 +411,7 @@ export class ParseTreeFunctionNode extends ParseTreeNode {
     isPublic: boolean;
     isMethod: boolean;
 
-    constructor(sourcePosition: SourcePosition,
+    constructor(sourcePosition: AbstractSourcePosition,
         nameExpression: ParseTreeNode | null, functionType: ParseTreeFunctionTypeNode,
         body: ParseTreeNode, isPublic: boolean, isMethod: boolean) {
         super(sourcePosition);
@@ -435,7 +435,7 @@ export class ParseTreeFunctionNode extends ParseTreeNode {
 export class ParseTreeLexicalBlockNode extends ParseTreeNode {
     body: ParseTreeNode;
     
-    constructor(sourcePosition: SourcePosition, body: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, body: ParseTreeNode) {
         super(sourcePosition);
         this.body = body;
     }
@@ -458,7 +458,7 @@ export abstract class ParseTreeLiteralNode extends ParseTreeNode {
 export class ParseTreeLiteralCharacterNode extends ParseTreeNode {
     value: number;
 
-    constructor(sourcePosition: SourcePosition, value: number) {
+    constructor(sourcePosition: AbstractSourcePosition, value: number) {
         super(sourcePosition);
         this.value = value;
     }
@@ -475,7 +475,7 @@ export class ParseTreeLiteralCharacterNode extends ParseTreeNode {
 export class ParseTreeLiteralFloatNode extends ParseTreeNode {
     value: number;
 
-    constructor(sourcePosition: SourcePosition, value: number) {
+    constructor(sourcePosition: AbstractSourcePosition, value: number) {
         super(sourcePosition);
         this.value = value;
     }
@@ -492,7 +492,7 @@ export class ParseTreeLiteralFloatNode extends ParseTreeNode {
 export class ParseTreeLiteralIntegerNode extends ParseTreeNode {
     value: number;
 
-    constructor(sourcePosition: SourcePosition, value: number) {
+    constructor(sourcePosition: AbstractSourcePosition, value: number) {
         super(sourcePosition);
         this.value = value;
     }
@@ -509,7 +509,7 @@ export class ParseTreeLiteralIntegerNode extends ParseTreeNode {
 export class ParseTreeLiteralStringNode extends ParseTreeNode {
     value: string;
 
-    constructor(sourcePosition: SourcePosition, value: string) {
+    constructor(sourcePosition: AbstractSourcePosition, value: string) {
         super(sourcePosition);
         this.value = value;
     }
@@ -526,7 +526,7 @@ export class ParseTreeLiteralStringNode extends ParseTreeNode {
 export class ParseTreeLiteralSymbolNode extends ParseTreeNode {
     value: string;
 
-    constructor(sourcePosition: SourcePosition, value: string) {
+    constructor(sourcePosition: AbstractSourcePosition, value: string) {
         super(sourcePosition);
         this.value = value;
     }
@@ -543,7 +543,7 @@ export class ParseTreeLiteralSymbolNode extends ParseTreeNode {
 export class ParseTreeLiteralValueNode extends ParseTreeNode {
     value: any;
 
-    constructor(sourcePosition: SourcePosition, value: any) {
+    constructor(sourcePosition: AbstractSourcePosition, value: any) {
         super(sourcePosition);
         this.value = value;
     }
@@ -561,7 +561,7 @@ export class ParseTreeCascadedMessageNode extends ParseTreeNode {
     selector: ParseTreeNode;
     sendArguments: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
         super(sourcePosition);
         this.selector = selector;
         this.sendArguments = sendArguments;
@@ -580,7 +580,7 @@ export class ParseTreeMessageCascadeNode extends ParseTreeNode {
     receiver: ParseTreeNode;
     cascadedMessages: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, receiver: ParseTreeNode, cascadedMessages: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, receiver: ParseTreeNode, cascadedMessages: ParseTreeNode[]) {
         super(sourcePosition);
         this.receiver = receiver;
         this.cascadedMessages = cascadedMessages;
@@ -600,7 +600,7 @@ export class ParseTreeMessageSendNode extends ParseTreeNode {
     selector: ParseTreeNode;
     sendArguments: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, receiver: ParseTreeNode, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, receiver: ParseTreeNode, selector: ParseTreeNode, sendArguments: ParseTreeNode[]) {
         super(sourcePosition);
         this.receiver = receiver;
         this.selector = selector;
@@ -623,7 +623,7 @@ export class ParseTreeMessageSendNode extends ParseTreeNode {
 export class ParseTreeSequenceNode extends ParseTreeNode {
     elements: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, elements: ParseTreeNode[]) {
         super(sourcePosition);
         this.elements = elements;
     }
@@ -640,7 +640,7 @@ export class ParseTreeSequenceNode extends ParseTreeNode {
 export class ParseTreeTupleNode extends ParseTreeNode {
     elements: ParseTreeNode[];
 
-    constructor(sourcePosition: SourcePosition, elements: ParseTreeNode[]) {
+    constructor(sourcePosition: AbstractSourcePosition, elements: ParseTreeNode[]) {
         super(sourcePosition);
         this.elements = elements;
     }
@@ -657,7 +657,7 @@ export class ParseTreeTupleNode extends ParseTreeNode {
 export class ParseTreeQuoteNode extends ParseTreeNode {
     expression: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, expression: ParseTreeNode) {
         super(sourcePosition);
         this.expression = expression;
     }
@@ -674,7 +674,7 @@ export class ParseTreeQuoteNode extends ParseTreeNode {
 export class ParseTreeQuasiQuoteNode extends ParseTreeNode {
     expression: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, expression: ParseTreeNode) {
         super(sourcePosition);
         this.expression = expression;
     }
@@ -691,7 +691,7 @@ export class ParseTreeQuasiQuoteNode extends ParseTreeNode {
 export class ParseTreeQuasiUnquoteNode extends ParseTreeNode {
     expression: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, expression: ParseTreeNode) {
         super(sourcePosition);
         this.expression = expression;
     }
@@ -708,7 +708,7 @@ export class ParseTreeQuasiUnquoteNode extends ParseTreeNode {
 export class ParseTreeSpliceNode extends ParseTreeNode {
     expression: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, expression: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, expression: ParseTreeNode) {
         super(sourcePosition);
         this.expression = expression;
     }
@@ -728,7 +728,7 @@ export class ParseTreeVariableDefinitionNode extends ParseTreeNode {
     initialValue: ParseTreeNode | null;
     isMutable: boolean;
 
-    constructor(sourcePosition: SourcePosition, nameExpression: ParseTreeNode | null, typeExpression: ParseTreeNode | null, initialValue: ParseTreeNode | null, isMutable: boolean) {
+    constructor(sourcePosition: AbstractSourcePosition, nameExpression: ParseTreeNode | null, typeExpression: ParseTreeNode | null, initialValue: ParseTreeNode | null, isMutable: boolean) {
         super(sourcePosition);
         this.nameExpression = nameExpression;
         this.typeExpression = typeExpression;
@@ -748,13 +748,13 @@ export class ParseTreeVariableDefinitionNode extends ParseTreeNode {
 export class ParseTreeIfSelectionNode extends ParseTreeNode {
     condition: ParseTreeNode;
     trueExpression: ParseTreeNode;
-    falseExpresion: ParseTreeNode | null;
+    falseExpression: ParseTreeNode | null;
 
-    constructor(sourcePosition: SourcePosition, condition: ParseTreeNode, trueExpression: ParseTreeNode, falseExpresion: ParseTreeNode | null) {
+    constructor(sourcePosition: AbstractSourcePosition, condition: ParseTreeNode, trueExpression: ParseTreeNode, falseExpression: ParseTreeNode | null) {
         super(sourcePosition);
         this.condition = condition;
         this.trueExpression = trueExpression;
-        this.falseExpresion = falseExpresion;
+        this.falseExpression = falseExpression;
     }
 
     accept(visitor: ParseTreeVisitor) {
@@ -770,7 +770,7 @@ export class ParseTreeSwitchSelectionNode extends ParseTreeNode {
     valueExpression: ParseTreeNode;
     cases: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, valueExpression: ParseTreeNode, cases: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, valueExpression: ParseTreeNode, cases: ParseTreeNode) {
         super(sourcePosition);
         this.valueExpression = valueExpression;
         this.cases = cases;
@@ -788,7 +788,7 @@ export class ParseTreeSwitchSelectionNode extends ParseTreeNode {
 export class ParseReturnNode extends ParseTreeNode {
     valueExpression: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, valueExpression: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, valueExpression: ParseTreeNode) {
         super(sourcePosition);
         this.valueExpression = valueExpression;
     }
@@ -807,7 +807,7 @@ export class ParseWhileDoNode extends ParseTreeNode {
     bodyExpression: ParseTreeNode;
     continueExpression: ParseTreeNode | null;
 
-    constructor(sourcePosition: SourcePosition, condition: ParseTreeNode, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null) {
+    constructor(sourcePosition: AbstractSourcePosition, condition: ParseTreeNode, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null) {
         super(sourcePosition);
         this.condition = condition;
         this.bodyExpression = bodyExpression;
@@ -828,7 +828,7 @@ export class ParseDoWhileNode extends ParseTreeNode {
     continueExpression: ParseTreeNode | null;
     condition: ParseTreeNode;
 
-    constructor(sourcePosition: SourcePosition, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null, condition: ParseTreeNode) {
+    constructor(sourcePosition: AbstractSourcePosition, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null, condition: ParseTreeNode) {
         super(sourcePosition);
         this.bodyExpression = bodyExpression;
         this.continueExpression = continueExpression;
@@ -957,7 +957,7 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
     visitIfSelectionNode(node: ParseTreeIfSelectionNode): any {
         this.visitNode(node.condition);
         this.visitNode(node.trueExpression);
-        this.visitOptionalNode(node.falseExpresion);
+        this.visitOptionalNode(node.falseExpression);
     }
 
     visitSwitchSelectionNode(node: ParseTreeSwitchSelectionNode): any {

@@ -9,7 +9,7 @@ function evaluateTopLevelSourceString(sourceString: string): hir.HIRValue {
     let ast = parser.parseSourceString(sourceString)
     assert.ok(new parseTree.ParseTreeParseErrorVisitor().checkAndPrintErrors(ast));
 
-    let evaluationContext = context.createTopLevelEvaluationContext(ast.sourcePosition.sourceCode);
+    let evaluationContext = context.createTopLevelEvaluationContext(ast.sourcePosition.getSourceCode());
     let result = new hir.AnalysisAndEvaluationPass(evaluationContext).visitNode(ast);
     return result as hir.HIRValue;
 }
@@ -97,6 +97,29 @@ export function runTests() {
 
         topLevelResult = evaluateTopLevelSourceString('nil')
         assert.ok(topLevelResult.isConstantLiteralNilValue())
+    }
+
+    // let with macro
+    {
+        //let topLevelResult = evaluateTopLevelSourceString('let: #x with: 42')
+        //assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        //assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        /*topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+        */
+    }
+
+    // If then else
+    {
+        let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        topLevelResult = evaluateTopLevelSourceString('if: false then: 1 else: 2')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 2);
     }
 
 }

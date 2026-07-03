@@ -189,6 +189,10 @@ export abstract class HIRValue {
     analyzeAndEvaluateIdentifierReferenceNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
         return this;
     }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+        throw new Error('TODO: analyzeAndEvaluateApplicationNode')
+    }
 }
 
 export class HIRType extends HIRValue {
@@ -216,6 +220,14 @@ export class HIRType extends HIRValue {
 
     isType(): boolean {
         return true;
+    }
+
+    isSatisfiedByValue(value: HIRValue) {
+        return this.isSatisfiedByType(value.getType())
+    }
+
+    isSatisfiedByType(subtype: HIRValue) {
+        return this === subtype;
     }
 }
 
@@ -652,6 +664,42 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
 
     toString(): string {
         return 'constantLiteralParseTree';
+    }
+}
+
+export class HIRMacroContext extends HIRValue {
+    coreTypes: HIRCoreTypes;
+
+    constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.coreTypes = coreTypes;
+    }
+
+    getType(): HIRType {
+        return this.coreTypes.macroContextType;
+    }
+}
+
+export class HIRPrimitiveMacro extends HIRConstant {
+    name: string;
+    type: HIRType;
+    primitiveFunction: any;
+
+    constructor(name: string, type: HIRType, primitiveFunction: any, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.name = name;
+        this.type = type;
+        this.primitiveFunction = primitiveFunction;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+        let macroContext = new HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition);
+        let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
+        return evaluator.visitNode(expandedMacro);
     }
 }
 
@@ -1432,6 +1480,7 @@ export class HIRCoreTypes {
     pointerAlignment = 8;
     coreTypeList: HIRType[] = [];
     coreValueList: [string, HIRValue][] = [];
+    corePrimitiveMacros: HIRPrimitiveMacro[] = [];
     universeLevels: Record<number, HIRUniverseType> = {};
 
     characterType: HIRNominalType = new HIRNominalType('Character', this, getOrMakeEmptySourcePosition());
@@ -1466,6 +1515,8 @@ export class HIRCoreTypes {
 
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
+    macroContextType: HIRNominalType = new HIRNominalType('MacroContext', this, getOrMakeEmptySourcePosition());
+    primitiveMacroType: HIRNominalType = new HIRNominalType('PrimitiveMacro', this, getOrMakeEmptySourcePosition());
 
     voidValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition());
     falseValue: HIRConstantLiteralBooleanValue = new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition());
@@ -1504,11 +1555,39 @@ export class HIRCoreTypes {
 
         this.coreTypeList.push(this.packageType);
         this.coreTypeList.push(this.basicBlockType);
+        this.coreTypeList.push(this.macroContextType);
+        this.coreTypeList.push(this.primitiveMacroType);
 
         this.coreValueList.push(['void',  this.voidValue]);
         this.coreValueList.push(['false', this.falseValue]);
         this.coreValueList.push(['true',  this.trueValue]);
         this.coreValueList.push(['nil',   this.nilValue]);
+
+        this.createCorePrimitiveMacros();
+    }
+
+    createCorePrimitiveMacros() {
+        function letWith(macroContext: HIRMacroContext, nameExpression: parseTree.ParseTreeNode, initialValue: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, false);
+        }
+        function letMutableWith(macroContext: HIRMacroContext, nameExpression: parseTree.ParseTreeNode, initialValue: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, false);
+        }
+
+        function ifThenElse(macroContext: HIRMacroContext, conditionExpression: parseTree.ParseTreeNode, trueExpression: parseTree.ParseTreeNode, falseExpresion: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, falseExpresion);
+        }
+        function ifThen(macroContext: HIRMacroContext, conditionExpression: parseTree.ParseTreeNode, trueExpression: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, null);
+        }
+
+        this.corePrimitiveMacros = [
+            new HIRPrimitiveMacro('let:with:', this.primitiveMacroType, letWith, getOrMakeEmptySourcePosition()),
+            new HIRPrimitiveMacro('let:mutableWith:', this.primitiveMacroType, letMutableWith, getOrMakeEmptySourcePosition()),
+
+            new HIRPrimitiveMacro('if:then:else:', this.primitiveMacroType, ifThenElse, getOrMakeEmptySourcePosition()),
+            new HIRPrimitiveMacro('if:then:', this.primitiveMacroType, ifThen, getOrMakeEmptySourcePosition()),
+        ]
     }
 
     getUniverseAtLevel(level: number): HIRUniverseType {
@@ -1539,6 +1618,7 @@ export class HIRPackage extends HIRValue {
     addCoreTypeMembers(): void {
         this.addCoreTypeListMembers();
         this.addCoreTypeValueList();
+        this.addCorePrimitiveMacros();
     }
 
     addCoreTypeListMembers(): void {
@@ -1560,6 +1640,15 @@ export class HIRPackage extends HIRValue {
 
             let [name, coreValue] = coreValueTuple;
             this.addSymbolWithBinding(name, coreValue)
+        }
+    }
+
+    addCorePrimitiveMacros(): void {
+        for(let i = 0; i < this.coreTypes.corePrimitiveMacros.length; ++i) {
+            let corePrimitiveMacro = this.coreTypes.corePrimitiveMacros[i];
+            if(!corePrimitiveMacro) continue;
+
+            this.addSymbolWithBinding(corePrimitiveMacro.name, corePrimitiveMacro);
         }
     }
 
@@ -1587,21 +1676,23 @@ export class HIRContext {
         this.corePackage.addCoreTypeMembers();
     }
 
-    createTopLevelEnvironment(sourceCode: SourceCode): HIRLexicalEnvironment {
+    createTopLevelEnvironment(sourceCode: SourceCode | null): HIRLexicalEnvironment {
         let packageEnvironment = new HIRPackageEnvironment(this.currentPackage, new HIREmptyEnvironment());
         let lexicalEnvironment = new HIRLexicalEnvironment(packageEnvironment);
 
-        if(sourceCode.directory) {
-            lexicalEnvironment.setSymbolBinding('__FileDir__', new HIRConstantLiteralStringValue(sourceCode.directory, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
-        }
-        if(sourceCode.name) {
-            lexicalEnvironment.setSymbolBinding('__FileName__', new HIRConstantLiteralStringValue(sourceCode.name, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
+        if(sourceCode) {
+            if(sourceCode.directory) {
+                lexicalEnvironment.setSymbolBinding('__FileDir__', new HIRConstantLiteralStringValue(sourceCode.directory, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
+            }
+            if(sourceCode.name) {
+                lexicalEnvironment.setSymbolBinding('__FileName__', new HIRConstantLiteralStringValue(sourceCode.name, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
+            }
         }
 
         return lexicalEnvironment;
     }
 
-    createTopLevelEvaluationContext(sourceCode: SourceCode): HIREvaluationContext {
+    createTopLevelEvaluationContext(sourceCode: SourceCode | null): HIREvaluationContext {
         return new HIREvaluationContext(this, this.createTopLevelEnvironment(sourceCode));
     }
 
@@ -1627,6 +1718,27 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         this.evaluationContext = evaluationContext;
     }
 
+    visitDecayedNode(node: parseTree.ParseTreeNode) : HIRValue {
+        let value = this.visitNode(node) as HIRValue;
+        if (value.isReferenceValue())
+            return value.loadValue();
+        return value;
+    }
+
+    visitNodeWithExpectedType(node: parseTree.ParseTreeNode, expectedType: HIRType | null) : HIRValue {
+        let value = this.visitDecayedNode(node);
+        // TODO: check the type.
+        if(expectedType && !expectedType.isSatisfiedByValue(value))
+            throw new Error(node.sourcePosition.formatMessage(`Expected a value whose type is ${expectedType.toString()}`));
+
+        return value;
+    }
+
+    visitBooleanNode(node: parseTree.ParseTreeNode) : boolean {
+        let evaluatedValue = this.visitNodeWithExpectedType(node, this.evaluationContext.context.coreTypes.boolean8Type);
+        return evaluatedValue.evaluateAsBoolean();
+    }
+
     visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
         throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
@@ -1636,7 +1748,8 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
-        throw new Error('TODO ParseTreeApplicationNode AnalysisAndEvaluationPass');
+        let functional = this.visitDecayedNode(node.functional);
+        return functional.analyzeAndEvaluateApplicationNode(this, node, functional)
     }
 
     visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
@@ -1756,7 +1869,18 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
-        throw new Error(node.sourcePosition.formatMessage('visitIfSelectionNode.'));
+        let condition = this.visitBooleanNode(node.condition);
+        if (condition) {
+            if(node.trueExpression)
+                return this.visitNode(node.trueExpression);
+            else
+                return this.evaluationContext.context.coreTypes.voidValue;
+        } else {
+            if(node.falseExpression)
+                return this.visitNode(node.falseExpression);
+            else
+                return this.evaluationContext.context.coreTypes.voidValue;
+        }
     }
 
     visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
