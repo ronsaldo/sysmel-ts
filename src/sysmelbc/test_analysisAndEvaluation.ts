@@ -34,4 +34,37 @@ export function runTests() {
         assert.ok(value.isConstantLiteralIntegerValue());
         assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
     }
+
+    // Literal float
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('42.5');
+        assert.ok(value.isConstantLiteralFloatValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 42.5);
+    }
+
+    // Literal character
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString("'A'");
+        assert.ok(value.isConstantLiteralCharacterValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralCharacterValue).value, 65);
+    }
+
+    // Literal string
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('"Hello World"');
+        assert.ok(value.isConstantLiteralStringValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralStringValue).value, 'Hello World');
+    }
+
+    // Literal symbol
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('#hello');
+        assert.ok(value.isConstantLiteralSymbolValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralSymbolValue).value, 'hello');
+    }
+
 }

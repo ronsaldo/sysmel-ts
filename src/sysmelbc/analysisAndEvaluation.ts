@@ -59,11 +59,11 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {
-        throw new Error('TODO ParseTreeLiteralCharacterNode AnalysisAndEvaluationPass');
+        return new hir.HIRConstantLiteralCharacterValue(node.value, this.evaluationContext.context.coreTypes.characterType, node.sourcePosition);
     }
 
     visitLiteralFloatNode(node: parseTree.ParseTreeLiteralFloatNode): any {
-        throw new Error('TODO ParseTreeLiteralFloatNode AnalysisAndEvaluationPass');
+        return new hir.HIRConstantLiteralFloatValue(node.value, this.evaluationContext.context.coreTypes.floatType, node.sourcePosition);
     }
 
     visitLiteralIntegerNode(node: parseTree.ParseTreeLiteralIntegerNode): any {
@@ -71,11 +71,11 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitLiteralStringNode(node: parseTree.ParseTreeLiteralStringNode): any {
-        throw new Error('TODO ParseTreeLiteralStringNode AnalysisAndEvaluationPass');
+        return new hir.HIRConstantLiteralStringValue(node.value, this.evaluationContext.context.coreTypes.stringType, node.sourcePosition);
     }
 
     visitLiteralSymbolNode(node: parseTree.ParseTreeLiteralSymbolNode): any {
-        throw new Error('TODO ParseTreeLiteralSymbolNode AnalysisAndEvaluationPass');
+        return new hir.HIRConstantLiteralSymbolValue(node.value, this.evaluationContext.context.coreTypes.symbolType, node.sourcePosition);
     }
 
     visitLiteralValueNode(node: parseTree.ParseTreeLiteralValueNode): any {
@@ -104,7 +104,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
-        throw new Error('TODO  visitTupleNode AnalysisAndEvaluationPass');
+        throw new Error('TODO visitTupleNode AnalysisAndEvaluationPass');
     }
 
     visitQuoteNode(node: parseTree.ParseTreeQuoteNode): any {
@@ -114,9 +114,11 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     visitQuasiQuoteNode(node: parseTree.ParseTreeQuasiQuoteNode): any {
         throw new Error('TODO AnalysisAndEvaluationPass');
     }
+
     visitQuasiUnquoteNode(node: parseTree.ParseTreeQuasiUnquoteNode): any {
         throw new Error(node.sourcePosition.formatMessage('Invalid location for a quasi-unquote.'));
     }
+
     visitSpliceNode(node: parseTree.ParseTreeSpliceNode): any {
         throw new Error(node.sourcePosition.formatMessage('Invalid location for a splice.'));
     }
