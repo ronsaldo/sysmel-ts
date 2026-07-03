@@ -269,6 +269,28 @@ export function runTests() {
         assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 1.0);
     }
 
+    // Function type
+    {
+        let value = evaluateTopLevelSourceString('{:(Integer)x :: Integer}');
+        assert.ok(value.isDependentFunctionType());
+        
+        let functionType = value as hir.HIRDependentFunctionType;
+        assert.strictEqual(functionType.functionArguments.length, 1);
+
+        let argument = functionType.functionArguments[0] as hir.HIRArgument;
+        assert.strictEqual(argument.name, 'x');
+        assert.strictEqual(argument.type, context.coreTypes.integerType);
+        assert.strictEqual(functionType.resultType, context.coreTypes.integerType);
+
+        let simplifiedType = functionType.asSimplifiedType();
+        assert.ok(simplifiedType.isSimpleFunctionType());
+        
+        let simplifiedFunctionType = simplifiedType as hir.HIRSimpleFunctionType;
+        assert.strictEqual(simplifiedFunctionType.argumentTypes.length, 1);
+        assert.strictEqual(simplifiedFunctionType.argumentTypes[0], context.coreTypes.integerType);
+        assert.strictEqual(simplifiedFunctionType.resultType, context.coreTypes.integerType);
+    }
+
     // If then else
     {
         let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')

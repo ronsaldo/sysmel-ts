@@ -1777,6 +1777,10 @@ export class HIRLexicalEnvironment extends HIREnvironment {
     }
 }
 
+export class HIRDependentFunctionTypeAnalysisEnvironment extends HIRLexicalEnvironment {
+
+}
+
 export class HIRMetaBuilderFactory extends HIRValue {
     clazz: any;
     coreTypes: HIRCoreTypes;
@@ -2545,11 +2549,35 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitArgumentDefinitionNode(node: parseTree.ParseTreeArgumentDefinitionNode): any {
-        throw new Error('TODO ParseTreeArgumentDefinitionNode AnalysisAndEvaluationPass');
+        let argumentType: HIRType = this.evaluationContext.context.coreTypes.dynamicType;
+        if (node.typeExpression)
+            argumentType = this.visitNodeExpectingType(node.typeExpression);
+
+        let argument = new HIRArgument(argumentType, node.name, node.sourcePosition);
+        argument.isSelf = node.isSelf;
+        return argument;
     }
 
     visitFunctionTypeNode(node: parseTree.ParseTreeFunctionTypeNode): any {
-        throw new Error('TODO ParseTreeFunctionTypeNode AnalysisAndEvaluationPass');
+        let oldEnvironment = this.evaluationContext.environment;
+        let analysisEnvironment = new HIRDependentFunctionTypeAnalysisEnvironment(oldEnvironment);
+        this.evaluationContext.environment = analysisEnvironment;
+
+        let argumentDefinitions: HIRArgument[] = [];
+        for(let i = 0; i < node.argumentDefinitions.length; ++i) {
+            let argument = this.visitNode(node.argumentDefinitions[i] as parseTree.ParseTreeNode);
+            argumentDefinitions.push(argument);
+        }
+
+        let resultType: HIRType = this.evaluationContext.context.coreTypes.dynamicType;
+        if(node.resultTypeExpression) {
+            resultType = this.visitNodeExpectingType(node.resultTypeExpression);
+        }
+
+        // TODO: Do we need to add back the captures
+        let functionType = new HIRDependentFunctionType(argumentDefinitions, resultType, this.evaluationContext.context.coreTypes, node.sourcePosition);
+        this.evaluationContext.environment = oldEnvironment;
+        return functionType;
     }
 
     visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
