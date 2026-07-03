@@ -131,6 +131,28 @@ export function runTests() {
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
     }
 
+    // let metabuilder
+    {
+        let topLevelResult = evaluateTopLevelSourceString('let x := 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelSourceString('let x := 42. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+    }
+
+    // let mutable metabuilder
+    {
+        let topLevelResult = evaluateTopLevelSourceString('let x mutable := 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelSourceString('let x mutable := 42. x := 5. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
+    }
+
     // Message send
     {
         let value = evaluateTopLevelSourceString('42 negated')

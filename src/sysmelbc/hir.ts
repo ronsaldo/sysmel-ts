@@ -1777,6 +1777,89 @@ export class HIRLexicalEnvironment extends HIREnvironment {
     }
 }
 
+export class HIRMetaBuilderFactory extends HIRValue {
+    clazz: any;
+    coreTypes: HIRCoreTypes;
+
+    constructor(clazz: any, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.clazz = clazz;
+        this.coreTypes = coreTypes;
+    }
+
+    getType(): HIRType {
+        return this.coreTypes.metaBuilderFactoryType;
+    }
+    
+    analyzeAndEvaluateIdentifierReferenceNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
+        return new this.clazz(this.coreTypes, node.sourcePosition)
+    }
+}
+
+export class HIRMetaBuilder extends HIRValue {
+    coreTypes: HIRCoreTypes;
+
+    constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.coreTypes = coreTypes;
+    }
+
+    getType(): HIRType {
+        return this.coreTypes.metaBuilderType;
+    }
+
+    supportsSelector(selector: string): boolean {
+        return false;
+    }
+    
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue) : HIRValue {
+        return this;
+    }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selectorValue = evaluator.visitSymbolNode(node.selector);
+        if(this.supportsSelector(selectorValue)) {
+            return this.expandAndEvaluateMessage(evaluator, node, selectorValue, receiver);
+        }
+        return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+}
+
+export class HIRNamedMetaBuilder extends HIRMetaBuilder {
+    nameExpression: parseTree.ParseTreeNode | null = null;
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        if (!this.nameExpression && node.sendArguments.length == 0){
+            this.nameExpression = node.selector;
+            return this;
+        }
+        return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    }
+}
+
+export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
+    isMutable: boolean = false;
+    typeExpression: parseTree.ParseTreeNode | null = null;
+
+    supportsSelector(selector: string): boolean {
+        return selector == 'mutable' || selector =='type:';
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector == 'mutable') {
+            this.isMutable = true;
+        } else if (selector == 'type:') {
+            this.typeExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+        }
+        return this;
+    }
+
+    analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode): HIRValue {
+        let variableDefinition = new parseTree.ParseTreeVariableDefinitionNode(node.sourcePosition, this.nameExpression, this.typeExpression, node.value, this.isMutable);
+        return evaluator.visitNode(variableDefinition)
+    }
+}
+
 export class HIRCoreTypes {
     pointerSize = 8;
     pointerAlignment = 8;
@@ -1819,6 +1902,8 @@ export class HIRCoreTypes {
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
     macroContextType: HIRNominalType = new HIRNominalType('MacroContext', this, getOrMakeEmptySourcePosition());
     primitiveMacroType: HIRNominalType = new HIRNominalType('PrimitiveMacro', this, getOrMakeEmptySourcePosition());
+    metaBuilderFactoryType: HIRNominalType = new HIRNominalType('MetaBuilderFactory', this, getOrMakeEmptySourcePosition());
+    metaBuilderType: HIRNominalType = new HIRNominalType('MetaBuilder', this, getOrMakeEmptySourcePosition());
 
     voidValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralVoidValue(this.voidType, getOrMakeEmptySourcePosition());
     falseValue: HIRConstantLiteralBooleanValue = new HIRConstantLiteralBooleanValue(false, this.boolean8Type, getOrMakeEmptySourcePosition());
@@ -1859,6 +1944,8 @@ export class HIRCoreTypes {
         this.coreTypeList.push(this.basicBlockType);
         this.coreTypeList.push(this.macroContextType);
         this.coreTypeList.push(this.primitiveMacroType);
+        this.coreTypeList.push(this.metaBuilderFactoryType);
+        this.coreTypeList.push(this.metaBuilderType);
 
         this.coreValueList.push(['void',  this.voidValue]);
         this.coreValueList.push(['false', this.falseValue]);
@@ -1866,6 +1953,7 @@ export class HIRCoreTypes {
         this.coreValueList.push(['nil',   this.nilValue]);
 
         this.createCorePrimitiveMacros();
+        this.createCorePrimitiveMetaBuilders();
         this.createCorePrimitiveFunctions();
     }
 
@@ -1927,6 +2015,10 @@ export class HIRCoreTypes {
 
             new HIRPrimitiveMacro('return:', this.primitiveMacroType, returnWithValue, getOrMakeEmptySourcePosition()),
         ]
+    }
+
+    createCorePrimitiveMetaBuilders() {
+        this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
     }
     
     createCorePrimitiveFunctions() {
