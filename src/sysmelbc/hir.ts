@@ -317,7 +317,11 @@ export class HIRNominalType extends HIRType {
     }
 
     addPrimitiveMethod(method: HIRPrimitiveFunction) {
-        this.withSelectorAddMethod(method.selector, method)
+        this.withSelectorAddMethod(method.selector, method);
+    }
+
+    addPrimitiveMacro(macro: HIRPrimitiveMacro) {
+        this.withSelectorAddMethod(macro.name, macro);
     }
 
     withSelectorAddMethod(selector: string, method: HIRValue) {
@@ -915,7 +919,10 @@ export class HIRPrimitiveMacro extends HIRConstant {
     }
 
     analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
-        throw new Error('TODO: HIRPrimitiveMacro analyzeAndEvaluateMessageSendNode')
+        let macroContext = new HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition);
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let expandedMacro = this.primitiveFunction(macroContext, receiverNode, ...node.sendArguments);
+        return evaluator.visitNode(expandedMacro);
     }
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
@@ -1880,6 +1887,8 @@ export class HIRCoreTypes {
     }
     
     createCorePrimitiveFunctions() {
+        this.createBooleanPrimitiveFunctions();
+
         this.createIntegerPrimitiveFunctions(this.integerType, true);
         this.createIntegerPrimitiveFunctions(this.int32Type,  true);
         this.createIntegerPrimitiveFunctions(this.uint32Type, false);
@@ -1893,6 +1902,28 @@ export class HIRCoreTypes {
         this.createNumericalPrimitiveConversionMethods(this.characterType);
         this.createNumericalPrimitiveConversionMethods(this.floatType);
         this.createNumericalPrimitiveConversionMethods(this.integerType);
+    }
+
+    createBooleanPrimitiveFunctions() {
+        let falseValue = this.falseValue;
+        let trueValue = this.trueValue;
+
+        function booleanNot(operand: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(!operand.evaluateAsBoolean(), resultType, sourcePosition);
+        }
+
+        function booleanAnd(macroContext: HIRMacroContext, left: parseTree.ParseTreeNode, right: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeIfSelectionNode(macroContext.sourcePosition, left, right, new parseTree.ParseTreeLiteralValueNode(macroContext.sourcePosition, falseValue))
+        }
+        function booleanOr(macroContext: HIRMacroContext, left: parseTree.ParseTreeNode, right: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeIfSelectionNode(macroContext.sourcePosition, left, new parseTree.ParseTreeLiteralValueNode(macroContext.sourcePosition, trueValue), right)
+        }
+
+
+        let primitivePrefix = this.boolean8Type.toString() + "::";
+        this.boolean8Type.addPrimitiveMethod(new HIRPrimitiveFunction('not', primitivePrefix + 'not', this.getOrCreateSimpleFunctionType([this.boolean8Type], this.boolean8Type), booleanNot, true, true, getOrMakeEmptySourcePosition()))
+        this.boolean8Type.addPrimitiveMacro(new HIRPrimitiveMacro('&&', this.primitiveMacroType, booleanAnd, getOrMakeEmptySourcePosition()))
+        this.boolean8Type.addPrimitiveMacro(new HIRPrimitiveMacro('||', this.primitiveMacroType, booleanOr, getOrMakeEmptySourcePosition()))
     }
 
     createIntegerPrimitiveFunctions(integerType: HIRNominalType, isSigned: boolean) {
@@ -2411,7 +2442,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitCascadedMessageNode(node: parseTree.ParseTreeCascadedMessageNode): any {
-        throw new Error('TODO visitCascadedMessageNode AnalysisAndEvaluationPass');
+        throw new Error('Invalid location for a cascaded message send node.');
     }
 
     visitMessageCascadeNode(node: parseTree.ParseTreeMessageCascadeNode): any {

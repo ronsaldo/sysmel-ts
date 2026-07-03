@@ -342,4 +342,54 @@ export function runTests() {
         assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
         assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
     }
+
+    // Boolean not
+    {
+        let value = evaluateTopLevelSourceString("false not")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("true not")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+    }
+
+    // Boolean and
+    {
+        let value = evaluateTopLevelSourceString("false && false")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("false && true")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("true && false")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("true && true")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+    }
+
+    // Boolean or
+    {
+        let value = evaluateTopLevelSourceString("false || false")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("false || true")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("true || false")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+
+        value = evaluateTopLevelSourceString("true || true")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+    }
+
 }
