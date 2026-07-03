@@ -185,6 +185,10 @@ export abstract class HIRValue {
     loadValue(): HIRValue {
         throw new Error(this.sourcePosition.formatMessage('Invalid value for loading a pointer or reference.'));
     }
+
+    analyzeAndEvaluateIdentifierReferenceNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
+        return this;
+    }
 }
 
 export class HIRType extends HIRValue {
@@ -1364,11 +1368,13 @@ export class HIRBuilder {
 }
 
 export abstract class HIREnvironment {
-
+    abstract lookSymbolRecursively(symbol: string): HIRValue | null;
 }
 
 export class HIREmptyEnvironment extends HIREnvironment {
-
+    lookSymbolRecursively(symbol: string): HIRValue | null {
+        return null;
+    }
 }
 
 export class HIRPackageEnvironment extends HIREnvironment {
@@ -1379,6 +1385,15 @@ export class HIRPackageEnvironment extends HIREnvironment {
         super();
         this.packageValue = packageValue;
         this.parent = parent;
+    }
+
+
+    lookSymbolRecursively(symbol: string): HIRValue | null {
+        let packageSymbolBinding = this.packageValue.lookSymbolRecursivelyOrNone(symbol);
+        if(packageSymbolBinding)
+            return packageSymbolBinding;
+
+        return this.parent.lookSymbolRecursively(symbol);
     }
 
 }
@@ -1394,6 +1409,21 @@ export class HIRLexicalEnvironment extends HIREnvironment {
 
     setSymbolBinding(symbol: string, binding: HIRValue) {
         this.symbolTable[symbol] = binding;
+    }
+
+    setNewSymbolBinding(symbol: string, binding: HIRValue, sourcePosition: AbstractSourcePosition) {
+        if(symbol in this.symbolTable)
+            throw new Error(sourcePosition.formatMessage(`a binding for ${symbol} already exists.`))
+        return this.setSymbolBinding(symbol, binding);
+    }
+
+    lookSymbolRecursively(symbol: string): HIRValue | null {
+        if (symbol in this.symbolTable) {
+            let binding = this.symbolTable[symbol];
+            return binding as HIRValue;
+        }
+
+        return this.parent.lookSymbolRecursively(symbol);
     }
 }
 
@@ -1537,6 +1567,12 @@ export class HIRPackage extends HIRValue {
         this.children.push(binding);
         this.publicSymbolTable[symbol] = binding;
     }
+
+    lookSymbolRecursivelyOrNone(symbol: string): HIRValue | null {
+        if (symbol in this.publicSymbolTable)
+            return this.publicSymbolTable[symbol] as HIRValue;
+        return null;
+    }
 }
 
 export class HIRContext {
@@ -1579,6 +1615,164 @@ export class HIRContext {
 
     getOrCreateMutableValueBoxType(baseType: HIRType) : HIRPointerType {
         return new HIRMutableValueBoxType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+    }
+
+}
+
+export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
+    evaluationContext: HIREvaluationContext;
+
+    constructor(evaluationContext: HIREvaluationContext) {
+        super();
+        this.evaluationContext = evaluationContext;
+    }
+
+    visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
+    }
+
+    visitParseErrorNode(node: parseTree.ParseTreeParseErrorNode): any {
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
+    }
+
+    visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
+        throw new Error('TODO ParseTreeApplicationNode AnalysisAndEvaluationPass');
+    }
+
+    visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
+        throw new Error('TODO ParseTreeAssignmentNode AnalysisAndEvaluationPass');
+    }
+
+    visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
+        throw new Error('TODO ParseTreeAssociationNode AnalysisAndEvaluationPass');
+    }
+
+    visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
+        throw new Error('TODO ParseTreeBinaryExpressionSequenceNode AnalysisAndEvaluationPass');
+    }
+
+    visitDictionaryNode(node: parseTree.ParseTreeDictionaryNode): any {
+        throw new Error('TODO ParseTreeDictionaryNode AnalysisAndEvaluationPass');
+    }
+    
+    visitIdentifierReferenceNode(node: parseTree.ParseTreeIdentifierReferenceNode): any {
+        let bindingOrNull = this.evaluationContext.environment.lookSymbolRecursively(node.symbol);
+        if(!bindingOrNull)
+            throw new Error(node.sourcePosition.formatMessage(`${node.symbol} identifier is not found.`))
+
+        return bindingOrNull.analyzeAndEvaluateIdentifierReferenceNode(this, node)
+    }
+
+    visitArgumentDefinitionNode(node: parseTree.ParseTreeArgumentDefinitionNode): any {
+        throw new Error('TODO ParseTreeArgumentDefinitionNode AnalysisAndEvaluationPass');
+    }
+
+    visitFunctionTypeNode(node: parseTree.ParseTreeFunctionTypeNode): any {
+        throw new Error('TODO ParseTreeFunctionTypeNode AnalysisAndEvaluationPass');
+    }
+
+    visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
+        throw new Error('TODO ParseTreeFunctionNode AnalysisAndEvaluationPass');
+    }
+
+    visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {
+        let childEnvironment = new HIRLexicalEnvironment(this.evaluationContext.environment);
+        let oldEnvironment = this.evaluationContext.environment;
+
+        let result = this.visitNode(node.body) as HIRValue;
+
+        this.evaluationContext.environment = oldEnvironment;
+        
+        return result;
+    }
+
+    visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {
+        return new HIRConstantLiteralCharacterValue(node.value, this.evaluationContext.context.coreTypes.characterType, node.sourcePosition);
+    }
+
+    visitLiteralFloatNode(node: parseTree.ParseTreeLiteralFloatNode): any {
+        return new HIRConstantLiteralFloatValue(node.value, this.evaluationContext.context.coreTypes.floatType, node.sourcePosition);
+    }
+
+    visitLiteralIntegerNode(node: parseTree.ParseTreeLiteralIntegerNode): any {
+        return new HIRConstantLiteralIntegerValue(node.value, this.evaluationContext.context.coreTypes.integerType, node.sourcePosition);
+    }
+
+    visitLiteralStringNode(node: parseTree.ParseTreeLiteralStringNode): any {
+        return new HIRConstantLiteralStringValue(node.value, this.evaluationContext.context.coreTypes.stringType, node.sourcePosition);
+    }
+
+    visitLiteralSymbolNode(node: parseTree.ParseTreeLiteralSymbolNode): any {
+        return new HIRConstantLiteralSymbolValue(node.value, this.evaluationContext.context.coreTypes.symbolType, node.sourcePosition);
+    }
+
+    visitLiteralValueNode(node: parseTree.ParseTreeLiteralValueNode): any {
+        return node.value as HIRValue;
+    }
+
+    visitCascadedMessageNode(node: parseTree.ParseTreeCascadedMessageNode): any {
+        throw new Error('TODO visitCascadedMessageNode AnalysisAndEvaluationPass');
+    }
+
+    visitMessageCascadeNode(node: parseTree.ParseTreeMessageCascadeNode): any {
+        throw new Error('TODO visitMessageCascadeNode AnalysisAndEvaluationPass');
+    }
+
+    visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
+        throw new Error('TODO visitMessageSendNode AnalysisAndEvaluationPass');
+    }
+
+    visitSequenceNode(node: parseTree.ParseTreeSequenceNode): any {
+        let result: HIRValue = this.evaluationContext.context.coreTypes.voidValue;
+        for(let i = 0; i < node.elements.length; ++i) {
+            result = this.visitNode(node.elements[i] as parseTree.ParseTreeNode) as HIRValue;
+        }
+
+        return result
+    }
+
+    visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
+        throw new Error('TODO visitTupleNode AnalysisAndEvaluationPass');
+    }
+
+    visitQuoteNode(node: parseTree.ParseTreeQuoteNode): any {
+        return new HIRConstantLiteralParseTree(node.expression, this.evaluationContext.context.coreTypes.parseTreeType, node.sourcePosition);
+    }
+
+    visitQuasiQuoteNode(node: parseTree.ParseTreeQuasiQuoteNode): any {
+        throw new Error('TODO visitQuasiQuoteNode AnalysisAndEvaluationPass');
+    }
+
+    visitQuasiUnquoteNode(node: parseTree.ParseTreeQuasiUnquoteNode): any {
+        throw new Error(node.sourcePosition.formatMessage('Invalid location for a quasi-unquote.'));
+    }
+
+    visitSpliceNode(node: parseTree.ParseTreeSpliceNode): any {
+        throw new Error(node.sourcePosition.formatMessage('Invalid location for a splice.'));
+    }
+
+    visitVariableDefinitionNode(node: parseTree.ParseTreeVariableDefinitionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitVariableDefinitionNode.'));
+    }
+
+    visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitIfSelectionNode.'));
+    }
+
+    visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitSwitchSelectionNode.'));
+    }
+
+    visitReturnNode(node: parseTree.ParseReturnNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitReturnNode.'));
+    }
+
+    visitWhileDoNode(node: parseTree.ParseWhileDoNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitWhileDoNode.'));
+    }
+
+    visitDoWhileNode(node: parseTree.ParseDoWhileNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitDoWhileNode.'));
     }
 
 }

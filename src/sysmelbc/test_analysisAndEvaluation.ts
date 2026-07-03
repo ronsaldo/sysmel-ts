@@ -1,7 +1,6 @@
 import * as parseTree from "./parsetree.js"
 import * as parser from "./parser.js"
 import * as hir from "./hir.js"
-import {AnalysisAndEvaluationPass} from "./analysisAndEvaluation.js"
 import * as assert from 'assert';
 
 let context: hir.HIRContext = new hir.HIRContext();
@@ -11,7 +10,7 @@ function evaluateTopLevelSourceString(sourceString: string): hir.HIRValue {
     assert.ok(new parseTree.ParseTreeParseErrorVisitor().checkAndPrintErrors(ast));
 
     let evaluationContext = context.createTopLevelEvaluationContext(ast.sourcePosition.sourceCode);
-    let result = new AnalysisAndEvaluationPass(evaluationContext).visitNode(ast);
+    let result = new hir.AnalysisAndEvaluationPass(evaluationContext).visitNode(ast);
     return result as hir.HIRValue;
 }
 
@@ -81,6 +80,23 @@ export function runTests() {
         let value = evaluateTopLevelSourceString('#hello');
         assert.ok(value.isConstantLiteralSymbolValue());
         assert.strictEqual((value as hir.HIRConstantLiteralSymbolValue).value, 'hello');
+    }
+
+    // Package symbols
+    {
+        let topLevelResult = evaluateTopLevelSourceString('false')
+        assert.ok(topLevelResult.isConstantLiteralBooleanValue())
+        assert.ok(!(topLevelResult as hir.HIRConstantLiteralBooleanValue).value)
+
+        topLevelResult = evaluateTopLevelSourceString('true')
+        assert.ok(topLevelResult.isConstantLiteralBooleanValue())
+        assert.ok((topLevelResult as hir.HIRConstantLiteralBooleanValue).value)
+
+        topLevelResult = evaluateTopLevelSourceString('void')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue())
+
+        topLevelResult = evaluateTopLevelSourceString('nil')
+        assert.ok(topLevelResult.isConstantLiteralNilValue())
     }
 
 }
