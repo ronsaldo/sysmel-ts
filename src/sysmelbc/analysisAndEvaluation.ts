@@ -11,11 +11,11 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
-        throw new Error('TODO AnalysisAndEvaluationPass');
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
 
     visitParseErrorNode(node: parseTree.ParseTreeParseErrorNode): any {
-        throw new Error('TODO ParseTreeParseErrorNode AnalysisAndEvaluationPass');
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
 
     visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
@@ -119,7 +119,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitQuasiQuoteNode(node: parseTree.ParseTreeQuasiQuoteNode): any {
-        throw new Error('TODO AnalysisAndEvaluationPass');
+        throw new Error('TODO visitQuasiQuoteNode AnalysisAndEvaluationPass');
     }
 
     visitQuasiUnquoteNode(node: parseTree.ParseTreeQuasiUnquoteNode): any {
