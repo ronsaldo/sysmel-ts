@@ -2281,6 +2281,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         let childEnvironment = new HIRLexicalEnvironment(this.evaluationContext.environment);
         let oldEnvironment = this.evaluationContext.environment;
 
+        this.evaluationContext.environment = childEnvironment;
         let result = this.visitNode(node.body) as HIRValue;
 
         this.evaluationContext.environment = oldEnvironment;
