@@ -37,6 +37,13 @@ export abstract class ParseTreeVisitor {
     abstract visitQuasiUnquoteNode(node: ParseTreeQuasiUnquoteNode): any;
     abstract visitSpliceNode(node: ParseTreeSpliceNode): any;
 
+    abstract visitVariableDefinitionNode(node: ParseTreeVariableDefinitionNode): any;
+    abstract visitIfSelectionNode(node: ParseTreeIfSelectionNode): any;
+    abstract visitSwitchSelectionNode(node: ParseTreeSwitchSelectionNode): any;
+    abstract visitReturnNode(node: ParseReturnNode): any;
+    abstract visitWhileDoNode(node: ParseWhileDoNode): any;
+    abstract visitDoWhileNode(node: ParseDoWhileNode): any;
+
     visitNode(node: ParseTreeNode) : any {
         return node.accept(this)
     }
@@ -173,6 +180,30 @@ export abstract class ParseTreeNode {
     }
 
     isSpliceNode(): boolean {
+        return false;
+    }
+
+    isVariableDefinitionNode(): boolean {
+        return false;
+    }
+
+    isIfSelectionNode(): boolean {
+        return false;
+    }
+
+    isSwitchSelectionNode(): boolean {
+        return false;
+    }
+
+    isReturnNode(): boolean {
+        return false;
+    }
+
+    isWhileDoNode(): boolean {
+        return false;
+    }
+
+    isDoWhileNode(): boolean {
         return false;
     }
 
@@ -674,7 +705,6 @@ export class ParseTreeQuasiUnquoteNode extends ParseTreeNode {
     }
 }
 
-
 export class ParseTreeSpliceNode extends ParseTreeNode {
     expression: ParseTreeNode;
 
@@ -688,6 +718,128 @@ export class ParseTreeSpliceNode extends ParseTreeNode {
     }
     
     isSpliceNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeVariableDefinitionNode extends ParseTreeNode {
+    nameExpression: ParseTreeNode | null;
+    typeExpression: ParseTreeNode | null;
+    initialValue: ParseTreeNode | null;
+    isMutable: boolean;
+
+    constructor(sourcePosition: SourcePosition, nameExpression: ParseTreeNode | null, typeExpression: ParseTreeNode | null, initialValue: ParseTreeNode | null, isMutable: boolean) {
+        super(sourcePosition);
+        this.nameExpression = nameExpression;
+        this.typeExpression = typeExpression;
+        this.initialValue = initialValue;
+        this.isMutable = isMutable;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitVariableDefinitionNode(this)
+    }
+    
+    isVariableDefinitionNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeIfSelectionNode extends ParseTreeNode {
+    condition: ParseTreeNode;
+    trueExpression: ParseTreeNode;
+    falseExpresion: ParseTreeNode | null;
+
+    constructor(sourcePosition: SourcePosition, condition: ParseTreeNode, trueExpression: ParseTreeNode, falseExpresion: ParseTreeNode | null) {
+        super(sourcePosition);
+        this.condition = condition;
+        this.trueExpression = trueExpression;
+        this.falseExpresion = falseExpresion;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitIfSelectionNode(this)
+    }
+    
+    isIfSelectionNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeSwitchSelectionNode extends ParseTreeNode {
+    valueExpression: ParseTreeNode;
+    cases: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, valueExpression: ParseTreeNode, cases: ParseTreeNode) {
+        super(sourcePosition);
+        this.valueExpression = valueExpression;
+        this.cases = cases;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitSwitchSelectionNode(this);
+    }
+    
+    isSwitchSelectionNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseReturnNode extends ParseTreeNode {
+    valueExpression: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, valueExpression: ParseTreeNode) {
+        super(sourcePosition);
+        this.valueExpression = valueExpression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitReturnNode(this);
+    }
+    
+    isReturnNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseWhileDoNode extends ParseTreeNode {
+    condition: ParseTreeNode;
+    bodyExpression: ParseTreeNode;
+    continueExpression: ParseTreeNode | null;
+
+    constructor(sourcePosition: SourcePosition, condition: ParseTreeNode, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null) {
+        super(sourcePosition);
+        this.condition = condition;
+        this.bodyExpression = bodyExpression;
+        this.continueExpression = continueExpression;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitWhileDoNode(this);
+    }
+    
+    isWhileDoNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseDoWhileNode extends ParseTreeNode {
+    bodyExpression: ParseTreeNode;
+    continueExpression: ParseTreeNode | null;
+    condition: ParseTreeNode;
+
+    constructor(sourcePosition: SourcePosition, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode | null, condition: ParseTreeNode) {
+        super(sourcePosition);
+        this.bodyExpression = bodyExpression;
+        this.continueExpression = continueExpression;
+        this.condition = condition;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitDoWhileNode(this);
+    }
+    
+    isDoWhileNode(): boolean {
         return true;
     }
 }
@@ -794,6 +946,40 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
 
     visitSpliceNode(node: ParseTreeSpliceNode): any {
         this.visitNode(node.expression);
+    }
+
+    visitVariableDefinitionNode(node: ParseTreeVariableDefinitionNode): any {
+        this.visitOptionalNode(node.nameExpression);
+        this.visitOptionalNode(node.typeExpression);
+        this.visitOptionalNode(node.initialValue);
+    }
+
+    visitIfSelectionNode(node: ParseTreeIfSelectionNode): any {
+        this.visitNode(node.condition);
+        this.visitNode(node.trueExpression);
+        this.visitOptionalNode(node.falseExpresion);
+    }
+
+    visitSwitchSelectionNode(node: ParseTreeSwitchSelectionNode): any {
+        this.visitNode(node.valueExpression);
+        this.visitNode(node.cases);
+    }
+
+    visitReturnNode(node: ParseReturnNode): any {
+        this.visitNode(node.valueExpression);
+    }
+
+    visitWhileDoNode(node: ParseWhileDoNode): any {
+        this.visitNode(node.condition);
+        this.visitNode(node.bodyExpression);
+        this.visitOptionalNode(node.continueExpression);
+
+    }
+
+    visitDoWhileNode(node: ParseDoWhileNode): any {
+        this.visitNode(node.bodyExpression);
+        this.visitOptionalNode(node.continueExpression);
+        this.visitNode(node.condition);
     }
 }
 

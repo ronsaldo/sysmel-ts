@@ -129,4 +129,29 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     visitSpliceNode(node: parseTree.ParseTreeSpliceNode): any {
         throw new Error(node.sourcePosition.formatMessage('Invalid location for a splice.'));
     }
+
+    visitVariableDefinitionNode(node: parseTree.ParseTreeVariableDefinitionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitVariableDefinitionNode.'));
+    }
+
+    visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitIfSelectionNode.'));
+    }
+
+    visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitSwitchSelectionNode.'));
+    }
+
+    visitReturnNode(node: parseTree.ParseReturnNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitReturnNode.'));
+    }
+
+    visitWhileDoNode(node: parseTree.ParseWhileDoNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitWhileDoNode.'));
+    }
+
+    visitDoWhileNode(node: parseTree.ParseDoWhileNode): any {
+        throw new Error(node.sourcePosition.formatMessage('visitDoWhileNode.'));
+    }
+
 }
