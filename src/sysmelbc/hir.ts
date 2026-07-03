@@ -10,6 +10,10 @@ export abstract class HIRValue {
 
     abstract getType(): HIRType;
 
+    ensureAnalysis(): void {
+        // By default do nothing.
+    }
+
     evaluateAsBoolean(): boolean {
         throw new Error(this.sourcePosition.formatMessage('Not a boolean value'))
     }
@@ -170,6 +174,10 @@ export abstract class HIRValue {
         return false;
     }
 
+    isFunction() : boolean {
+        return false;
+    }
+
     isFunctionLocalValue() : boolean {
         return false;
     }
@@ -206,6 +214,10 @@ export abstract class HIRValue {
         throw new Error(callSourcePosition.formatMessage('Called value is non functional.'));
     }
 
+    evaluateWithArguments(callArguments: HIRValue[]): HIRValue {
+        throw new Error(this.sourcePosition.formatMessage('Called value is non functional.'));
+    }
+
     storeValueAtIndex(valueToStore: HIRValue, index: number): void {
         throw new Error(this.sourcePosition.formatMessage('Invalid value for storing a field.'));
     }
@@ -223,6 +235,10 @@ export abstract class HIRValue {
     }
 
     analyzeAndEvaluateIdentifierReferenceNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
+        return this;
+    }
+
+    analyzeAndBuildIdentifierReferenceNode(evaluator: AnalysisAndBuildPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
         return this;
     }
 
@@ -1080,6 +1096,10 @@ export class HIRFunction extends HIRConstant {
     simplifiedType: HIRType;
     captures: HIRCapture[] = [];
 
+    definitionBody: parseTree.ParseTreeNode | null = null;
+    definitionContext: HIRContext | null = null;
+    definitionEnvironment: HIRLexicalEnvironment | null = null;
+
     firstBasicBlock: HIRBasicBlock | null = null;
     lastBasicBlock: HIRBasicBlock | null = null;
     enumeratedInstructions: HIRFunctionLocalValue[] | null = null; 
@@ -1105,10 +1125,58 @@ export class HIRFunction extends HIRConstant {
         }
     }
 
+    ensureAnalysis(): void {
+        if(this.firstBasicBlock)
+            return;
+
+        // Function environment arguments
+        let selfArgument: HIRArgument | null = null;
+        if(this.dependentFunctionType.functionArguments.length >= 1) {
+            let firstArgument = this.dependentFunctionType.functionArguments[0] as HIRArgument;
+            if(firstArgument.isSelf)
+                selfArgument = firstArgument;
+        }
+
+        let context = this.definitionContext as HIRContext;
+        let functionEnvironment = new HIRFunctionAnalysisEnvironment(this.definitionEnvironment as HIREnvironment, this.dependentFunctionType.resultType, selfArgument, context);
+        for(let i = 0; i < this.dependentFunctionType.functionArguments.length; ++i) {
+            let functionArgument = this.dependentFunctionType.functionArguments[i] as HIRArgument;
+            if (functionArgument.name) {
+                functionEnvironment.setNewSymbolBinding(functionArgument.name, functionArgument, functionArgument.sourcePosition);
+            }
+        }
+
+        // Body environment
+        let bodyEnvironment = new HIRLexicalEnvironment(functionEnvironment);
+
+        // Alloca block
+        let allocaBlock = new HIRBasicBlock(context.coreTypes.basicBlockType, 'alloca', this.sourcePosition);
+        this.addBasicBlock(allocaBlock);
+        let allocaBuilder = new HIRBuilder(this, context, allocaBlock, bodyEnvironment);
+
+        // Entry block
+        let entryBlock = new HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', this.sourcePosition);
+        this.addBasicBlock(entryBlock);
+        let builder = new HIRBuilder(this, context, entryBlock, bodyEnvironment);
+        builder.allocaBuilder = allocaBuilder
+        builder.entryBasicBlock = entryBlock;
+
+        // Build the body
+        let result = new AnalysisAndBuildPass(builder).visitNodeWithExpectedType(this.definitionBody as parseTree.ParseTreeNode, this.dependentFunctionType.resultType);
+        if(!builder.isLastTerminator())
+            builder.returnValue(result, this.sourcePosition);
+
+        // Finish building
+        builder.finishBuilding(this.sourcePosition);
+
+        this.captures = functionEnvironment.captureList;
+    }
+
     enumerateInstructions(): HIRFunctionLocalValue[] {
         if(this.enumeratedInstructions !== null)
             return this.enumeratedInstructions;
 
+        this.ensureAnalysis();
         let instructions: HIRFunctionLocalValue[] = [];
         this.enumeratedInstructions = instructions;
 
@@ -1159,6 +1227,7 @@ export class HIRFunction extends HIRConstant {
     }
 
     fullPrintString(): string {
+        this.ensureAnalysis();
         this.enumerateInstructions();
         let result = "HIRFunction ";
         if (this.name)
@@ -1197,6 +1266,10 @@ export class HIRFunction extends HIRConstant {
 
     evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
         return this.evaluateWithArguments(callArguments)
+    }
+
+    isFunction(): boolean {
+        return true;
     }
 }
 
@@ -1630,6 +1703,7 @@ export class HIRBuilder {
     context: HIRContext;
     basicBlock: HIRBasicBlock;
     allocaBuilder: HIRBuilder | null = null;
+    entryBasicBlock: HIRBasicBlock | null = null;
     environment: HIREnvironment;
 
     constructor(hirFunction: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIREnvironment) {
@@ -1648,6 +1722,12 @@ export class HIRBuilder {
         if(!lastInstruction)
             return false;
         return lastInstruction.isTerminatorInstruction();
+    }
+
+    finishBuilding(sourcePosition: AbstractSourcePosition): void {
+        if (this.allocaBuilder && this.entryBasicBlock) {
+            this.allocaBuilder.branch(this.entryBasicBlock, sourcePosition)
+        }
     }
 
     alloca(valueType: HIRType, referenceType: HIRType, sourcePosition: AbstractSourcePosition): HIRAllocaInstruction {
@@ -1781,6 +1861,21 @@ export class HIRDependentFunctionTypeAnalysisEnvironment extends HIRLexicalEnvir
 
 }
 
+export class HIRFunctionAnalysisEnvironment extends HIRLexicalEnvironment {
+    returnType: HIRType;
+    receiverValue: HIRValue | null;
+    context: HIRContext;
+    captureTable: Record<string, HIRCapture> = {}
+    captureList: HIRCapture[] = [];
+
+    constructor(parent: HIREnvironment, returnType: HIRType, receiverValue: HIRValue | null, context: HIRContext) {
+        super(parent);
+        this.returnType = returnType;
+        this.receiverValue = receiverValue;
+        this.context = context;
+    }
+}
+
 export class HIRMetaBuilderFactory extends HIRValue {
     clazz: any;
     coreTypes: HIRCoreTypes;
@@ -1796,6 +1891,10 @@ export class HIRMetaBuilderFactory extends HIRValue {
     }
     
     analyzeAndEvaluateIdentifierReferenceNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeIdentifierReferenceNode) : HIRValue {
+        return new this.clazz(this.coreTypes, node.sourcePosition)
+    }
+
+    analyzeAndBuildIdentifierReferenceNode(evaluator: AnalysisAndBuildPass, node: parseTree.ParseTreeIdentifierReferenceNode): HIRValue {
         return new this.clazz(this.coreTypes, node.sourcePosition)
     }
 }
@@ -2321,6 +2420,7 @@ export class HIRPackage extends HIRValue {
     coreTypes: HIRCoreTypes;
     children: HIRValue[] = []
     publicSymbolTable: Record<string, HIRValue> = {};
+    pendingAnalysisList: HIRValue[] = [];
 
     constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
@@ -2329,6 +2429,21 @@ export class HIRPackage extends HIRValue {
 
     getType(): HIRType {
         return this.coreTypes.packageType;
+    }
+
+    addEntityWithPendingAnalysis(entity: HIRValue) {
+        this.pendingAnalysisList.push(entity);
+    }
+    
+    finishPendingAnalysis() {
+        while(this.pendingAnalysisList.length !== 0) {
+            let toAnalyze = this.pendingAnalysisList;
+            this.pendingAnalysisList = [];
+            for (let i = 0; i < toAnalyze.length; ++i) {
+                let entity = toAnalyze[i] as HIRValue;
+                entity.ensureAnalysis();
+            }
+        }
     }
 
     addCoreTypeMembers(): void {
@@ -2390,6 +2505,14 @@ export class HIRContext {
         this.corePackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
         this.currentPackage = this.corePackage;
         this.corePackage.addCoreTypeMembers();
+    }
+
+    addEntityWithPendingAnalysis(entity: HIRValue) {
+        this.currentPackage.addEntityWithPendingAnalysis(entity);
+    }
+
+    finishPendingAnalysis() {
+        this.currentPackage.finishPendingAnalysis();
     }
 
     createTopLevelEnvironment(sourceCode: SourceCode | null): HIRLexicalEnvironment {
@@ -2581,7 +2704,24 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
-        throw new Error('TODO ParseTreeFunctionNode AnalysisAndEvaluationPass');
+        let name = this.visitOptionalSymbolNode(node.nameExpression);
+        let dependentFunctionType = this.visitNode(node.functionType) as HIRDependentFunctionType;
+
+        if(node.isMethod) {
+            throw new Error('TODO ParseTreeFunctionNode isMethod');
+        }
+
+        let hirFunction = new HIRFunction(name, dependentFunctionType, node.sourcePosition);
+        hirFunction.definitionBody = node.body;
+        hirFunction.definitionContext = this.evaluationContext.context;
+        hirFunction.definitionEnvironment = this.evaluationContext.environment;
+        this.evaluationContext.context.addEntityWithPendingAnalysis(hirFunction);
+
+        if(name) {
+            this.evaluationContext.environment.setNewSymbolBinding(name, hirFunction, node.sourcePosition);
+            // TODO: add method and public functions
+        }
+        return hirFunction;
     }
 
     visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {
@@ -2778,5 +2918,161 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
 
         return this.evaluationContext.context.coreTypes.voidValue;
     }
+}
 
+export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
+    builder: HIRBuilder;
+
+    constructor(builder: HIRBuilder) {
+        super();
+        this.builder = builder;
+    }
+
+    visitDecayedNode(node: parseTree.ParseTreeNode) : HIRValue {
+        let value = this.visitNode(node) as HIRValue;
+        let valueType = value.getType();
+
+        if (valueType.isReferenceType())
+            return this.builder.load((valueType as HIRPointerLikeType).baseType, value, node.sourcePosition);
+        return value;
+    }
+    castValueToExpectedType(value: HIRValue, expectedType: HIRType | null, sourcePosition: AbstractSourcePosition): HIRValue {
+        if(!expectedType)
+            return value;
+
+        if(!expectedType.isSatisfiedByValue(value))
+            throw new Error(sourcePosition.formatMessage(`expected a value of type ${expectedType.toString()} instead of "${value.getType().toString()}".`))
+        return value;
+    }
+
+    visitNodeExpectingType(node: parseTree.ParseTreeNode) : HIRType {
+        let value = this.visitDecayedNode(node);
+        if(!value.isType())
+            throw new Error(node.sourcePosition.formatMessage('Expected a type expression.'));
+        return value as HIRType;
+    }
+
+    visitNodeWithExpectedType(node: parseTree.ParseTreeNode, expectedType: HIRType | null) : HIRValue {
+        let value = this.visitDecayedNode(node);
+        return this.castValueToExpectedType(value, expectedType, node.sourcePosition);
+    }
+
+    visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
+        throw new Error('visitErrorNode')
+    }
+    visitParseErrorNode(node: parseTree.ParseTreeParseErrorNode): any {
+        throw new Error('visitParseErrorNode')
+    }
+    visitRuntimeErrorNode(node: parseTree.ParseTreeRuntimeErrorNode): any {
+        throw new Error('visitRuntimeErrorNode')
+    }
+    visitAssertNode(node: parseTree.ParseTreeAssertNode): any {
+        throw new Error('visitAssertNode')
+    }
+
+    visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
+        throw new Error('visitApplicationNode')
+    }
+    visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
+        throw new Error('visitNode')
+    }
+    visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
+        throw new Error('visitAssociationNode')
+    }
+    visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
+        throw new Error('visitBinaryExpressionSequenceNode')
+    }
+    visitDictionaryNode(node: parseTree.ParseTreeDictionaryNode): any {
+        throw new Error('visitDictionaryNode')
+    }
+
+    visitIdentifierReferenceNode(node: parseTree.ParseTreeIdentifierReferenceNode): any {
+        let bindingOrNull = this.builder.environment.lookSymbolRecursively(node.symbol);
+        if(!bindingOrNull)
+            throw new Error(node.sourcePosition.formatMessage(`#${node.symbol} identifier is not found.`))
+
+        return bindingOrNull.analyzeAndBuildIdentifierReferenceNode(this, node)
+    }
+
+    visitArgumentDefinitionNode(node: parseTree.ParseTreeArgumentDefinitionNode): any {
+        throw new Error('visitArgumentDefinitionNode')
+    }
+    visitFunctionTypeNode(node: parseTree.ParseTreeFunctionTypeNode): any {
+        throw new Error('visitFunctionTypeNode')
+    }
+    visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
+        throw new Error('visitFunctionNode')
+    }
+
+    visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {
+        throw new Error('visitLexicalBlockNode')
+    }
+
+    visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {
+        throw new Error('visitLiteralCharacterNode')
+    }
+    visitLiteralFloatNode(node: parseTree.ParseTreeLiteralFloatNode): any {
+        throw new Error('visitLiteralFloatNode')
+    }
+    visitLiteralIntegerNode(node: parseTree.ParseTreeLiteralIntegerNode): any {
+        throw new Error('visitLiteralIntegerNode')
+    }
+    visitLiteralStringNode(node: parseTree.ParseTreeLiteralStringNode): any {
+        throw new Error('visitLiteralStringNode')
+    }
+    visitLiteralSymbolNode(node: parseTree.ParseTreeLiteralSymbolNode): any {
+        throw new Error('visitLiteralSymbolNode')
+    }
+    visitLiteralValueNode(node: parseTree.ParseTreeLiteralValueNode): any {
+        throw new Error('visitLiteralValueNode')
+    }
+
+    visitCascadedMessageNode(node: parseTree.ParseTreeCascadedMessageNode): any {
+        throw new Error('visitCascadedMessageNode')
+    }
+    visitMessageCascadeNode(node: parseTree.ParseTreeMessageCascadeNode): any {
+        throw new Error('visitMessageCascadeNode')
+    }
+    visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
+        throw new Error('visitMessageSendNode')
+    }
+
+    visitSequenceNode(node: parseTree.ParseTreeSequenceNode): any {
+        throw new Error('visitSequenceNode')
+    }
+    visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
+        throw new Error('visitTupleNode')
+    }
+
+    visitQuoteNode(node: parseTree.ParseTreeQuoteNode): any {
+        throw new Error('visitQuoteNode')
+    }
+    visitQuasiQuoteNode(node: parseTree.ParseTreeQuasiQuoteNode): any {
+        throw new Error('visitQuasiQuoteNode')
+    }
+    visitQuasiUnquoteNode(node: parseTree.ParseTreeQuasiUnquoteNode): any {
+        throw new Error('visitQuasiUnquoteNode')
+    }
+    visitSpliceNode(node: parseTree.ParseTreeSpliceNode): any {
+        throw new Error('visitSpliceNode')
+    }
+
+    visitVariableDefinitionNode(node: parseTree.ParseTreeVariableDefinitionNode): any {
+        throw new Error('visitVariableDefinitionNode')
+    }
+    visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
+        throw new Error('visitIfSelectionNode')
+    }
+    visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
+        throw new Error('visitSwitchSelectionNode')
+    }
+    visitReturnNode(node: parseTree.ParseTreeReturnNode): any {
+        throw new Error('visitReturnNode')
+    }
+    visitWhileDoNode(node: parseTree.ParseTreeWhileDoNode): any {
+        throw new Error('visitWhileDoNode')
+    }
+    visitDoWhileNode(node: parseTree.ParseTreeDoWhileNode): any {
+        throw new Error('visitDoWhileNode')
+    }
 }

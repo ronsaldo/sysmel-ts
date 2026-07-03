@@ -2,6 +2,7 @@ import * as parseTree from "./parsetree.js"
 import * as parser from "./parser.js"
 import * as hir from "./hir.js"
 import * as assert from 'assert';
+import { getOrMakeEmptySourcePosition } from "./source_code.js";
 
 let context: hir.HIRContext = new hir.HIRContext();
 
@@ -289,6 +290,22 @@ export function runTests() {
         assert.strictEqual(simplifiedFunctionType.argumentTypes.length, 1);
         assert.strictEqual(simplifiedFunctionType.argumentTypes[0], context.coreTypes.integerType);
         assert.strictEqual(simplifiedFunctionType.resultType, context.coreTypes.integerType);
+    }
+
+    // Function
+    {
+        let functionValue = evaluateTopLevelSourceString('{:(Integer)x :: Integer | x}');
+        assert.ok(functionValue.isFunction())
+        //console.log((functionValue as hir.HIRFunction).fullPrintString())
+        let result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 42);
+
+        //functionValue = evaluateTopLevelSourceString('{:(Integer)x :: Integer | x negated}');
+        //assert.ok(functionValue.isFunction())
+        //result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        //assert.ok(result.isConstantLiteralIntegerValue());
+        //assert.strictEqual(result.evaluateAsInteger(), -42);
     }
 
     // If then else
