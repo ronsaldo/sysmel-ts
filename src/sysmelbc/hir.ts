@@ -2415,7 +2415,19 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitMessageCascadeNode(node: parseTree.ParseTreeMessageCascadeNode): any {
-        throw new Error('TODO visitMessageCascadeNode AnalysisAndEvaluationPass');
+        let resultValue = this.visitNode(node.receiver) as HIRValue;
+        let receiverNodeValue = new parseTree.ParseTreeLiteralValueNode(node.receiver.sourcePosition, resultValue);
+
+        for(let i = 0; i < node.cascadedMessages.length; ++i) {
+            let cascadedMessage = node.cascadedMessages[i];
+            if(!cascadedMessage)
+                throw new Error("Expected a valid cascaded message.");
+
+            let expandedMessage = cascadedMessage.asMessageSendWithReceiver(receiverNodeValue);
+            resultValue = this.visitNode(expandedMessage);
+        }
+
+        return resultValue;
     }
 
     visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
@@ -2532,7 +2544,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
-        throw new Error(node.sourcePosition.formatMessage('visitSwitchSelectionNode.'));
+        throw new Error(node.sourcePosition.formatMessage('TODO: visitSwitchSelectionNode.'));
     }
 
     visitReturnNode(node: parseTree.ParseTreeReturnNode): any {

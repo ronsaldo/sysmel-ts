@@ -207,6 +207,10 @@ export abstract class ParseTreeNode {
         return false;
     }
 
+    asMessageSendWithReceiver(receiver: ParseTreeNode) : ParseTreeNode {
+        return this;
+    }
+
     asMessageSendCascadeReceiverAndFirstMessage(): [ParseTreeNode, ParseTreeNode | null] {
         return [this, null]
     }
@@ -590,6 +594,11 @@ export class ParseTreeCascadedMessageNode extends ParseTreeNode {
     isCascadeMessageNode(): boolean {
         return true;
     }
+
+    asMessageSendWithReceiver(receiver: ParseTreeNode) : ParseTreeNode {
+        return new ParseTreeMessageSendNode(this.sourcePosition, receiver, this.selector, this.sendArguments);
+    }
+
 }
 
 export class ParseTreeMessageCascadeNode extends ParseTreeNode {

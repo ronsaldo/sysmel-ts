@@ -240,6 +240,13 @@ export function runTests() {
         assert.strictEqual(value.evaluateAsBoolean(), false);
     }
 
+    // Message send cascade
+    {
+        let value = evaluateTopLevelSourceString('1.0 + 2.0; yourself')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 1.0);
+    }
+
     // If then else
     {
         let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')
