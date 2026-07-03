@@ -189,6 +189,57 @@ export function runTests() {
         assert.strictEqual(value.evaluateAsBoolean(), false);
     }
 
+    // Message send 3
+    {
+        let value = evaluateTopLevelSourceString('42.0 negated')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, -42);
+
+        value = evaluateTopLevelSourceString('9.0 sqrt')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 3);
+
+        value = evaluateTopLevelSourceString('1.0 + 2.0')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 3);
+
+        value = evaluateTopLevelSourceString('1.0 - 2.0')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, -1);
+
+        value = evaluateTopLevelSourceString('2.0 * 3.0')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 6);
+
+        value = evaluateTopLevelSourceString('6.0 / 3.0')
+        assert.ok(value.isConstantLiteralFloatValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 2);
+
+        value = evaluateTopLevelSourceString('2.0 = 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('2.0 ~= 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
+
+        value = evaluateTopLevelSourceString('1.0 < 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('1.0 <= 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('1.0 > 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
+
+        value = evaluateTopLevelSourceString('1.0 >= 2.0')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
+    }
+
     // If then else
     {
         let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')
