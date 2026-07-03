@@ -1880,20 +1880,125 @@ export class HIRCoreTypes {
     }
     
     createCorePrimitiveFunctions() {
-        this.createIntegerPrimitiveFunctions(this.integerType);
-        this.createIntegerPrimitiveFunctions(this.int32Type);
-        this.createIntegerPrimitiveFunctions(this.uint32Type);
-        this.createIntegerPrimitiveFunctions(this.int64Type);
-        this.createIntegerPrimitiveFunctions(this.uint64Type);
+        this.createIntegerPrimitiveFunctions(this.integerType, true);
+        this.createIntegerPrimitiveFunctions(this.int32Type,  true);
+        this.createIntegerPrimitiveFunctions(this.uint32Type, false);
+        this.createIntegerPrimitiveFunctions(this.int64Type,  true);
+        this.createIntegerPrimitiveFunctions(this.uint64Type, false);
     }
 
-    createIntegerPrimitiveFunctions(integerType: HIRNominalType) {
+    createIntegerPrimitiveFunctions(integerType: HIRNominalType, isSigned: boolean) {
         function integerNegated(operand: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
             return new HIRConstantLiteralIntegerValue(-operand.evaluateAsInteger(), resultType, sourcePosition)
         }
+        function integerBitInvert(operand: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(~operand.evaluateAsInteger(), resultType, sourcePosition)
+        }
+
+        function integerAdd(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() + right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerSub(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() - right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerMul(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() * right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerDiv(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(~~(left.evaluateAsInteger() / right.evaluateAsInteger()), resultType, sourcePosition)
+        }
+        function integerMod(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() % right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+
+        function integerBitAnd(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() & right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerBitOr(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() | right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerBitXor(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() ^ right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerShifLeft(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() << right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerShifRight(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            if(isSigned)
+                return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() >> right.evaluateAsInteger(), resultType, sourcePosition)
+            else
+                return new HIRConstantLiteralIntegerValue(left.evaluateAsInteger() >>> right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+
+        function integerEquals(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() === right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerNotEquals(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() !== right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerLessThan(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() < right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerLessOrEquals(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() <= right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerGreaterThan(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() > right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+        function integerGreaterOrEquals(left: HIRValue, right: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralBooleanValue(left.evaluateAsInteger() >= right.evaluateAsInteger(), resultType, sourcePosition)
+        }
+
+        function asPrimitiveInt(value: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(value.evaluateAsInteger(), resultType, sourcePosition);
+        }
+
+        function asPrimitiveFloat(value: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralFloatValue(value.evaluateAsInteger(), resultType, sourcePosition);
+        }
 
         let primitivePrefix = integerType.toString() + "::";
-        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('negated', primitivePrefix + 'negated', this.getOrCreateSimpleFunctionType([integerType], integerType), integerNegated, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('negated',   primitivePrefix + 'negated',   this.getOrCreateSimpleFunctionType([integerType], integerType), integerNegated, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('bitInvert', primitivePrefix + 'bitInvert', this.getOrCreateSimpleFunctionType([integerType], integerType), integerBitInvert, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('+',  primitivePrefix + '+',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerAdd, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('-',  primitivePrefix + '-',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerSub, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('*',  primitivePrefix + '*',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerMul, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('//', primitivePrefix + '//', this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerDiv, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('%',  primitivePrefix + '%',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerMod, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('&',  primitivePrefix + '&',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerBitAnd,    true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('|',  primitivePrefix + '|',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerBitOr,     true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('^',  primitivePrefix + '^',  this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerBitXor,    true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('<<', primitivePrefix + '<<', this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerShifLeft,  true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('>>', primitivePrefix + '>>', this.getOrCreateSimpleFunctionType([integerType, integerType], integerType), integerShifRight, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('=',  primitivePrefix + '=',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerEquals,          true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('~=', primitivePrefix + '~=', this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerNotEquals,       true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('<',  primitivePrefix + '<',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerLessThan,        true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('<=', primitivePrefix + '<=', this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerLessOrEquals,    true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('>',  primitivePrefix + '>',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerGreaterThan,     true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('>=', primitivePrefix + '>=', this.getOrCreateSimpleFunctionType([integerType, integerType], this.boolean8Type), integerGreaterOrEquals, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asCharacter',  primitivePrefix + 'asCharacter', this.getOrCreateSimpleFunctionType([integerType, integerType], this.characterType),  asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asChar8',  primitivePrefix + 'asChar8',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.char8Type),  asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asChar16', primitivePrefix + 'asChar16', this.getOrCreateSimpleFunctionType([integerType, integerType], this.char16Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asChar32', primitivePrefix + 'asChar32', this.getOrCreateSimpleFunctionType([integerType, integerType], this.char32Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asInt8',  primitivePrefix + 'asInt8',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.int8Type),  asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asInt16', primitivePrefix + 'asInt16', this.getOrCreateSimpleFunctionType([integerType, integerType], this.int16Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asInt32', primitivePrefix + 'asInt32', this.getOrCreateSimpleFunctionType([integerType, integerType], this.int32Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asInt64', primitivePrefix + 'asInt64', this.getOrCreateSimpleFunctionType([integerType, integerType], this.int64Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asUInt8',  primitivePrefix + 'asUInt8',  this.getOrCreateSimpleFunctionType([integerType, integerType], this.uint8Type),  asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asUInt16', primitivePrefix + 'asUInt16', this.getOrCreateSimpleFunctionType([integerType, integerType], this.uint16Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asUInt32', primitivePrefix + 'asUInt32', this.getOrCreateSimpleFunctionType([integerType, integerType], this.uint32Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asUInt64', primitivePrefix + 'asUInt64', this.getOrCreateSimpleFunctionType([integerType, integerType], this.uint64Type), asPrimitiveInt, true, true, getOrMakeEmptySourcePosition()))
+
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat',   primitivePrefix + 'asFloat',   this.getOrCreateSimpleFunctionType([integerType, integerType], this.floatType),   asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat32', primitivePrefix + 'asFloat32', this.getOrCreateSimpleFunctionType([integerType, integerType], this.float32Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
+        integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat64', primitivePrefix + 'asFloat64', this.getOrCreateSimpleFunctionType([integerType, integerType], this.float64Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
     }
 
     getOrCreateSimpleFunctionType(argumentTypes: HIRType[], resultType: HIRType) : HIRSimpleFunctionType {
@@ -2110,7 +2215,8 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
-        throw new Error('TODO ParseTreeBinaryExpressionSequenceNode AnalysisAndEvaluationPass');
+        let expandedMessageSend = node.expandAsMessageSends();
+        return this.visitNode(expandedMessageSend)
     }
 
     visitDictionaryNode(node: parseTree.ParseTreeDictionaryNode): any {

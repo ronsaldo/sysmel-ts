@@ -345,6 +345,22 @@ export class ParseTreeBinaryExpressionSequenceNode extends ParseTreeNode {
             new ParseTreeCascadedMessageNode(this.sourcePosition, cascadeSelector, [cascadeArgument])
         ];
     }
+    
+    expandAsMessageSends(): ParseTreeNode {
+        let previous = this.operands[0] as ParseTreeNode;
+        for(let i = 1; i < this.operands.length; i += 2) {
+            let operator = this.operands[i];
+            let operand = this.operands[i + 1];
+            if(!operator || !operand)
+                throw new Error('Expected a valid operand.');
+            previous = new ParseTreeMessageSendNode(
+                (operator.sourcePosition as SourcePosition).until(operand.sourcePosition as SourcePosition),
+                previous, operator, [operand]
+            );
+        }
+
+        return previous;
+    }
 }
 
 export class ParseTreeIdentifierReferenceNode extends ParseTreeNode {

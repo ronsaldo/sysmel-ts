@@ -131,9 +131,53 @@ export function runTests() {
 
     // Message send 2
     {
-        //let value = evaluateTopLevelSourceString('1 + 2')
-        //assert.ok(value.isConstantLiteralIntegerValue())
-        //assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 3);
+        let value = evaluateTopLevelSourceString('1 + 2')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 3);
+
+        value = evaluateTopLevelSourceString('1 - 2')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, -1);
+
+        value = evaluateTopLevelSourceString('2 * 3')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 6);
+
+        value = evaluateTopLevelSourceString('6 // 3')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 2);
+
+        value = evaluateTopLevelSourceString('5 // 3')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        value = evaluateTopLevelSourceString('5 % 3')
+        assert.ok(value.isConstantLiteralIntegerValue())
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 2);
+
+        value = evaluateTopLevelSourceString('2 = 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('2 ~= 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
+
+        value = evaluateTopLevelSourceString('1 < 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('1 <= 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), true);
+
+        value = evaluateTopLevelSourceString('1 > 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
+
+        value = evaluateTopLevelSourceString('1 >= 2')
+        assert.ok(value.isConstantLiteralBooleanValue())
+        assert.strictEqual(value.evaluateAsBoolean(), false);
     }
 
     // If then else
