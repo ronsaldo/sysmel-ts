@@ -343,6 +343,24 @@ export function runTests() {
         assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
     }
 
+    // Simple function type
+    {
+        let simpleFunctionTypeValue = evaluateTopLevelSourceString('(Integer) => Integer');
+        assert.ok(simpleFunctionTypeValue.isSimpleFunctionType());
+        let simpleFunctionType = simpleFunctionTypeValue as hir.HIRSimpleFunctionType;
+        assert.strictEqual(simpleFunctionType.argumentTypes.length, 1);
+        assert.strictEqual(simpleFunctionType.argumentTypes[0], context.coreTypes.integerType);
+        assert.strictEqual(simpleFunctionType.resultType, context.coreTypes.integerType);
+
+        simpleFunctionTypeValue = evaluateTopLevelSourceString('(Integer, Integer) => Integer');
+        assert.ok(simpleFunctionTypeValue.isSimpleFunctionType());
+        simpleFunctionType = simpleFunctionTypeValue as hir.HIRSimpleFunctionType;
+        assert.strictEqual(simpleFunctionType.argumentTypes.length, 2);
+        assert.strictEqual(simpleFunctionType.argumentTypes[0], context.coreTypes.integerType);
+        assert.strictEqual(simpleFunctionType.argumentTypes[1], context.coreTypes.integerType);
+        assert.strictEqual(simpleFunctionType.resultType, context.coreTypes.integerType);
+    }
+
     // Boolean not
     {
         let value = evaluateTopLevelSourceString("false not")

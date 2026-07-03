@@ -234,6 +234,10 @@ export abstract class HIRValue {
         let selfType = this.getType();
         return selfType.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
     }
+
+    asArrowArguments(): HIRType[] {
+        throw new Error(this.sourcePosition.formatMessage('Not a valid type for the arrow arguments'));
+    }
     
 }
 
@@ -297,6 +301,11 @@ export class HIRType extends HIRValue {
     lookupSelector(selector: string) : HIRValue | null {
         return null;
     }
+
+    asArrowArguments(): HIRType[] {
+        return [this];
+    }
+
 }
 
 export class HIRNominalType extends HIRType {
@@ -445,6 +454,18 @@ export class HIRUniverseType extends HIRType {
         }
         return 'Type@' + this.level;
     }
+
+    analyzeAndEvaluateMessageSendNodeOnType(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = evaluator.visitSymbolNode(node.selector);
+
+        // FIXME: Remove this hack by using a method dictionary
+        if(selector === '=>') {
+            let functionArguments = receiver.asArrowArguments();
+            let resultType = evaluator.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode)
+            return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
+        }
+        return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
+    }
 }
 
 export class HIRDerivedType extends HIRType {
@@ -547,6 +568,10 @@ export class HIRTupleType extends HIRType {
 
     isTupleType(): boolean {
         return true;
+    }
+
+    asArrowArguments(): HIRType[] {
+        return this.elements;
     }
 }
 
