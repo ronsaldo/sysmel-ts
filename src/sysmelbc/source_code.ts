@@ -25,6 +25,9 @@ export abstract class AbstractSourcePosition {
         return null;
     }
 
+    getValue() : string {
+        return '<No source code>';
+    }
 };
 
 export class EmptySourcePosition extends AbstractSourcePosition {

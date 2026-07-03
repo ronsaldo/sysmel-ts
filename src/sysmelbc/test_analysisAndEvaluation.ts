@@ -361,6 +361,17 @@ export function runTests() {
         assert.strictEqual(simpleFunctionType.resultType, context.coreTypes.integerType);
     }
 
+    // Runtime error
+    {
+        assert.throws(() => evaluateTopLevelSourceString('error: "Test Error"'))
+    }
+
+    // Assertion
+    {
+        evaluateTopLevelSourceString('assert: true');
+        assert.throws(() => evaluateTopLevelSourceString('assert: false'))
+    }
+
     // Boolean not
     {
         let value = evaluateTopLevelSourceString("false not")

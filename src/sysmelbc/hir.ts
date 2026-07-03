@@ -26,6 +26,10 @@ export abstract class HIRValue {
         throw new Error(this.sourcePosition.formatMessage('Not a numerical value'))
     }
 
+    evaluateAsString(): string {
+        throw new Error(this.sourcePosition.formatMessage('Not a string value'))
+    }
+
     evaluateAsSymbol(): string {
         throw new Error(this.sourcePosition.formatMessage('Not a symbol value'))
     }
@@ -773,6 +777,10 @@ export class HIRConstantLiteralStringValue extends HIRConstantLiteralValue {
     constructor(value:string, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+
+    evaluateAsString(): string {
+        return this.value;
     }
 
     isConstantLiteralStringValue() : boolean {
@@ -1862,6 +1870,13 @@ export class HIRCoreTypes {
     }
 
     createCorePrimitiveMacros() {
+        function error(macroContext: HIRMacroContext, errorMessage: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeRuntimeErrorNode(macroContext.sourcePosition, errorMessage);
+        }
+        function assertExpression(macroContext: HIRMacroContext, condition: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
+            return new parseTree.ParseTreeAssertNode(macroContext.sourcePosition, condition);
+        }
+
         function letWith(macroContext: HIRMacroContext, nameExpression: parseTree.ParseTreeNode, initialValue: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
             return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, false);
         }
@@ -1895,6 +1910,9 @@ export class HIRCoreTypes {
         }
 
         this.corePrimitiveMacros = [
+            new HIRPrimitiveMacro('error:', this.primitiveMacroType, error, getOrMakeEmptySourcePosition()),
+            new HIRPrimitiveMacro('assert:', this.primitiveMacroType, assertExpression, getOrMakeEmptySourcePosition()),
+
             new HIRPrimitiveMacro('let:with:', this.primitiveMacroType, letWith, getOrMakeEmptySourcePosition()),
             new HIRPrimitiveMacro('let:mutableWith:', this.primitiveMacroType, letMutableWith, getOrMakeEmptySourcePosition()),
 
@@ -2356,6 +2374,11 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         return evaluatedValue.evaluateAsBoolean();
     }
 
+    visitStringNode(node: parseTree.ParseTreeNode) : string {
+        let evaluatedValue = this.visitNodeWithExpectedType(node, this.evaluationContext.context.coreTypes.stringType);
+        return evaluatedValue.evaluateAsString();
+    }
+
     visitSymbolNode(node: parseTree.ParseTreeNode) : string {
         let evaluatedValue = this.visitNodeWithExpectedType(node, this.evaluationContext.context.coreTypes.symbolType);
         return evaluatedValue.evaluateAsSymbol();
@@ -2373,6 +2396,17 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
 
     visitParseErrorNode(node: parseTree.ParseTreeParseErrorNode): any {
         throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
+    }
+
+    visitRuntimeErrorNode(node: parseTree.ParseTreeRuntimeErrorNode): any {
+        let errorMessage = this.visitStringNode(node.errorMessage);
+        throw new Error(node.sourcePosition.formatMessage(errorMessage));
+    }
+
+    visitAssertNode(node: parseTree.ParseTreeAssertNode): any {
+        if(!this.visitBooleanNode(node.condition))
+            throw new Error(node.sourcePosition.formatMessage(`Assertion failure: ${node.condition.sourcePosition.getValue()}`));
+        return this.evaluationContext.context.coreTypes.voidValue;
     }
 
     visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
@@ -2413,7 +2447,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     visitIdentifierReferenceNode(node: parseTree.ParseTreeIdentifierReferenceNode): any {
         let bindingOrNull = this.evaluationContext.environment.lookSymbolRecursively(node.symbol);
         if(!bindingOrNull)
-            throw new Error(node.sourcePosition.formatMessage(`${node.symbol} identifier is not found.`))
+            throw new Error(node.sourcePosition.formatMessage(`#${node.symbol} identifier is not found.`))
 
         return bindingOrNull.analyzeAndEvaluateIdentifierReferenceNode(this, node)
     }

@@ -3,6 +3,8 @@ import {SourceCode, AbstractSourcePosition, SourcePosition} from "./source_code.
 export abstract class ParseTreeVisitor {
     abstract visitErrorNode(node: ParseTreeErrorNode): any;
     abstract visitParseErrorNode(node: ParseTreeParseErrorNode): any;
+    abstract visitRuntimeErrorNode(node: ParseTreeRuntimeErrorNode): any;
+    abstract visitAssertNode(node: ParseTreeAssertNode): any;
 
     abstract visitApplicationNode(node: ParseTreeApplicationNode): any;
     abstract visitAssignmentNode(node: ParseTreeAssignmentNode): any;
@@ -76,6 +78,14 @@ export abstract class ParseTreeNode {
     }
 
     isParseErrorNode(): boolean {
+        return false;
+    }
+
+    isRuntimeErrorNode(): boolean {
+        return false;
+    }
+
+    isAssertNode(): boolean {
         return false;
     }
 
@@ -233,12 +243,44 @@ export class ParseTreeErrorNode extends ParseTreeNode{
 }
 
 export class ParseTreeParseErrorNode extends ParseTreeErrorNode{
-
     accept(visitor: ParseTreeVisitor) {
         return visitor.visitParseErrorNode(this);
     }
 
     isParseErrorNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeRuntimeErrorNode extends ParseTreeNode {
+    errorMessage: ParseTreeNode;
+    constructor(sourcePosition: AbstractSourcePosition, errorMessage: ParseTreeNode) {
+        super(sourcePosition);
+        this.errorMessage = errorMessage;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitRuntimeErrorNode(this);
+    }
+
+    isRuntimeErrorNode(): boolean {
+        return true;
+    }
+}
+
+export class ParseTreeAssertNode extends ParseTreeNode {
+    condition: ParseTreeNode;
+
+    constructor(sourcePosition: AbstractSourcePosition, condition: ParseTreeNode) {
+        super(sourcePosition);
+        this.condition = condition
+
+    }
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitAssertNode(this)
+    }
+
+    isAssertNode(): boolean {
         return true;
     }
 }
@@ -874,6 +916,14 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
     }
 
     visitParseErrorNode(node: ParseTreeParseErrorNode): any {
+    }
+
+    visitRuntimeErrorNode(node: ParseTreeRuntimeErrorNode): any {
+        this.visitNode(node.errorMessage);
+    }
+
+    visitAssertNode(node: ParseTreeAssertNode): any {
+        this.visitNode(node.condition);
     }
 
     visitApplicationNode(node: ParseTreeApplicationNode): any {
