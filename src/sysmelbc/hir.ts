@@ -1885,6 +1885,10 @@ export class HIRCoreTypes {
         this.createIntegerPrimitiveFunctions(this.uint32Type, false);
         this.createIntegerPrimitiveFunctions(this.int64Type,  true);
         this.createIntegerPrimitiveFunctions(this.uint64Type, false);
+
+        this.createNumericalPrimitiveConversionMethods(this.characterType);
+        this.createNumericalPrimitiveConversionMethods(this.floatType);
+        this.createNumericalPrimitiveConversionMethods(this.integerType);
     }
 
     createIntegerPrimitiveFunctions(integerType: HIRNominalType, isSigned: boolean) {
@@ -1999,6 +2003,36 @@ export class HIRCoreTypes {
         integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat',   primitivePrefix + 'asFloat',   this.getOrCreateSimpleFunctionType([integerType, integerType], this.floatType),   asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
         integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat32', primitivePrefix + 'asFloat32', this.getOrCreateSimpleFunctionType([integerType, integerType], this.float32Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
         integerType.addPrimitiveMethod(new HIRPrimitiveFunction('asFloat64', primitivePrefix + 'asFloat64', this.getOrCreateSimpleFunctionType([integerType, integerType], this.float64Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
+    }
+
+    createNumericalPrimitiveConversionMethods(numericalType: HIRNominalType) {
+        function asPrimitiveCharacter(value: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralCharacterValue(~~value.evaluateAsNumber(), resultType, sourcePosition);
+        }
+        function asPrimitiveFloat(value: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralFloatValue(value.evaluateAsNumber(), resultType, sourcePosition);
+        }
+        function asPrimitiveInteger(value: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(~~value.evaluateAsNumber(), resultType, sourcePosition);
+        }
+
+        let primitivePrefix = numericalType.toString() + "::";
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('i8',  primitivePrefix + 'i8',  this.getOrCreateSimpleFunctionType([numericalType], this.int8Type),  asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('i16', primitivePrefix + 'i16', this.getOrCreateSimpleFunctionType([numericalType], this.int16Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('i32', primitivePrefix + 'i32', this.getOrCreateSimpleFunctionType([numericalType], this.int32Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('i64', primitivePrefix + 'i64', this.getOrCreateSimpleFunctionType([numericalType], this.int64Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('u8',  primitivePrefix + 'u8',  this.getOrCreateSimpleFunctionType([numericalType], this.uint8Type),  asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('u16', primitivePrefix + 'u16', this.getOrCreateSimpleFunctionType([numericalType], this.uint16Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('u32', primitivePrefix + 'u32', this.getOrCreateSimpleFunctionType([numericalType], this.uint32Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('u64', primitivePrefix + 'u64', this.getOrCreateSimpleFunctionType([numericalType], this.uint64Type), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('c8',  primitivePrefix + 'c8',  this.getOrCreateSimpleFunctionType([numericalType], this.char8Type),  asPrimitiveCharacter, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('c16', primitivePrefix + 'c16', this.getOrCreateSimpleFunctionType([numericalType], this.char16Type), asPrimitiveCharacter, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('c32', primitivePrefix + 'c32', this.getOrCreateSimpleFunctionType([numericalType], this.char32Type), asPrimitiveCharacter, true, true, getOrMakeEmptySourcePosition()))
+
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('f32', primitivePrefix + 'f32', this.getOrCreateSimpleFunctionType([numericalType], this.float32Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('f64', primitivePrefix + 'f64', this.getOrCreateSimpleFunctionType([numericalType], this.float64Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
     }
 
     getOrCreateSimpleFunctionType(argumentTypes: HIRType[], resultType: HIRType) : HIRSimpleFunctionType {

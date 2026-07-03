@@ -82,6 +82,15 @@ export function runTests() {
         assert.strictEqual((value as hir.HIRConstantLiteralSymbolValue).value, 'hello');
     }
 
+    // Literal int32
+    {
+        setUp();
+        let value = evaluateTopLevelSourceString('42i32');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+        assert.strictEqual(value.getType(), context.coreTypes.int32Type);
+    }
+
     // Package symbols
     {
         let topLevelResult = evaluateTopLevelSourceString('false')
