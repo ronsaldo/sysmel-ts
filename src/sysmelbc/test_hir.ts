@@ -170,7 +170,7 @@ export function runTests() {
         }
     }
 
-    // Alloca load store
+    // Alloca, load and store
     {
         let context = new hir.HIRContext();
         let argument = new hir.HIRArgument(context.coreTypes.boolean8Type, 'x', getOrMakeEmptySourcePosition());
@@ -224,5 +224,38 @@ export function runTests() {
             assert.ok(result.isConstantLiteralIntegerValue());
             assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 1);
         }
+    }
+
+    // Call
+    {
+        let context = new hir.HIRContext();
+        let argument = new hir.HIRArgument(context.coreTypes.int32Type, 'x', getOrMakeEmptySourcePosition());
+        let identityFunctionType = new hir.HIRDependentFunctionType([argument], context.coreTypes.int32Type, context.coreTypes, getOrMakeEmptySourcePosition())
+        let identity = new hir.HIRFunction('identity', identityFunctionType, getOrMakeEmptySourcePosition());
+        
+        {
+            let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
+            identity.addBasicBlock(entryBlock)
+
+            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
+            builder.returnValue(argument, getOrMakeEmptySourcePosition());
+            //console.log(identity.fullPrintString());
+        }
+
+        let callerFunctionType = new hir.HIRDependentFunctionType([], context.coreTypes.int32Type, context.coreTypes, getOrMakeEmptySourcePosition())
+        let caller = new hir.HIRFunction('caller', callerFunctionType, getOrMakeEmptySourcePosition());
+
+        {
+            let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
+            caller.addBasicBlock(entryBlock)
+
+            let builder = new hir.HIRBuilder(caller, context, entryBlock, new hir.HIREmptyEnvironment());
+            let callResult = builder.call(identity, [new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.int32Type, getOrMakeEmptySourcePosition())], context.coreTypes.int32Type, getOrMakeEmptySourcePosition());
+            builder.returnValue(callResult, getOrMakeEmptySourcePosition());
+        }
+
+        let result = caller.evaluateWithArguments([]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual((result as hir.HIRConstantLiteralIntegerValue).value, 42);      
     }
 } 

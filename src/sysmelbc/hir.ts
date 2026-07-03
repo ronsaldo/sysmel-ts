@@ -166,6 +166,10 @@ export abstract class HIRValue {
         return this;
     }
 
+    evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
+        throw new Error(callSourcePosition.formatMessage('Called value is non functional.'));
+    }
+
     storeValueAtIndex(valueToStore: HIRValue, index: number): void {
         throw new Error(this.sourcePosition.formatMessage('Invalid value for storing a field.'));
     }
@@ -793,6 +797,13 @@ export class HIRFunction extends HIRConstant {
         return instructions;
     }
 
+    toString(): string {
+        if (this.name)
+            return 'HIRFunction ' + this.name;
+        else
+            return '<anonymous function>';
+    }
+
     fullPrintString(): string {
         this.enumerateInstructions();
         let result = "HIRFunction ";
@@ -828,6 +839,10 @@ export class HIRFunction extends HIRConstant {
 
     evaluateWithArguments(callArguments: HIRValue[]): HIRValue {
         return this.evaluateWithArgumentsAndCaptures(callArguments, []);
+    }
+
+    evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
+        return this.evaluateWithArguments(callArguments)
     }
 }
 
@@ -1100,6 +1115,30 @@ export class HIRConditionalBranchInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRCallInstruction extends HIRInstruction  {
+    functional: HIRValue;
+    callArguments: HIRValue[];
+    
+    constructor(functional: HIRValue, callArguments: HIRValue[], type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.functional = functional;
+        this.callArguments = callArguments;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := call ${this.functional.toString()} with ${this.callArguments.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let functional = this.functional.getValueInEvaluationContext(context);
+        let callArguments = this.callArguments.map((value: HIRValue) : HIRValue => value.getValueInEvaluationContext(context));
+        let result = functional.evaluateWithArgumentsAndResultTypeAt(callArguments, this.type, this.sourcePosition);
+        context.setCurrentInstructionValue(result);
+    }
+
+}
+
+
 export class HIRLoadInstruction extends HIRInstruction  {
     storage: HIRValue;
 
@@ -1259,6 +1298,13 @@ export class HIRBuilder {
     conditionalBranch(condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRConditionalBranchInstruction {
         let instruction = new HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, this.context.coreTypes.voidType, null, sourcePosition);
         this.addInstruction(instruction);
+        return instruction;
+    }
+
+    call(functional: HIRValue, callArguments: HIRValue[], resultType: HIRType, sourcePosition: AbstractSourcePosition): HIRCallInstruction {
+        let instruction = new HIRCallInstruction(functional, callArguments, resultType, null, sourcePosition);
+        this.addInstruction(instruction);
+        // TODO: Simplify the call if possible.
         return instruction;
     }
 
