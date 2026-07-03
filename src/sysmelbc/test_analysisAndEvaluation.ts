@@ -101,14 +101,13 @@ export function runTests() {
 
     // let with macro
     {
-        //let topLevelResult = evaluateTopLevelSourceString('let: #x with: 42')
-        //assert.ok(topLevelResult.isConstantLiteralIntegerValue())
-        //assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+        let topLevelResult = evaluateTopLevelSourceString('let: #x with: 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
 
-        /*topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
-        self.assertTrue(topLevelResult.isIntegerConstant())
-        self.assertEqual(topLevelResult.value, 42)
-        */
+        topLevelResult = evaluateTopLevelSourceString('let: #x with: 42. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
     }
 
     // If then else

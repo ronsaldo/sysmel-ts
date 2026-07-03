@@ -14,6 +14,10 @@ export abstract class HIRValue {
         throw new Error(this.sourcePosition.formatMessage('Not a boolean value'))
     }
 
+    evaluateAsSymbol(): string {
+        throw new Error(this.sourcePosition.formatMessage('Not a symbol value'))
+    }
+
     isType(): boolean {
         return false;
     }
@@ -212,6 +216,10 @@ export class HIRType extends HIRValue {
         if(!name)
             return '<AnonType>';
         return name;
+    }
+
+    getOrCreateDefaultValue(): HIRValue {
+        throw new Error(this.sourcePosition.formatMessage(`Type ${this.toString()} does not have a default value.`));
     }
 
     getType(): HIRType {
@@ -596,10 +604,13 @@ export class HIRConstantLiteralSymbolValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    evaluateAsSymbol(): string {
+        return this.value;
+    }
+
     isConstantLiteralSymbolValue() : boolean {
         return true
     }
-
 
     toString(): string {
         return 'constantLiteralSymbol ' + this.value;
@@ -1725,6 +1736,13 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         return value;
     }
 
+    visitNodeExpectingType(node: parseTree.ParseTreeNode) : HIRType {
+        let value = this.visitDecayedNode(node);
+        if(!value.isType())
+            throw new Error(node.sourcePosition.formatMessage('Expected a type expression.'));
+        return value as HIRType;
+    }
+
     visitNodeWithExpectedType(node: parseTree.ParseTreeNode, expectedType: HIRType | null) : HIRValue {
         let value = this.visitDecayedNode(node);
         // TODO: check the type.
@@ -1737,6 +1755,17 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     visitBooleanNode(node: parseTree.ParseTreeNode) : boolean {
         let evaluatedValue = this.visitNodeWithExpectedType(node, this.evaluationContext.context.coreTypes.boolean8Type);
         return evaluatedValue.evaluateAsBoolean();
+    }
+
+    visitSymbolNode(node: parseTree.ParseTreeNode) : string {
+        let evaluatedValue = this.visitNodeWithExpectedType(node, this.evaluationContext.context.coreTypes.symbolType);
+        return evaluatedValue.evaluateAsSymbol();
+    }
+        
+    visitOptionalSymbolNode(node: parseTree.ParseTreeNode | null) : string | null {
+        if(!node)
+            return null;
+        return this.visitSymbolNode(node);
     }
 
     visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
@@ -1865,6 +1894,48 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitVariableDefinitionNode(node: parseTree.ParseTreeVariableDefinitionNode): any {
+        let name = this.visitOptionalSymbolNode(node.nameExpression);
+        
+        let typeValue: HIRType | null = null;
+        if (node.typeExpression)
+            typeValue = this.visitNodeExpectingType(node.typeExpression);
+
+        let initialValue: HIRValue | null = null;
+        if (node.initialValue) {
+            initialValue = this.visitNodeWithExpectedType(node.initialValue, typeValue);
+        }
+        
+        if(!initialValue) {
+            if(!typeValue)
+                throw new Error(node.sourcePosition.formatMessage('At least a type or an initial value must be specified.'));
+            initialValue = typeValue.getOrCreateDefaultValue();
+        }
+        if (node.isMutable) {
+            console.log('initialValue', initialValue);
+            throw new Error('TODO: mutable visitVariableDefinitionNode')
+        } else {
+            if(name)
+                this.evaluationContext.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition);
+            return initialValue;
+        }
+
+        /*
+        if node.isMutable:
+            valueType = typeValue
+            if valueType is None:
+                valueType = initialValue.getType()
+
+            valueBoxType = self.evaluationContext.context.getOrCreateMutableValueBoxType(valueType)
+            valueBox = HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition)
+
+            referenceType = self.evaluationContext.context.getOrCreateReferenceType(valueType)
+            referenceValue = HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition)
+            if name is not None:
+                self.evaluationContext.environment.setNewSymbolBinding(name, referenceValue, node.sourcePosition)
+
+            return referenceValue
+
+        */
         throw new Error(node.sourcePosition.formatMessage('visitVariableDefinitionNode.'));
     }
 
@@ -1888,7 +1959,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitReturnNode(node: parseTree.ParseReturnNode): any {
-        throw new Error(node.sourcePosition.formatMessage('visitReturnNode.'));
+        throw new Error(node.sourcePosition.formatMessage('Invalid location for a return expression.'));
     }
 
     visitWhileDoNode(node: parseTree.ParseWhileDoNode): any {
