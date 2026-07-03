@@ -1,4 +1,4 @@
-import {AbstractSourcePosition, getOrMakeEmptySourcePosition} from "./source_code.js"
+import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
 import * as parseTree from "./parsetree.js"
 
 export abstract class HIRValue {
@@ -555,7 +555,7 @@ export class HIRConstantLiteralCharacterValue extends HIRConstantLiteralValue {
     }
 }
 
-export class isConstantLiteralStringValue extends HIRConstantLiteralValue {
+export class HIRConstantLiteralStringValue extends HIRConstantLiteralValue {
     value: string;
 
     constructor(value:string, type: HIRType, sourcePosition: AbstractSourcePosition) {
@@ -572,7 +572,7 @@ export class isConstantLiteralStringValue extends HIRConstantLiteralValue {
     }
 }
 
-export class isConstantLiteralSymbolValue extends HIRConstantLiteralValue {
+export class HIRConstantLiteralSymbolValue extends HIRConstantLiteralValue {
     value: string;
 
     constructor(value:string, type: HIRType, sourcePosition: AbstractSourcePosition) {
@@ -1257,6 +1257,20 @@ export class HIRUnreachableInstruction extends HIRInstruction  {
     }
 }
 
+export class HIREvaluationContext {
+    context: HIRContext;
+    environment: HIRLexicalEnvironment;
+
+    constructor(context: HIRContext, environment: HIRLexicalEnvironment) {
+        this.context = context;
+        this.environment = environment;
+    }
+
+    clone() : HIREvaluationContext {
+        return new HIREvaluationContext(this.context, this.environment);
+    }
+}
+
 export class HIRBuilder {
     hirFunction: HIRFunction;
     context: HIRContext;
@@ -1353,8 +1367,34 @@ export abstract class HIREnvironment {
 
 }
 
-export class HIREmptyEnvironment extends HIREnvironment{
+export class HIREmptyEnvironment extends HIREnvironment {
 
+}
+
+export class HIRPackageEnvironment extends HIREnvironment {
+    packageValue: HIRPackage;
+    parent: HIREnvironment;
+
+    constructor(packageValue: HIRPackage, parent: HIREnvironment) {
+        super();
+        this.packageValue = packageValue;
+        this.parent = parent;
+    }
+
+}
+
+export class HIRLexicalEnvironment extends HIREnvironment {
+    parent: HIREnvironment;
+    symbolTable: Record<string, HIRValue> = {};
+    
+    constructor(parent: HIREnvironment) {
+        super();
+        this.parent = parent;
+    }
+
+    setSymbolBinding(symbol: string, binding: HIRValue) {
+        this.symbolTable[symbol] = binding;
+    }
 }
 
 export class HIRCoreTypes {
@@ -1363,6 +1403,13 @@ export class HIRCoreTypes {
     coreTypeList: HIRType[] = [];
     coreValueList: [string, HIRValue][] = [];
     universeLevels: Record<number, HIRUniverseType> = {};
+
+    characterType: HIRNominalType = new HIRNominalType('Character', this, getOrMakeEmptySourcePosition());
+    integerType: HIRNominalType = new HIRNominalType('Integer', this, getOrMakeEmptySourcePosition());
+    floatType: HIRNominalType = new HIRNominalType('Float', this, getOrMakeEmptySourcePosition());
+    stringType: HIRNominalType = new HIRNominalType('String', this, getOrMakeEmptySourcePosition());
+    symbolType: HIRNominalType = new HIRNominalType('Symbol', this, getOrMakeEmptySourcePosition());
+    parseTreeType: HIRNominalType = new HIRNominalType('ParseTree', this, getOrMakeEmptySourcePosition());
 
     boolean8Type: HIRPrimitiveType = new HIRPrimitiveType('Boolean8', 1, 1, this, getOrMakeEmptySourcePosition());
 
@@ -1396,6 +1443,12 @@ export class HIRCoreTypes {
     nilValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition());
     
     constructor() {
+        this.coreTypeList.push(this.characterType);
+        this.coreTypeList.push(this.integerType);
+        this.coreTypeList.push(this.floatType);
+        this.coreTypeList.push(this.stringType);
+        this.coreTypeList.push(this.symbolType);
+
         this.coreTypeList.push(this.boolean8Type);
 
         this.coreTypeList.push(this.char8Type);
@@ -1496,6 +1549,24 @@ export class HIRContext {
         this.corePackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
         this.currentPackage = this.corePackage;
         this.corePackage.addCoreTypeMembers();
+    }
+
+    createTopLevelEnvironment(sourceCode: SourceCode): HIRLexicalEnvironment {
+        let packageEnvironment = new HIRPackageEnvironment(this.currentPackage, new HIREmptyEnvironment());
+        let lexicalEnvironment = new HIRLexicalEnvironment(packageEnvironment);
+
+        if(sourceCode.directory) {
+            lexicalEnvironment.setSymbolBinding('__FileDir__', new HIRConstantLiteralStringValue(sourceCode.directory, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
+        }
+        if(sourceCode.name) {
+            lexicalEnvironment.setSymbolBinding('__FileName__', new HIRConstantLiteralStringValue(sourceCode.name, this.coreTypes.stringType, getOrMakeEmptySourcePosition()));
+        }
+
+        return lexicalEnvironment;
+    }
+
+    createTopLevelEvaluationContext(sourceCode: SourceCode): HIREvaluationContext {
+        return new HIREvaluationContext(this, this.createTopLevelEnvironment(sourceCode));
     }
 
     getOrCreatePointerType(baseType: HIRType) : HIRPointerType {
