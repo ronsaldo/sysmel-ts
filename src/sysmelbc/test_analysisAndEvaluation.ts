@@ -117,9 +117,9 @@ export function runTests() {
         assert.ok(topLevelResult.isConstantLiteralIntegerValue())
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
 
-        topLevelResult = evaluateTopLevelSourceString('let: #x mutableWith: 42. x')
+        topLevelResult = evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue())
-        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
     }
 
     // If then else

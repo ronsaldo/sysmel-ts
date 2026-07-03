@@ -195,8 +195,13 @@ export abstract class HIRValue {
     }
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
-        throw new Error('TODO: analyzeAndEvaluateApplicationNode')
+        throw new Error(node.sourcePosition.formatMessage('Non-functional value cannot be applied.'))
     }
+
+    analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
+        throw new Error(node.sourcePosition.formatMessage('Value does not support assignment.'))
+    }
+    
 }
 
 export class HIRType extends HIRValue {
@@ -780,6 +785,11 @@ export class HIRPointerValue extends HIRPointerLikeValue {
 export class HIRReferenceValue extends HIRPointerLikeValue {
     isReferenceValue(): boolean {
         return true;
+    }
+
+    analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
+        this.storeValue(evaluator.visitNodeWithExpectedType(node.value, (this.type as HIRPointerLikeType).baseType))
+        return this;
     }
 }
 
@@ -1782,7 +1792,8 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
-        throw new Error('TODO ParseTreeAssignmentNode AnalysisAndEvaluationPass');
+        let storeValue = this.visitNode(node.store) as HIRValue;
+        return storeValue.analyzeAndEvaluateAssignment(this, node)
     }
 
     visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
