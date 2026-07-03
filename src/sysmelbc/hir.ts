@@ -50,48 +50,88 @@ export abstract class HIRValue {
         return false;
     }
 
+    isDerivedType() : boolean {
+        return false;
+    }
+
+    isPointerLikeType() : boolean {
+        return false;
+    }
+
+    isPointerType() : boolean {
+        return false;
+    }
+
+    isReferenceType() : boolean {
+        return false;
+    }
+
+    isMutableValueBoxType() : boolean {
+        return false;
+    }
+
+    isMutableValueBox() : boolean {
+        return false;
+    }
+
+    isPointerLikeValue() : boolean {
+        return false;
+    }
+
+    isPointerValue() : boolean {
+        return false;
+    }
+
+    isReferenceValue() : boolean {
+        return false;
+    }
+
     isConstant() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralIntegerValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralFloatValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralBooleanValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralCharacterValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralStringValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralSymbolValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralVoidValue() : boolean {
-        return false
+        return false;
     }
 
     isConstantLiteralNilValue() : boolean {
-        return false
+        return false;
     }
 
+    isConstantLiteralUndefinedValue() : boolean {
+        return false;
+    }
+    
     isConstantLiteralParseTree() : boolean {
-        return false
+        return false;
     }
 
     isFunctionLocalValue() : boolean {
@@ -124,6 +164,22 @@ export abstract class HIRValue {
 
     getValueInEvaluationContext(context: HIRFunctionActivationContext): HIRValue {
         return this;
+    }
+
+    storeValueAtIndex(valueToStore: HIRValue, index: number): void {
+        throw new Error(this.sourcePosition.formatMessage('Invalid value for storing a field.'));
+    }
+
+    loadValueAtIndex(index: number): HIRValue {
+        throw new Error(this.sourcePosition.formatMessage('Invalid value for loading a field.'));
+    }
+
+    storeValue(valueToStore: HIRValue): void {
+        throw new Error(this.sourcePosition.formatMessage('Invalid value for storing a pointer or reference.'));
+    }
+
+    loadValue(): HIRValue {
+        throw new Error(this.sourcePosition.formatMessage('Invalid value for loading a pointer or reference.'));
     }
 }
 
@@ -281,6 +337,67 @@ export class HIRUniverseType extends HIRType {
             return 'Type'
         }
         return 'Type@' + this.level;
+    }
+}
+
+export class HIRDerivedType extends HIRType {
+    baseType: HIRType;
+
+    constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.baseType = baseType;
+    }
+
+    isDerivedType(): boolean {
+        return true;
+    }
+}
+
+export class HIRPointerLikeType extends HIRDerivedType {
+    constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(baseType, coreTypes, sourcePosition);
+    }
+
+    isPointerLikeType(): boolean {
+        return true;
+    }
+}
+
+export class HIRPointerType extends HIRPointerLikeType {
+    constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(baseType, coreTypes, sourcePosition);
+    }
+
+    isPointerType(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return this.baseType.toString() + ' pointer';
+    }
+}
+
+export class HIRReferenceType extends HIRPointerLikeType {
+    constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(baseType, coreTypes, sourcePosition);
+    }
+
+    isReferenceType(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return this.baseType.toString() + ' ref';
+    }
+}
+
+export class HIRMutableValueBoxType extends HIRPointerLikeType {
+    constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(baseType, coreTypes, sourcePosition);
+    }
+
+    isMutableValueBoxType(): boolean {
+        return true;
     }
 }
 
@@ -498,6 +615,21 @@ export class HIRConstantLiteralNilValue extends HIRConstantLiteralValue {
     }
 }
 
+export class HIRConstantLiteralUndefinedValue extends HIRConstantLiteralValue {
+    constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
+        super(type, sourcePosition);
+    }
+
+    isConstantLiteralUndefinedValue() : boolean {
+        return true
+    }
+
+
+    toString(): string {
+        return 'constantLiteralUndefined';
+    }
+}
+
 export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
     value: parseTree.ParseTreeNode;
 
@@ -512,6 +644,75 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
 
     toString(): string {
         return 'constantLiteralParseTree';
+    }
+}
+
+export class HIRMutableValueBox extends HIRValue {
+    type: HIRType;
+    value: HIRValue;
+
+    constructor(type: HIRType, value: HIRValue, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+        this.value = value;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    storeValueAtIndex(valueToStore: HIRValue, index: number): void {
+        if (index !== 0)
+            throw new Error(this.sourcePosition.formatMessage('Invalid field index for storing in a mutable value box'));
+        this.value = valueToStore;
+    }
+
+    loadValueAtIndex(index: number): HIRValue {
+        if (index !== 0)
+            throw new Error(this.sourcePosition.formatMessage('Invalid field index for loading from a mutable value box'));
+
+        return this.value;
+    }
+}
+
+export class HIRPointerLikeValue extends HIRValue {
+    type: HIRType;
+    storage: HIRValue;
+    index: number;
+
+    constructor(type: HIRType, storage: HIRValue, index: number, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+        this.storage = storage;
+        this.index = index;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    isPointerLikeValue(): boolean {
+        return true;
+    }
+
+    storeValue(valueToStore: HIRValue): void {
+        return this.storage.storeValueAtIndex(valueToStore, this.index);
+    }
+
+    loadValue(): HIRValue {
+        return this.storage.loadValueAtIndex(this.index);
+    }
+}
+
+export class HIRPointerValue extends HIRPointerLikeValue {
+    isPointerValue(): boolean {
+        return true;
+    }
+}
+
+export class HIRReferenceValue extends HIRPointerLikeValue {
+    isReferenceValue(): boolean {
+        return true;
     }
 }
 
@@ -820,6 +1021,33 @@ export abstract class HIRInstruction extends HIRFunctionLocalValue {
     abstract fullPrintString(): string;
 }
 
+export class HIRAllocaInstruction extends HIRInstruction  {
+    valueType: HIRType;
+    valueBoxType: HIRType;
+
+    constructor(valueType: HIRType, valueBoxType: HIRType, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.valueType = valueType;
+        this.valueBoxType = valueBoxType;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := alloca ${this.valueType.toString()} as ${this.type.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let initialValue = new HIRConstantLiteralUndefinedValue(this.valueType, this.sourcePosition);
+        let valueBox = new HIRMutableValueBox(this.valueBoxType, initialValue, this.sourcePosition);
+        if (this.type.isReferenceType()) {
+            let allocaValue = new HIRReferenceValue(this.type, valueBox, 0, this.sourcePosition);
+            context.setCurrentInstructionValue(allocaValue);
+        } else {
+            let allocaValue = new HIRPointerValue(this.type, valueBox, 0, this.sourcePosition);
+            context.setCurrentInstructionValue(allocaValue);
+        }
+    }
+}
+
 export class HIRBranchInstruction extends HIRInstruction  {
     destination: HIRBasicBlock;
 
@@ -869,6 +1097,45 @@ export class HIRConditionalBranchInstruction extends HIRInstruction  {
             context.pc = this.trueDestination.index;
         else 
             context.pc = this.falseDestination.index;
+    }
+}
+
+export class HIRLoadInstruction extends HIRInstruction  {
+    storage: HIRValue;
+
+    constructor(storage: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.storage = storage;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := load ${this.storage.toString()} as ${this.type.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let storageValue = this.storage.getValueInEvaluationContext(context);
+        context.setCurrentInstructionValue(storageValue.loadValue());
+    }
+}
+
+export class HIRStoreInstruction extends HIRInstruction  {
+    storage: HIRValue;
+    valueToStore: HIRValue;
+
+    constructor(type: HIRType, storage: HIRValue, valueToStore: HIRValue, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.storage = storage;
+        this.valueToStore = valueToStore;
+    }
+
+    fullPrintString(): string {
+        return `store ${this.valueToStore.toString()} in ${this.storage.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let storageValue = this.storage.getValueInEvaluationContext(context)
+        let valueToStoreValue = this.valueToStore.getValueInEvaluationContext(context)
+        storageValue.storeValue(valueToStoreValue);
     }
 }
 
@@ -976,6 +1243,13 @@ export class HIRBuilder {
         return lastInstruction.isTerminatorInstruction();
     }
 
+    alloca(valueType: HIRType, referenceType: HIRType, sourcePosition: AbstractSourcePosition): HIRAllocaInstruction {
+        let valueBoxType = this.context.getOrCreateMutableValueBoxType(valueType);
+        let instruction = new HIRAllocaInstruction(valueType, valueBoxType, referenceType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
     branch(destination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRBranchInstruction {
         let instruction = new HIRBranchInstruction(destination, this.context.coreTypes.voidType, null, sourcePosition);
         this.addInstruction(instruction);
@@ -984,6 +1258,18 @@ export class HIRBuilder {
 
     conditionalBranch(condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, sourcePosition: AbstractSourcePosition): HIRConditionalBranchInstruction {
         let instruction = new HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, this.context.coreTypes.voidType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    load(type: HIRType, storage: HIRValue, sourcePosition: AbstractSourcePosition): HIRLoadInstruction {
+        let instruction = new HIRLoadInstruction(storage, type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    store(storage: HIRValue, valueToStore: HIRValue, sourcePosition: AbstractSourcePosition): HIRStoreInstruction {
+        let instruction = new HIRStoreInstruction(this.context.coreTypes.voidType, storage, valueToStore, null, sourcePosition);
         this.addInstruction(instruction);
         return instruction;
     }
@@ -1165,4 +1451,17 @@ export class HIRContext {
         this.currentPackage = this.corePackage;
         this.corePackage.addCoreTypeMembers();
     }
+
+    getOrCreatePointerType(baseType: HIRType) : HIRPointerType {
+        return new HIRPointerType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+    }
+
+    getOrCreateReferenceType(baseType: HIRType) : HIRPointerType {
+        return new HIRReferenceType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+    }
+
+    getOrCreateMutableValueBoxType(baseType: HIRType) : HIRPointerType {
+        return new HIRMutableValueBoxType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+    }
+
 }
