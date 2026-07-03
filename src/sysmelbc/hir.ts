@@ -1582,7 +1582,7 @@ export class HIRCoreTypes {
             return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, false);
         }
         function letMutableWith(macroContext: HIRMacroContext, nameExpression: parseTree.ParseTreeNode, initialValue: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
-            return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, false);
+            return new parseTree.ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, null, initialValue, true);
         }
 
         function ifThenElse(macroContext: HIRMacroContext, conditionExpression: parseTree.ParseTreeNode, trueExpression: parseTree.ParseTreeNode, falseExpresion: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
@@ -1911,32 +1911,25 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
             initialValue = typeValue.getOrCreateDefaultValue();
         }
         if (node.isMutable) {
-            console.log('initialValue', initialValue);
-            throw new Error('TODO: mutable visitVariableDefinitionNode')
+            let valueType = typeValue;
+            if(!valueType)
+                valueType = initialValue.getType();
+
+            let valueBoxType = this.evaluationContext.context.getOrCreateMutableValueBoxType(valueType);
+            let valueBox = new HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition);
+
+            let referenceType = this.evaluationContext.context.getOrCreateReferenceType(valueType);
+            let reference = new HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition);
+
+            if(name)
+                this.evaluationContext.environment.setNewSymbolBinding(name, reference, node.sourcePosition);
+
+            return reference;
         } else {
             if(name)
                 this.evaluationContext.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition);
             return initialValue;
         }
-
-        /*
-        if node.isMutable:
-            valueType = typeValue
-            if valueType is None:
-                valueType = initialValue.getType()
-
-            valueBoxType = self.evaluationContext.context.getOrCreateMutableValueBoxType(valueType)
-            valueBox = HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition)
-
-            referenceType = self.evaluationContext.context.getOrCreateReferenceType(valueType)
-            referenceValue = HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition)
-            if name is not None:
-                self.evaluationContext.environment.setNewSymbolBinding(name, referenceValue, node.sourcePosition)
-
-            return referenceValue
-
-        */
-        throw new Error(node.sourcePosition.formatMessage('visitVariableDefinitionNode.'));
     }
 
     visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {

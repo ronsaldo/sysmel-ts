@@ -10,7 +10,7 @@ function evaluateTopLevelSourceString(sourceString: string): hir.HIRValue {
     assert.ok(new parseTree.ParseTreeParseErrorVisitor().checkAndPrintErrors(ast));
 
     let evaluationContext = context.createTopLevelEvaluationContext(ast.sourcePosition.getSourceCode());
-    let result = new hir.AnalysisAndEvaluationPass(evaluationContext).visitNode(ast);
+    let result = new hir.AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast);
     return result as hir.HIRValue;
 }
 
@@ -106,6 +106,18 @@ export function runTests() {
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
 
         topLevelResult = evaluateTopLevelSourceString('let: #x with: 42. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+    }
+
+
+    // let mutable with macro
+    {
+        let topLevelResult = evaluateTopLevelSourceString('let: #x mutableWith: 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelSourceString('let: #x mutableWith: 42. x')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue())
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
     }
