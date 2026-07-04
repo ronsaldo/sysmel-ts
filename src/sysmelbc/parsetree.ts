@@ -1,3 +1,4 @@
+import { HIRArgument } from "./hir.js";
 import {SourceCode, AbstractSourcePosition, SourcePosition} from "./source_code.js"
 
 export abstract class ParseTreeVisitor {
@@ -224,6 +225,10 @@ export abstract class ParseTreeNode {
     asMessageSendCascadeReceiverAndFirstMessage(): [ParseTreeNode, ParseTreeNode | null] {
         return [this, null]
     }
+
+    parseAsArgumentDefinition(): ParseTreeArgumentDefinitionNode {
+        throw new Error(this.sourcePosition.formatMessage('Parse tree is not a valid argument definition.'))
+    }
 }
 
 export class ParseTreeErrorNode extends ParseTreeNode{
@@ -423,6 +428,10 @@ export class ParseTreeIdentifierReferenceNode extends ParseTreeNode {
     
     isIdentifierReferenceNode(): boolean {
         return true;
+    }
+
+    parseAsArgumentDefinition(): ParseTreeArgumentDefinitionNode {
+        return new ParseTreeArgumentDefinitionNode(this.sourcePosition, this.symbol, null, false);
     }
 }
 

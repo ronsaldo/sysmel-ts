@@ -242,7 +242,7 @@ export abstract class HIRValue {
         return this;
     }
 
-    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         throw new Error(node.sourcePosition.formatMessage('Non-functional value cannot be applied.'))
     }
 
@@ -1021,7 +1021,7 @@ export class HIRPrimitiveMacro extends HIRConstant {
         return evaluator.visitNode(expandedMacro);
     }
 
-    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         let macroContext = new HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition);
         let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
         return evaluator.visitNode(expandedMacro);
@@ -1066,7 +1066,7 @@ export class HIRPrimitiveFunction extends HIRConstant {
         return buildPass.builder.call(this, typecheckedArguments, resultType, node.sourcePosition);
     }
 
-    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue) {
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         throw new Error('TODO: HIRPrimitiveFunction analyzeAndEvaluateApplicationNode')
     }
 
@@ -2026,6 +2026,36 @@ export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
+    argumentDefinitions: parseTree.ParseTreeArgumentDefinitionNode[] = [];
+    resultTypeExpression: parseTree.ParseTreeNode | null = null;
+    isPublic: boolean = false;
+
+    supportsSelector(selector: string): boolean {
+        return selector === '=>'
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector === '=>')
+            this.resultTypeExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+        return this;
+    }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        this.argumentDefinitions = node.applicationArguments.map((argumentNode: parseTree.ParseTreeNode): parseTree.ParseTreeArgumentDefinitionNode => argumentNode.parseAsArgumentDefinition());
+        return this;
+    }
+
+    makeFunctionType(): parseTree.ParseTreeFunctionTypeNode {
+        return new parseTree.ParseTreeFunctionTypeNode(this.sourcePosition, this.argumentDefinitions, this.resultTypeExpression);
+    }
+
+    analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode): HIRValue {
+        let functionNode = new parseTree.ParseTreeFunctionNode(node.sourcePosition, this.nameExpression, this.makeFunctionType(), node.value, this.isPublic, false);
+        return evaluator.visitNode(functionNode);
+    }
+}
+
 export class HIRCoreTypes {
     pointerSize = 8;
     pointerAlignment = 8;
@@ -2184,6 +2214,7 @@ export class HIRCoreTypes {
     }
 
     createCorePrimitiveMetaBuilders() {
+        this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
     }
     
