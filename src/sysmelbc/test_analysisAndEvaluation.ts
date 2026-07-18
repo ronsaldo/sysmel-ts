@@ -319,10 +319,10 @@ export function runTests() {
         setUp();
 
         let functionValue = evaluateTopLevelSourceString('function two() => Integer := 2');
-        //assert.ok(functionValue.isFunction())
-        //let result = functionValue.evaluateWithArguments([]);
-        //assert.ok(result.isConstantLiteralIntegerValue());
-        //assert.strictEqual(result.evaluateAsInteger(), 2);
+        assert.ok(functionValue.isFunction())
+        let result = functionValue.evaluateWithArguments([]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 2);
 
         tearDown();
     }
