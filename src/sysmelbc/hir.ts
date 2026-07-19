@@ -3127,7 +3127,16 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {
-        throw new Error('visitLexicalBlockNode')
+        let childEnvironment = new HIRLexicalEnvironment(this.builder.environment);
+        let oldEnvironment = this.builder.environment;
+
+        this.builder.environment = childEnvironment;
+        
+        let result = this.visitNode(node.body);
+
+        this.builder.environment = oldEnvironment;
+
+        return result;
     }
 
     visitLiteralCharacterNode(node: parseTree.ParseTreeLiteralCharacterNode): any {

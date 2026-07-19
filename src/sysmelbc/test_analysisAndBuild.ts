@@ -26,7 +26,6 @@ function evaluateTopLevelFunctionSourceString(sourceString: string): hir.HIRValu
     return topLevelFunction.evaluateWithArguments([]);
 }
 
-
 function setUp() {
     context = new hir.HIRContext();
 }
@@ -43,4 +42,68 @@ export function runTests() {
         assert.ok(result.isConstantLiteralVoidValue());
         tearDown();
     }
+
+    // Sequence
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('5 . 42');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
+    }
+
+    // Lexical block
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('{42}');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
+    }
+
+    // Literal integer
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('42');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
+    }
+
+    // Literal float
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('42.5');
+        assert.ok(value.isConstantLiteralFloatValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 42.5);
+        tearDown();
+    }
+
+    // Literal character
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString("'A'");
+        assert.ok(value.isConstantLiteralCharacterValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralCharacterValue).value, 65);
+        tearDown();
+    }
+
+    // Literal string
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('"Hello World"');
+        assert.ok(value.isConstantLiteralStringValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralStringValue).value, 'Hello World');
+        tearDown();
+    }
+
+    // Literal symbol
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('#hello');
+        assert.ok(value.isConstantLiteralSymbolValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralSymbolValue).value, 'hello');
+        tearDown();
+    }
+
 }
