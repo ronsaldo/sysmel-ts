@@ -1383,6 +1383,14 @@ export class HIRFunction extends HIRConstant {
             result += '\n';
         }
 
+        for(let i = 0; i < this.captures.length; ++i) {
+            let capture = this.captures[i];
+            if(!capture)
+                throw new Error('Expected a capture value value');
+            result += capture.fullPrintString();
+            result += '\n';
+        }
+
         let basicBlock = this.firstBasicBlock;
         while(basicBlock)
         {
