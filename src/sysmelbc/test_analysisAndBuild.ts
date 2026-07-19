@@ -365,5 +365,32 @@ export function runTests() {
         let topLevelResult = evaluateTopLevelFunctionSourceString('return: 42. 45')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue());
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
-   }
+    }
+
+    // Association type
+    {
+        let value = evaluateTopLevelFunctionSourceString('Symbol : Integer')
+        assert.ok(value.isAssociationType());
+
+        let assocType = value as hir.HIRAssociationType;
+        assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
+        assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+    }
+
+    // Association value
+    {
+        let value = evaluateTopLevelFunctionSourceString('#first : 1')
+        assert.ok(value.isConstantAssociation());
+
+        let assoc = value as hir.HIRConstantAssociation;
+        assert.ok(assoc.key.isConstantLiteralSymbolValue());
+        assert.strictEqual((assoc.key as hir.HIRConstantLiteralSymbolValue).value, 'first');
+
+        assert.ok(assoc.value.isConstantLiteralIntegerValue());
+        assert.strictEqual((assoc.value as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        let assocType = value.getType() as hir.HIRAssociationType;
+        assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
+        assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+    }
 }

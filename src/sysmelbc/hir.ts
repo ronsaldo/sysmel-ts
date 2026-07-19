@@ -1729,6 +1729,28 @@ export class HIRStoreInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRMakeAssociationInstruction extends HIRInstruction  {
+    key: HIRValue;
+    value: HIRValue;
+
+    constructor(key: HIRValue, value: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.key = key;
+        this.value = value;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := makeAssocation ${this.key.toString()} with ${this.value.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let keyValue = this.key.getValueInEvaluationContext(context);
+        let valueValue = this.value.getValueInEvaluationContext(context);
+        let association = new HIRConstantAssociation(keyValue, valueValue, this.type, this.sourcePosition);
+        context.setCurrentInstructionValue(association);
+    }
+}
+
 export class HIRPhiInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
@@ -1895,6 +1917,12 @@ export class HIRBuilder {
 
     store(storage: HIRValue, valueToStore: HIRValue, sourcePosition: AbstractSourcePosition): HIRStoreInstruction {
         let instruction = new HIRStoreInstruction(this.context.coreTypes.voidType, storage, valueToStore, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    makeAssociation(key: HIRValue, value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition): HIRMakeAssociationInstruction {
+        let instruction = new HIRMakeAssociationInstruction(key, value, type, null, sourcePosition);
         this.addInstruction(instruction);
         return instruction;
     }
@@ -3232,7 +3260,19 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         return storeValue.analyzeAndBuildAssignment(this, node);
     }
     visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
-        throw new Error('visitAssociationNode')
+        let key = this.visitDecayedNode(node.key);
+        let value: HIRValue = this.builder.context.coreTypes.nilValue;
+        if(node.value)
+            value = this.visitDecayedNode(node.value);
+
+        if(key.isType() && value.isType()) {
+            return this.builder.context.getOrCreateAssociationType(key as HIRType, value as HIRType);
+        }
+
+        let keyType = key.getType();
+        let valueType = value.getType();
+        let associationType = this.builder.context.getOrCreateAssociationType(keyType, valueType);
+        return this.builder.makeAssociation(key, value, associationType, node.sourcePosition)
     }
     
     visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
