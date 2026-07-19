@@ -368,6 +368,10 @@ export function runTests() {
         assert.ok(result.isConstantLiteralIntegerValue());
         assert.strictEqual(result.evaluateAsInteger(), 43);
 
+        result = closureValue.evaluateWithArguments([]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 44);
+
         tearDown();
     }
 
