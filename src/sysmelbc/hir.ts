@@ -1930,10 +1930,15 @@ export class HIRBuilder {
 
 export abstract class HIREnvironment {
     abstract lookSymbolRecursively(symbol: string): HIRValue | null;
+    abstract lookReturnTypeRecursively(): HIRType | null;
 }
 
 export class HIREmptyEnvironment extends HIREnvironment {
     lookSymbolRecursively(symbol: string): HIRValue | null {
+        return null;
+    }
+
+    lookReturnTypeRecursively(): HIRType | null {
         return null;
     }
 }
@@ -1957,6 +1962,9 @@ export class HIRPackageEnvironment extends HIREnvironment {
         return this.parent.lookSymbolRecursively(symbol);
     }
 
+    lookReturnTypeRecursively(): HIRType | null {
+        return this.parent.lookReturnTypeRecursively();
+    }
 }
 
 export class HIRLexicalEnvironment extends HIREnvironment {
@@ -1986,6 +1994,10 @@ export class HIRLexicalEnvironment extends HIREnvironment {
 
         return this.parent.lookSymbolRecursively(symbol);
     }
+
+    lookReturnTypeRecursively(): HIRType | null {
+        return this.parent.lookReturnTypeRecursively();
+    }
 }
 
 export class HIRDependentFunctionTypeAnalysisEnvironment extends HIRLexicalEnvironment {
@@ -2004,6 +2016,10 @@ export class HIRFunctionAnalysisEnvironment extends HIRLexicalEnvironment {
         this.returnType = returnType;
         this.receiverValue = receiverValue;
         this.context = context;
+    }
+
+    lookReturnTypeRecursively(): HIRType | null {
+        return this.returnType;
     }
 }
 
@@ -3418,8 +3434,14 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error('visitSwitchSelectionNode')
     }
     visitReturnNode(node: parseTree.ParseTreeReturnNode): any {
-        throw new Error('visitReturnNode')
+        let returnType = this.builder.environment.lookReturnTypeRecursively();
+        let resultValue = this.visitNodeWithExpectedType(node.valueExpression, returnType);
+        this.builder.returnValue(resultValue, node.sourcePosition);
+
+        // TODO: Use a control flow escape type
+        return this.builder.context.coreTypes.voidValue;
     }
+    
     visitWhileDoNode(node: parseTree.ParseTreeWhileDoNode): any {
         let loopHeader = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopHeader", node.sourcePosition)
         let loopBody = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopBody", node.sourcePosition)

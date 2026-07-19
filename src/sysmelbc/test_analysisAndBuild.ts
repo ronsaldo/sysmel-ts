@@ -359,4 +359,11 @@ export function runTests() {
         let topLevelResult = evaluateTopLevelFunctionSourceString('do: {} continueWith: {} while: false')
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
     }
+
+    // Return
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('return: 42. 45')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+   }
 }
