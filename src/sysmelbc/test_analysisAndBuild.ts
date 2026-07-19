@@ -315,4 +315,17 @@ export function runTests() {
         assert.strictEqual((value as hir.HIRConstantLiteralFloatValue).value, 1.0);
         tearDown();
     }
+
+    // If then else
+    {
+        setUp();
+        let topLevelResult = evaluateTopLevelFunctionSourceString('if: true then: 1 else: 2');
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('if: false then: 1 else: 2');
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 2);
+        tearDown();
+    }
 }

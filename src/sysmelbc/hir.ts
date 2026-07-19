@@ -1841,6 +1841,12 @@ export class HIRBuilder {
         this.basicBlock.addInstruction(instruction);
     }
 
+    copyWithBasicBlock(basicBlock: HIRBasicBlock): HIRBuilder {
+        let builder = new HIRBuilder(this.hirFunction, this.context, basicBlock, this.environment);
+        builder.allocaBuilder = this.allocaBuilder;
+        return builder;
+    }
+
     isLastTerminator(): boolean {
         let lastInstruction = this.basicBlock.lastInstruction;
         if(!lastInstruction)
@@ -3183,11 +3189,15 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         return this.castValueToExpectedType(value, expectedType, node.sourcePosition);
     }
 
+    visitBooleanCondition(node: parseTree.ParseTreeNode) : HIRValue {
+        return this.visitNodeWithExpectedType(node, this.builder.context.coreTypes.boolean8Type);
+    }
+
     visitErrorNode(node: parseTree.ParseTreeErrorNode): any {
-        throw new Error('visitErrorNode')
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
     visitParseErrorNode(node: parseTree.ParseTreeParseErrorNode): any {
-        throw new Error('visitParseErrorNode')
+        throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
     visitRuntimeErrorNode(node: parseTree.ParseTreeRuntimeErrorNode): any {
         throw new Error('visitRuntimeErrorNode')
@@ -3360,8 +3370,50 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
-        throw new Error('visitIfSelectionNode')
+        let trueDestination = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, 'ifTrue', node.sourcePosition);
+        let falseDestination = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, 'ifFalse', node.sourcePosition);
+        let mergeDestination = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, 'ifMerge', node.sourcePosition);
+
+        let conditionValue = this.visitBooleanCondition(node.condition);
+        this.builder.conditionalBranch(conditionValue, trueDestination, falseDestination, node.sourcePosition);
+
+        // True destination
+        this.builder.hirFunction.addBasicBlock(trueDestination);
+        let trueBuildPass = new AnalysisAndBuildPass(this.builder.copyWithBasicBlock(trueDestination));
+        let trueResult : HIRValue | null = null;
+        if(node.trueExpression)
+            trueResult = trueBuildPass.visitDecayedNode(node.trueExpression);
+
+        // False destination/
+        this.builder.hirFunction.addBasicBlock(falseDestination);
+        let falseBuildPass = new AnalysisAndBuildPass(this.builder.copyWithBasicBlock(falseDestination));
+        let falseResult : HIRValue | null = null;
+        if(node.falseExpression)
+            falseResult = falseBuildPass.visitDecayedNode(node.falseExpression);
+
+        // Merge
+        this.builder.hirFunction.addBasicBlock(mergeDestination);
+        this.builder.basicBlock = mergeDestination;
+
+        let mergedResult = this.builder.context.coreTypes.voidValue;
+        if(trueResult && falseResult) {
+            let trueType = trueResult.getType();
+            let falseType = falseResult.getType();
+            if(!trueType.isVoidType() && trueType === falseType) {
+                let phiNode = this.builder.phi(trueType, node.sourcePosition);
+                trueBuildPass.builder.phiSource(phiNode, trueResult, node.sourcePosition);
+                falseBuildPass.builder.phiSource(phiNode, falseResult, node.sourcePosition);
+                mergedResult = phiNode;
+            }
+
+        }
+
+        trueBuildPass.builder.branch(mergeDestination, node.sourcePosition);
+        falseBuildPass.builder.branch(mergeDestination, node.sourcePosition);
+
+        return mergedResult;
     }
+
     visitSwitchSelectionNode(node: parseTree.ParseTreeSwitchSelectionNode): any {
         throw new Error('visitSwitchSelectionNode')
     }

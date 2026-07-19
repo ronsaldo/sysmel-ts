@@ -823,10 +823,10 @@ export class ParseTreeVariableDefinitionNode extends ParseTreeNode {
 
 export class ParseTreeIfSelectionNode extends ParseTreeNode {
     condition: ParseTreeNode;
-    trueExpression: ParseTreeNode;
+    trueExpression: ParseTreeNode | null;
     falseExpression: ParseTreeNode | null;
 
-    constructor(sourcePosition: AbstractSourcePosition, condition: ParseTreeNode, trueExpression: ParseTreeNode, falseExpression: ParseTreeNode | null) {
+    constructor(sourcePosition: AbstractSourcePosition, condition: ParseTreeNode, trueExpression: ParseTreeNode | null, falseExpression: ParseTreeNode | null) {
         super(sourcePosition);
         this.condition = condition;
         this.trueExpression = trueExpression;
@@ -1040,7 +1040,7 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
 
     visitIfSelectionNode(node: ParseTreeIfSelectionNode): any {
         this.visitNode(node.condition);
-        this.visitNode(node.trueExpression);
+        this.visitOptionalNode(node.trueExpression);
         this.visitOptionalNode(node.falseExpression);
     }
 
