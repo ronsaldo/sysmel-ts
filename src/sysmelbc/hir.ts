@@ -1414,6 +1414,36 @@ export class HIRFunction extends HIRConstant {
     }
 }
 
+export class HIRFunctionClosure extends HIRConstant {
+    hirFunction: HIRFunction;
+    captureVector: HIRValue[];
+    constructor(hirFunction: HIRFunction, captureVector: HIRValue[], sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.hirFunction = hirFunction;
+        this.captureVector = captureVector;
+    }
+
+    getType(): HIRType {
+        return this.hirFunction.simplifiedType;
+    }
+
+    evaluateWithArguments(callArguments: HIRValue[]): HIRValue {
+        return this.hirFunction.evaluateWithArgumentsAndCaptures(callArguments, this.captureVector);
+    }
+
+    evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
+        return this.evaluateWithArguments(callArguments)
+    }
+
+    isFunctionClosure(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return 'HIRFunctionClosure ' + this.hirFunction.toString();
+    }
+}
+
 export class HIRFunctionActivationContext {
     instructions: HIRFunctionLocalValue[];
     instructionValues: HIRValue[];
@@ -1494,6 +1524,10 @@ export abstract class HIRFunctionLocalValue extends HIRValue {
         this.name = name;
     }
 
+    isFunctionLocalValue(): boolean {
+        return true;
+    }
+
     getType(): HIRType {
         return this.type;
     }
@@ -1537,8 +1571,11 @@ export class HIRArgument extends HIRFunctionLocalValue {
 }
 
 export class HIRCapture extends HIRFunctionLocalValue {
-    constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+    sourceValue: HIRValue;
+
+    constructor(sourceValue: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition);
+        this.sourceValue = sourceValue;
     }
 
     isCapture(): boolean {
@@ -1815,6 +1852,27 @@ export class HIRMakeTupleInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRMakeClosureInstruction extends HIRInstruction  {
+    hirFunction: HIRFunction;
+    captureVector: HIRValue[];
+
+    constructor(hirFunction: HIRFunction, captureVector: HIRValue[], type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.hirFunction = hirFunction;
+        this.captureVector = captureVector;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := makeClosure ${this.hirFunction.toString()} captures ${this.captureVector.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let captureVector = this.captureVector.map((value: HIRValue) : HIRValue => value.getValueInEvaluationContext(context));
+        let closure = new HIRFunctionClosure(this.hirFunction, captureVector, this.sourcePosition);
+        context.setCurrentInstructionValue(closure);
+    }
+}
+
 export class HIRPhiInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
@@ -2043,6 +2101,12 @@ export class HIRBuilder {
         return instruction;
     }
 
+    makeClosure(hirFunction: HIRFunction, captureVector: HIRValue[], sourcePosition: AbstractSourcePosition): HIRMakeClosureInstruction {
+        let instruction = new HIRMakeClosureInstruction(hirFunction, captureVector, hirFunction.simplifiedType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
     phi(type: HIRType, sourcePosition: AbstractSourcePosition) : HIRPhiInstruction {
         let instruction = new HIRPhiInstruction(type, null, sourcePosition);
         this.addInstruction(instruction);
@@ -2176,6 +2240,30 @@ export class HIRFunctionAnalysisEnvironment extends HIRLexicalEnvironment {
 
     lookReturnTypeRecursively(): HIRType | null {
         return this.returnType;
+    }
+
+    lookSymbolRecursively(symbol: string): HIRValue | null {
+        if (symbol in this.symbolTable) {
+            let binding = this.symbolTable[symbol];
+            return binding as HIRValue;
+        }
+
+        // Captures
+        if(symbol in this.captureTable) {
+            return this.captureTable[symbol] as HIRValue;
+        }
+
+        let parentBinding = this.parent.lookSymbolRecursively(symbol);
+        if(parentBinding) {
+            if(parentBinding.isFunctionLocalValue()) {
+                let capture = new HIRCapture(parentBinding, parentBinding.getType(), symbol, parentBinding.sourcePosition);
+                this.captureTable[symbol] = capture;
+                this.captureList.push(capture);
+                return capture;
+            }
+        }
+
+        return parentBinding;
     }
 }
 
@@ -3469,13 +3557,15 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
 
         let functionValue: HIRValue = hirFunction;
         if(hirFunction.captures.length !== 0) {
-            throw new Error('TODO: Make closure with captures.');
+            let captureSources = hirFunction.captures.map((value: HIRCapture) : HIRValue => value.sourceValue);
+            let closure = this.builder.makeClosure(hirFunction, captureSources, node.sourcePosition);
+            functionValue = closure;
         }
 
         if(name) {
-            this.builder.environment.setNewSymbolBinding(name, hirFunction, node.sourcePosition);
+            this.builder.environment.setNewSymbolBinding(name, functionValue, node.sourcePosition);
         }
-        
+
         return functionValue;
     }
 

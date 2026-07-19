@@ -356,6 +356,27 @@ export function runTests() {
         tearDown();
     }
 
+    // Function capture
+    {
+        setUp();
+        printTopLevelFunctionSourceString('let x mutable := 42. {:: Integer | x }')
+
+        /*let functionValue = evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer | x}');
+        assert.ok(functionValue.isFunction())
+        let result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 42);
+
+        functionValue = evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer | x negated}');
+        assert.ok(functionValue.isFunction())
+        result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), -42);
+        */
+
+        tearDown();
+    }
+
     // If then else
     {
         setUp();
