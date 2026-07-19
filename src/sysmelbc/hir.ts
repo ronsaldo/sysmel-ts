@@ -3088,7 +3088,7 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
             resultType = this.visitNodeExpectingType(node.resultTypeExpression);
         }
 
-        // TODO: Do we need to add back the captures
+        // TODO: Do we need to add back the captures?
         let functionType = new HIRDependentFunctionType(argumentDefinitions, resultType, this.evaluationContext.context.coreTypes, node.sourcePosition);
         this.evaluationContext.environment = oldEnvironment;
         return functionType;
@@ -3426,11 +3426,37 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitArgumentDefinitionNode(node: parseTree.ParseTreeArgumentDefinitionNode): any {
-        throw new Error('visitArgumentDefinitionNode')
+        let argumentType: HIRType = this.builder.context.coreTypes.dynamicType;
+        if (node.typeExpression)
+            argumentType = this.visitNodeExpectingType(node.typeExpression);
+
+        let argument = new HIRArgument(argumentType, node.name, node.sourcePosition);
+        argument.isSelf = node.isSelf;
+        return argument;
     }
+
     visitFunctionTypeNode(node: parseTree.ParseTreeFunctionTypeNode): any {
-        throw new Error('visitFunctionTypeNode')
+        let oldEnvironment = this.builder.environment;
+        let analysisEnvironment = new HIRDependentFunctionTypeAnalysisEnvironment(oldEnvironment);
+        this.builder.environment = analysisEnvironment;
+
+        let argumentDefinitions: HIRArgument[] = [];
+        for(let i = 0; i < node.argumentDefinitions.length; ++i) {
+            let argument = this.visitNode(node.argumentDefinitions[i] as parseTree.ParseTreeNode);
+            argumentDefinitions.push(argument);
+        }
+
+        let resultType: HIRType = this.builder.context.coreTypes.dynamicType;
+        if(node.resultTypeExpression) {
+            resultType = this.visitNodeExpectingType(node.resultTypeExpression);
+        }
+
+        // TODO: Do we need to add back the captures?
+        let functionType = new HIRDependentFunctionType(argumentDefinitions, resultType, this.builder.context.coreTypes, node.sourcePosition);
+        this.builder.environment = oldEnvironment;
+        return functionType;
     }
+    
     visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
         throw new Error('visitFunctionNode')
     }

@@ -316,6 +316,28 @@ export function runTests() {
         tearDown();
     }
 
+    // Function type
+    {
+        let value = evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer}');
+        assert.ok(value.isDependentFunctionType());
+        
+        let functionType = value as hir.HIRDependentFunctionType;
+        assert.strictEqual(functionType.functionArguments.length, 1);
+
+        let argument = functionType.functionArguments[0] as hir.HIRArgument;
+        assert.strictEqual(argument.name, 'x');
+        assert.strictEqual(argument.type, context.coreTypes.integerType);
+        assert.strictEqual(functionType.resultType, context.coreTypes.integerType);
+
+        let simplifiedType = functionType.asSimplifiedType();
+        assert.ok(simplifiedType.isSimpleFunctionType());
+        
+        let simplifiedFunctionType = simplifiedType as hir.HIRSimpleFunctionType;
+        assert.strictEqual(simplifiedFunctionType.argumentTypes.length, 1);
+        assert.strictEqual(simplifiedFunctionType.argumentTypes[0], context.coreTypes.integerType);
+        assert.strictEqual(simplifiedFunctionType.resultType, context.coreTypes.integerType);
+    }
+
     // If then else
     {
         setUp();
