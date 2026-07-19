@@ -326,6 +326,19 @@ export function runTests() {
         topLevelResult = evaluateTopLevelFunctionSourceString('if: false then: 1 else: 2');
         assert.ok(topLevelResult.isConstantLiteralIntegerValue());
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 2);
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('if: false then: 1');
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('if: true then: 1');
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+
         tearDown();
+    }
+
+    // While do macro
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('while: false do: {}');
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
     }
 }

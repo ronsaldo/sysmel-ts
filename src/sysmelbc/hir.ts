@@ -3421,8 +3421,45 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error('visitReturnNode')
     }
     visitWhileDoNode(node: parseTree.ParseTreeWhileDoNode): any {
-        throw new Error('visitWhileDoNode')
+        let loopHeader = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopHeader", node.sourcePosition)
+        let loopBody = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopBody", node.sourcePosition)
+        let loopContinueWith = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopContinueWith", node.sourcePosition)
+        let loopMerge = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopMerge", node.sourcePosition)
+
+        // Loop header.
+        this.builder.branch(loopHeader, node.sourcePosition);
+        this.builder.basicBlock = loopHeader;
+        this.builder.hirFunction.addBasicBlock(loopHeader);
+
+        let conditionValue = this.visitBooleanCondition(node.condition);
+        this.builder.conditionalBranch(conditionValue, loopBody, loopMerge, node.sourcePosition);
+
+        // Loop body.
+        this.builder.basicBlock = loopBody;
+        this.builder.hirFunction.addBasicBlock(loopBody);
+
+        if(node.bodyExpression)
+            this.visitNode(node.bodyExpression);
+
+        if(!this.builder.isLastTerminator())
+            this.builder.branch(loopContinueWith, node.sourcePosition);
+
+        // Loop continue with
+        this.builder.basicBlock = loopContinueWith;
+        this.builder.hirFunction.addBasicBlock(loopContinueWith);
+
+        if(node.continueExpression)
+            this.visitNode(node.continueExpression);
+
+        if(!this.builder.isLastTerminator())
+            this.builder.branch(loopHeader, node.sourcePosition);
+
+        // Loop merge.
+        this.builder.basicBlock = loopMerge;
+        this.builder.hirFunction.addBasicBlock(loopMerge);
+        return this.builder.context.coreTypes.voidValue;
     }
+
     visitDoWhileNode(node: parseTree.ParseTreeDoWhileNode): any {
         throw new Error('visitDoWhileNode')
     }
