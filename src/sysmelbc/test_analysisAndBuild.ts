@@ -139,15 +139,14 @@ export function runTests() {
     }
 
     // let with macro
-    //{
-    //    let topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42')
-    //    assert.ok(topLevelResult.isConstantLiteralIntegerValue())
-    //    assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
 
-    //    topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42. x')
-    //    assert.ok(topLevelResult.isConstantLiteralIntegerValue())
-    //    assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
-    //}
+        topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+    }
     
-
 }

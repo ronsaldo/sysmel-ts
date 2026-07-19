@@ -250,6 +250,10 @@ export abstract class HIRValue {
         throw new Error(node.sourcePosition.formatMessage('Non-functional value cannot be applied.'))
     }
 
+    analyzeAndBuildApplicationNode(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        throw new Error(node.sourcePosition.formatMessage('Non-functional value cannot be applied.'))
+    }
+
     analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
         throw new Error(node.sourcePosition.formatMessage('Value does not support assignment.'))
     }
@@ -1030,6 +1034,12 @@ export class HIRPrimitiveMacro extends HIRConstant {
         let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
         return evaluator.visitNode(expandedMacro);
     }
+
+    analyzeAndBuildApplicationNode(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        let macroContext = new HIRMacroContext(analyzer.builder.context.coreTypes, node.sourcePosition);
+        let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
+        return analyzer.visitNode(expandedMacro);        
+    }
 }
 
 export class HIRPrimitiveFunction extends HIRConstant {
@@ -1072,6 +1082,10 @@ export class HIRPrimitiveFunction extends HIRConstant {
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         throw new Error('TODO: HIRPrimitiveFunction analyzeAndEvaluateApplicationNode')
+    }
+
+    analyzeAndBuildApplicationNode(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        throw new Error('TODO: HIRPrimitiveFunction analyzeAndBuildApplicationNode')
     }
 
     evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
@@ -1803,9 +1817,9 @@ export class HIRBuilder {
     basicBlock: HIRBasicBlock;
     allocaBuilder: HIRBuilder | null = null;
     entryBasicBlock: HIRBasicBlock | null = null;
-    environment: HIREnvironment;
+    environment: HIRLexicalEnvironment;
 
-    constructor(hirFunction: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIREnvironment) {
+    constructor(hirFunction: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment) {
         this.hirFunction = hirFunction;
         this.context = context;
         this.basicBlock = basicBlock;
@@ -3104,6 +3118,12 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         return symbolValue.evaluateAsSymbol();
     }
 
+    evaluateOptionalSymbolNode(node: parseTree.ParseTreeNode | null) : string | null {
+        if(!node)
+            return null;
+        return this.evaluateSymbolNode(node);
+    }
+
     visitNodeExpectingType(node: parseTree.ParseTreeNode) : HIRType {
         let value = this.visitDecayedNode(node);
         if(!value.isType())
@@ -3130,8 +3150,10 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
-        throw new Error('visitApplicationNode')
+        let functional = this.visitDecayedNode(node.functional);
+        return functional.analyzeAndBuildApplicationNode(this, node, functional);
     }
+
     visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
         throw new Error('visitNode')
     }
@@ -3237,7 +3259,42 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitVariableDefinitionNode(node: parseTree.ParseTreeVariableDefinitionNode): any {
-        throw new Error('visitVariableDefinitionNode')
+        let name = this.evaluateOptionalSymbolNode(node.nameExpression);
+        let typeValue: HIRType | null = null;
+        if (node.typeExpression)
+            typeValue = this.visitNodeExpectingType(node.typeExpression);
+
+        let initialValue: HIRValue | null = null;
+        if (node.initialValue) {
+            initialValue = this.visitNodeWithExpectedType(node.initialValue, typeValue);
+        }
+        
+        if(!initialValue) {
+            if(!typeValue)
+                throw new Error(node.sourcePosition.formatMessage('At least a type or an initial value must be specified.'));
+            initialValue = typeValue.getOrCreateDefaultValue();
+        }
+        if (node.isMutable) {
+            throw new Error('TODO: visitVariableDefinitionNode mutable')
+            /*let valueType = typeValue;
+            if(!valueType)
+                valueType = initialValue.getType();
+
+            let valueBoxType = this.evaluationContext.context.getOrCreateMutableValueBoxType(valueType);
+            let valueBox = new HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition);
+
+            let referenceType = this.evaluationContext.context.getOrCreateReferenceType(valueType);
+            let reference = new HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition);
+
+            if(name)
+                this.evaluationContext.environment.setNewSymbolBinding(name, reference, node.sourcePosition);
+
+            return reference;*/
+        } else {
+            if(name)
+                this.builder.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition);
+            return initialValue;
+        }
     }
     visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
         throw new Error('visitIfSelectionNode')

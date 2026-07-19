@@ -29,7 +29,7 @@ export function runTests() {
         let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
         identity.addBasicBlock(entryBlock)
 
-        let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
+        let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
         builder.returnValue(argument, getOrMakeEmptySourcePosition());
         //console.log(identity.fullPrintString());
 
@@ -52,12 +52,12 @@ export function runTests() {
         identity.addBasicBlock(exitBlock)
 
         {
-            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.branch(exitBlock, getOrMakeEmptySourcePosition())
         }
 
         {
-            let builder = new hir.HIRBuilder(identity, context, exitBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(identity, context, exitBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.returnValue(argument, getOrMakeEmptySourcePosition());
         }
 
@@ -83,17 +83,17 @@ export function runTests() {
         branchingFunction.addBasicBlock(falseBlock)
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.conditionalBranch(argument, trueBlock, falseBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.returnValue(new hir.HIRConstantLiteralIntegerValue(1, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.returnValue(new hir.HIRConstantLiteralIntegerValue(0, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
         }
 
@@ -133,22 +133,22 @@ export function runTests() {
         let mergeBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'merge', getOrMakeEmptySourcePosition());
         branchingFunction.addBasicBlock(mergeBlock)
 
-        let mergeBuilder = new hir.HIRBuilder(branchingFunction, context, mergeBlock, new hir.HIREmptyEnvironment());
+        let mergeBuilder = new hir.HIRBuilder(branchingFunction, context, mergeBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
         let phi = mergeBuilder.phi(context.coreTypes.int32Type, getOrMakeEmptySourcePosition());
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.conditionalBranch(argument, trueBlock, falseBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.phiSource(phi, new hir.HIRConstantLiteralIntegerValue(1, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
             builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.phiSource(phi, new hir.HIRConstantLiteralIntegerValue(0, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
             builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
         }
@@ -189,24 +189,24 @@ export function runTests() {
         let mergeBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'merge', getOrMakeEmptySourcePosition());
         branchingFunction.addBasicBlock(mergeBlock)
 
-        let entryBuilder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIREmptyEnvironment());
+        let entryBuilder = new hir.HIRBuilder(branchingFunction, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
         let alloca = entryBuilder.alloca(context.coreTypes.int32Type, context.getOrCreatePointerType(context.coreTypes.int32Type), getOrMakeEmptySourcePosition());
         entryBuilder.conditionalBranch(argument, trueBlock, falseBlock, getOrMakeEmptySourcePosition());
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, trueBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.store(alloca, new hir.HIRConstantLiteralIntegerValue(1, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
             builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(branchingFunction, context, falseBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.store(alloca, new hir.HIRConstantLiteralIntegerValue(0, context.coreTypes.int32Type, getOrMakeEmptySourcePosition()), getOrMakeEmptySourcePosition());
             builder.branch(mergeBlock, getOrMakeEmptySourcePosition());
         }
 
         {
-            let mergeBuilder = new hir.HIRBuilder(branchingFunction, context, mergeBlock, new hir.HIREmptyEnvironment());
+            let mergeBuilder = new hir.HIRBuilder(branchingFunction, context, mergeBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             let resultValue = mergeBuilder.load(context.coreTypes.int32Type, alloca, getOrMakeEmptySourcePosition());
             mergeBuilder.returnValue(resultValue, getOrMakeEmptySourcePosition());
         }
@@ -237,7 +237,7 @@ export function runTests() {
             let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
             identity.addBasicBlock(entryBlock)
 
-            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(identity, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             builder.returnValue(argument, getOrMakeEmptySourcePosition());
             //console.log(identity.fullPrintString());
         }
@@ -249,7 +249,7 @@ export function runTests() {
             let entryBlock = new hir.HIRBasicBlock(context.coreTypes.basicBlockType, 'entry', getOrMakeEmptySourcePosition());
             caller.addBasicBlock(entryBlock)
 
-            let builder = new hir.HIRBuilder(caller, context, entryBlock, new hir.HIREmptyEnvironment());
+            let builder = new hir.HIRBuilder(caller, context, entryBlock, new hir.HIRLexicalEnvironment(new hir.HIREmptyEnvironment()));
             let callResult = builder.call(identity, [new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.int32Type, getOrMakeEmptySourcePosition())], context.coreTypes.int32Type, getOrMakeEmptySourcePosition());
             builder.returnValue(callResult, getOrMakeEmptySourcePosition());
         }
