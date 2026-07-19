@@ -3208,9 +3208,12 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
         throw new Error('visitAssociationNode')
     }
+    
     visitBinaryExpressionSequenceNode(node: parseTree.ParseTreeBinaryExpressionSequenceNode): any {
-        throw new Error('visitBinaryExpressionSequenceNode')
+        let expandedMessageSend = node.expandAsMessageSends();
+        return this.visitNode(expandedMessageSend)
     }
+
     visitDictionaryNode(node: parseTree.ParseTreeDictionaryNode): any {
         throw new Error('visitDictionaryNode')
     }
@@ -3274,8 +3277,21 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error('visitCascadedMessageNode')
     }
     visitMessageCascadeNode(node: parseTree.ParseTreeMessageCascadeNode): any {
-        throw new Error('visitMessageCascadeNode')
+        let resultValue = this.visitNode(node.receiver) as HIRValue;
+        let receiverNodeValue = new parseTree.ParseTreeLiteralValueNode(node.receiver.sourcePosition, resultValue);
+
+        for(let i = 0; i < node.cascadedMessages.length; ++i) {
+            let cascadedMessage = node.cascadedMessages[i];
+            if(!cascadedMessage)
+                throw new Error("Expected a valid cascaded message.");
+
+            let expandedMessage = cascadedMessage.asMessageSendWithReceiver(receiverNodeValue);
+            resultValue = this.visitNode(expandedMessage);
+        }
+
+        return resultValue;
     }
+
     visitMessageSendNode(node: parseTree.ParseTreeMessageSendNode): any {
         let receiver = this.visitNode(node.receiver) as HIRValue;
         return receiver.analyzeAndBuildMessageSendNode(this, node, receiver);
