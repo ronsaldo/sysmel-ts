@@ -393,4 +393,38 @@ export function runTests() {
         assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
         assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
     }
+
+    // Tuple type
+    {
+        let value = evaluateTopLevelFunctionSourceString('Integer, Float, Character')
+        assert.ok(value.isTupleType());
+
+        let tupleType = value as hir.HIRTupleType;
+        assert.strictEqual(tupleType.elements.length, 3);
+        assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
+        assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
+        assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+    }
+
+    // Tuple
+    {
+        let value = evaluateTopLevelFunctionSourceString("1, 2.5, 'A'")
+        assert.ok(value.isConstantTuple());
+
+        let tuple = value as hir.HIRConstantTuple;
+        assert.ok(tuple.elements[0]?.isConstantLiteralIntegerValue());
+        assert.strictEqual((tuple.elements[0] as hir.HIRConstantLiteralIntegerValue).value, 1);
+
+        assert.ok(tuple.elements[1]?.isConstantLiteralFloatValue());
+        assert.strictEqual((tuple.elements[1] as hir.HIRConstantLiteralFloatValue).value, 2.5);
+
+        assert.ok(tuple.elements[2]?.isConstantLiteralCharacterValue());
+        assert.strictEqual((tuple.elements[2] as hir.HIRConstantLiteralCharacterValue).value, 65);
+
+        let tupleType = value.getType() as hir.HIRTupleType;
+        assert.strictEqual(tupleType.elements.length, 3);
+        assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
+        assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
+        assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+    }
 }

@@ -1751,6 +1751,25 @@ export class HIRMakeAssociationInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRMakeTupleInstruction extends HIRInstruction  {
+    elements: HIRValue[];
+
+    constructor(elements: HIRValue[], type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.elements = elements;
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := makeTuple ${this.elements.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let tupleElements = this.elements.map((value: HIRValue) : HIRValue => value.getValueInEvaluationContext(context));
+        let tuple = new HIRConstantTuple(tupleElements, this.type, this.sourcePosition);
+        context.setCurrentInstructionValue(tuple);
+    }
+}
+
 export class HIRPhiInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
@@ -1923,6 +1942,12 @@ export class HIRBuilder {
 
     makeAssociation(key: HIRValue, value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition): HIRMakeAssociationInstruction {
         let instruction = new HIRMakeAssociationInstruction(key, value, type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    makeTuple(elements: HIRValue[], type: HIRType, sourcePosition: AbstractSourcePosition): HIRMakeTupleInstruction {
+        let instruction = new HIRMakeTupleInstruction(elements, type, null, sourcePosition);
         this.addInstruction(instruction);
         return instruction;
     }
@@ -3372,7 +3397,32 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitTupleNode(node: parseTree.ParseTreeTupleNode): any {
-        throw new Error('visitTupleNode')
+        // The empty tuple is void.
+        if(node.elements.length == 0)
+            return this.builder.context.coreTypes.voidValue;
+
+        let tupleElements: HIRValue[] = [];
+        let tupleTypes: HIRType[] = [];
+        let hasOnlyTypes: boolean = true;
+        for(let i = 0; i < node.elements.length; ++i) {
+            let elementNode = node.elements[i];
+            if(!elementNode)
+                throw new Error('Expected an element node.');
+
+            let elementValue = this.visitDecayedNode(elementNode);
+            tupleElements.push(elementValue);
+            tupleTypes.push(elementValue.getType());
+            if(!elementValue.isType())
+                hasOnlyTypes = false;
+
+        }
+
+        if(hasOnlyTypes) {
+            return this.builder.context.getOrCreateTupleType(tupleElements as HIRType[]);
+        }
+
+        let tupleType = this.builder.context.getOrCreateTupleType(tupleTypes);
+        return this.builder.makeTuple(tupleElements, tupleType, node.sourcePosition);
     }
 
     visitQuoteNode(node: parseTree.ParseTreeQuoteNode): any {
