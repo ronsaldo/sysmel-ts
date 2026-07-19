@@ -118,7 +118,7 @@ export abstract class HIRValue {
         return false;
     }
 
-    isConstant() : boolean {
+    isConstantValue() : boolean {
         return false;
     }
 
@@ -171,6 +171,10 @@ export abstract class HIRValue {
     }
 
     isConstantTuple() : boolean {
+        return false;
+    }
+
+    isCompileTimeFunction(): boolean {
         return false;
     }
 
@@ -720,7 +724,7 @@ export abstract class HIRConstant extends HIRValue {
     }
 }
 
-export abstract class HIRConstantLiteralValue extends HIRValue {
+export abstract class HIRConstantLiteralValue extends HIRConstant {
     type: HIRType;
 
     constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
@@ -1072,6 +1076,10 @@ export class HIRPrimitiveFunction extends HIRConstant {
 
     evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
         return this.primitiveFunction(...callArguments, resultType, callSourcePosition);
+    }
+
+    isCompileTimeFunction(): boolean {
+        return this.isCompileTime
     }
 
     toString(): string {
@@ -1524,6 +1532,10 @@ export abstract class HIRInstruction extends HIRFunctionLocalValue {
     }
 
     abstract fullPrintString(): string;
+
+    simplifyWithBuilder(builder: HIRBuilder) : HIRValue {
+        return this;
+    }
 }
 
 export class HIRAllocaInstruction extends HIRInstruction  {
@@ -1626,6 +1638,30 @@ export class HIRCallInstruction extends HIRInstruction  {
         context.setCurrentInstructionValue(result);
     }
 
+    canSimplify(): boolean {
+        //console.log('this.functional.isCompileTimeFunction()', this.functional.isCompileTimeFunction());
+        if(!this.functional.isCompileTimeFunction())
+            return false;
+
+        for(let i = 0; i < this.callArguments.length; ++i) {
+            let argument = this.callArguments[i];
+            if(!argument)
+                throw new Error('Expected an argument');
+            
+            //console.log('argument', argument.isConstantValue(), argument);
+            if(!argument.isConstantValue())
+                return false;
+        }
+   
+        return true;
+    }
+
+    simplifyWithBuilder(builder: HIRBuilder) : HIRValue {
+        if(!this.canSimplify())
+            return this;
+
+        return this.functional.evaluateWithArgumentsAndResultTypeAt(this.callArguments, this.type, this.sourcePosition);
+    }
 }
 
 
@@ -1812,11 +1848,12 @@ export class HIRBuilder {
         return instruction;
     }
 
-    call(functional: HIRValue, callArguments: HIRValue[], resultType: HIRType, sourcePosition: AbstractSourcePosition): HIRCallInstruction {
+    call(functional: HIRValue, callArguments: HIRValue[], resultType: HIRType, sourcePosition: AbstractSourcePosition): HIRValue {
         let instruction = new HIRCallInstruction(functional, callArguments, resultType, null, sourcePosition);
-        this.addInstruction(instruction);
-        // TODO: Simplify the call if possible.
-        return instruction;
+        let simplified = instruction.simplifyWithBuilder(this);
+        if(instruction === simplified)
+            this.addInstruction(instruction);
+        return simplified;
     }
 
     load(type: HIRType, storage: HIRValue, sourcePosition: AbstractSourcePosition): HIRLoadInstruction {

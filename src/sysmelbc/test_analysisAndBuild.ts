@@ -21,6 +21,11 @@ function buildTopLevelSourceString(sourceString: string): hir.HIRFunction {
     return builder.hirFunction;
 }
 
+function printTopLevelFunctionSourceString(sourceString: string): void {
+    let topLevelFunction = buildTopLevelSourceString(sourceString);
+    console.log(topLevelFunction.fullPrintString())
+}
+
 function evaluateTopLevelFunctionSourceString(sourceString: string): hir.HIRValue {
     let topLevelFunction = buildTopLevelSourceString(sourceString);
     return topLevelFunction.evaluateWithArguments([]);
@@ -109,6 +114,7 @@ export function runTests() {
     // Literal int32
     {
         setUp();
+        printTopLevelFunctionSourceString('42i32');
         let value = evaluateTopLevelFunctionSourceString('42i32');
         assert.ok(value.isConstantLiteralIntegerValue());
         assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
