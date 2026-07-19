@@ -114,13 +114,40 @@ export function runTests() {
     // Literal int32
     {
         setUp();
-        printTopLevelFunctionSourceString('42i32');
         let value = evaluateTopLevelFunctionSourceString('42i32');
         assert.ok(value.isConstantLiteralIntegerValue());
         assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
         assert.strictEqual(value.getType(), context.coreTypes.int32Type);
         tearDown();
     }
+    
+    // Package symbols
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('false')
+        assert.ok(topLevelResult.isConstantLiteralBooleanValue())
+        assert.ok(!(topLevelResult as hir.HIRConstantLiteralBooleanValue).value)
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('true')
+        assert.ok(topLevelResult.isConstantLiteralBooleanValue())
+        assert.ok((topLevelResult as hir.HIRConstantLiteralBooleanValue).value)
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('void')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue())
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('nil')
+        assert.ok(topLevelResult.isConstantLiteralNilValue())
+    }
+
+    // let with macro
+    //{
+    //    let topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42')
+    //    assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+    //    assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+    //    topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42. x')
+    //    assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+    //    assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+    //}
     
 
 }
