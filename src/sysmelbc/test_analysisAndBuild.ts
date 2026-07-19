@@ -165,4 +165,30 @@ export function runTests() {
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
         tearDown();
     }
+
+    // let metabuilder
+    {
+        setUp();
+        let topLevelResult = evaluateTopLevelFunctionSourceString('let x := 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('let x := 42. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
+    }
+
+    // let mutable metabuilder
+    {
+        setUp();
+        let topLevelResult = evaluateTopLevelFunctionSourceString('let x mutable := 42')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('let x mutable := 42. x := 5. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
+        tearDown();
+    }
 }

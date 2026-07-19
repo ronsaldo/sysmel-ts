@@ -2044,12 +2044,25 @@ export class HIRMetaBuilder extends HIRValue {
         return this;
     }
 
+    expandAndBuildMessage(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue) : HIRValue {
+        return this;
+    }
+
     analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
         let selectorValue = evaluator.visitSymbolNode(node.selector);
         if(this.supportsSelector(selectorValue)) {
             return this.expandAndEvaluateMessage(evaluator, node, selectorValue, receiver);
         }
         return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selectorValue = builder.evaluateSymbolNode(node.selector)
+        if(this.supportsSelector(selectorValue)) {
+            return this.expandAndBuildMessage(builder, node, selectorValue, receiver);
+        }
+
+        return super.analyzeAndBuildMessageSendNode(builder, node, receiver)
     }
 }
 
@@ -2062,6 +2075,15 @@ export class HIRNamedMetaBuilder extends HIRMetaBuilder {
             return this;
         }
         return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    }
+
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        if (!this.nameExpression && node.sendArguments.length == 0){
+            this.nameExpression = node.selector;
+            return this;
+        }
+
+        return super.analyzeAndBuildMessageSendNode(builder, node, receiver)
     }
 }
 
@@ -2082,9 +2104,23 @@ export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
         return this;
     }
 
+    expandAndBuildMessage(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector == 'mutable') {
+            this.isMutable = true;
+        } else if (selector == 'type:') {
+            this.typeExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+        }
+        return this;
+    }
+
     analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode): HIRValue {
         let variableDefinition = new parseTree.ParseTreeVariableDefinitionNode(node.sourcePosition, this.nameExpression, this.typeExpression, node.value, this.isMutable);
         return evaluator.visitNode(variableDefinition)
+    }
+
+    analyzeAndBuildAssignment(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeAssignmentNode): HIRValue {
+        let variableDefinition = new parseTree.ParseTreeVariableDefinitionNode(node.sourcePosition, this.nameExpression, this.typeExpression, node.value, this.isMutable);
+        return analyzer.visitNode(variableDefinition);
     }
 }
 
