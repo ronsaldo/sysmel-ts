@@ -258,6 +258,17 @@ export abstract class HIRValue {
         throw new Error(node.sourcePosition.formatMessage('Value does not support assignment.'))
     }
 
+    analyzeAndBuildAssignment(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
+        let selfType = this.getType();
+        if (!selfType.isReferenceType())
+            throw new Error(node.sourcePosition.formatMessage('Storage type does not support assignments.'))
+
+        let baseType = (selfType as HIRReferenceType).baseType;
+        let valueToStore = analyzer.visitNodeWithExpectedType(node.value, baseType);
+        analyzer.builder.store(this, valueToStore, node.sourcePosition);
+        return this;
+    }
+
     analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
         let selfType = this.getType();
         return selfType.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
@@ -3155,7 +3166,8 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitAssignmentNode(node: parseTree.ParseTreeAssignmentNode): any {
-        throw new Error('visitNode')
+        let storeValue = this.visitNode(node.store);
+        return storeValue.analyzeAndBuildAssignment(this, node);
     }
     visitAssociationNode(node: parseTree.ParseTreeAssociationNode): any {
         throw new Error('visitAssociationNode')
@@ -3275,27 +3287,26 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
             initialValue = typeValue.getOrCreateDefaultValue();
         }
         if (node.isMutable) {
-            throw new Error('TODO: visitVariableDefinitionNode mutable')
-            /*let valueType = typeValue;
+            let valueType = typeValue;
             if(!valueType)
                 valueType = initialValue.getType();
 
-            let valueBoxType = this.evaluationContext.context.getOrCreateMutableValueBoxType(valueType);
-            let valueBox = new HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition);
-
-            let referenceType = this.evaluationContext.context.getOrCreateReferenceType(valueType);
-            let reference = new HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition);
+            let referenceType = this.builder.context.getOrCreateReferenceType(valueType);
+            let alloca = this.builder.allocaBuilder?.alloca(valueType, referenceType, node.sourcePosition);
+            if(!alloca)
+                throw new Error('Expected an alloca builder');
+            this.builder.store(alloca, initialValue, node.sourcePosition);
 
             if(name)
-                this.evaluationContext.environment.setNewSymbolBinding(name, reference, node.sourcePosition);
-
-            return reference;*/
+                this.builder.environment.setNewSymbolBinding(name, alloca, node.sourcePosition);
+            return alloca;
         } else {
             if(name)
                 this.builder.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition);
             return initialValue;
         }
     }
+
     visitIfSelectionNode(node: parseTree.ParseTreeIfSelectionNode): any {
         throw new Error('visitIfSelectionNode')
     }

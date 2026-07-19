@@ -123,6 +123,7 @@ export function runTests() {
     
     // Package symbols
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('false')
         assert.ok(topLevelResult.isConstantLiteralBooleanValue())
         assert.ok(!(topLevelResult as hir.HIRConstantLiteralBooleanValue).value)
@@ -136,10 +137,12 @@ export function runTests() {
 
         topLevelResult = evaluateTopLevelFunctionSourceString('nil')
         assert.ok(topLevelResult.isConstantLiteralNilValue())
+        tearDown();
     }
 
     // let with macro
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue())
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
@@ -147,6 +150,19 @@ export function runTests() {
         topLevelResult = evaluateTopLevelFunctionSourceString('let: #x with: 42. x')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue())
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
     }
     
+    // let mutable with macro
+    {
+        setUp();
+        let topLevelResult = evaluateTopLevelFunctionSourceString('let: #x mutableWith: 42');
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue());
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+
+        topLevelResult = evaluateTopLevelFunctionSourceString('let: #x mutableWith: 42. x := 5. x')
+        assert.ok(topLevelResult.isConstantLiteralIntegerValue())
+        assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 5);
+        tearDown();
+    }
 }
