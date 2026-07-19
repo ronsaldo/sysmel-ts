@@ -338,47 +338,60 @@ export function runTests() {
 
     // While do macro
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('while: false do: {}');
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
+        tearDown();
     }
 
     // While do continue with macro
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('while: false do: {} continueWith: {}')
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
+        tearDown();
     }
 
     // Do while macro
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('do: {} while: false')
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
+        tearDown();
     }
 
     // Do continue with while macro
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('do: {} continueWith: {} while: false')
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
+        tearDown();
     }
 
     // Return
     {
+        setUp();
         let topLevelResult = evaluateTopLevelFunctionSourceString('return: 42. 45')
         assert.ok(topLevelResult.isConstantLiteralIntegerValue());
         assert.strictEqual((topLevelResult as hir.HIRConstantLiteralIntegerValue).value, 42);
+        tearDown();
     }
 
     // Association type
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString('Symbol : Integer')
         assert.ok(value.isAssociationType());
 
         let assocType = value as hir.HIRAssociationType;
         assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
         assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+        tearDown();
     }
 
     // Association value
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString('#first : 1')
         assert.ok(value.isConstantAssociation());
 
@@ -392,10 +405,12 @@ export function runTests() {
         let assocType = value.getType() as hir.HIRAssociationType;
         assert.strictEqual(assocType.keyType, context.coreTypes.symbolType);
         assert.strictEqual(assocType.valueType, context.coreTypes.integerType);
+        tearDown();
     }
 
     // Tuple type
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString('Integer, Float, Character')
         assert.ok(value.isTupleType());
 
@@ -404,10 +419,12 @@ export function runTests() {
         assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
         assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
         assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+        tearDown();
     }
 
     // Tuple
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString("1, 2.5, 'A'")
         assert.ok(value.isConstantTuple());
 
@@ -426,10 +443,12 @@ export function runTests() {
         assert.strictEqual(tupleType.elements[0], context.coreTypes.integerType);
         assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
         assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
+        tearDown();
     }
 
     // Simple function type
     {
+        setUp();
         let simpleFunctionTypeValue = evaluateTopLevelFunctionSourceString('(Integer) => Integer');
         assert.ok(simpleFunctionTypeValue.isSimpleFunctionType());
         let simpleFunctionType = simpleFunctionTypeValue as hir.HIRSimpleFunctionType;
@@ -444,21 +463,27 @@ export function runTests() {
         assert.strictEqual(simpleFunctionType.argumentTypes[0], context.coreTypes.integerType);
         assert.strictEqual(simpleFunctionType.argumentTypes[1], context.coreTypes.integerType);
         assert.strictEqual(simpleFunctionType.resultType, context.coreTypes.integerType);
+        tearDown();
     }
 
     // Runtime error
     {
+        setUp();
         assert.throws(() => evaluateTopLevelFunctionSourceString('error: "Test Error"'))
+        tearDown();
     }
 
     // Assertion
     {
+        setUp();
         evaluateTopLevelFunctionSourceString('assert: true');
         assert.throws(() => evaluateTopLevelFunctionSourceString('assert: false'))
+        tearDown();
     }
 
     // Boolean not
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString("false not")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(value.evaluateAsBoolean());
@@ -466,10 +491,12 @@ export function runTests() {
         value = evaluateTopLevelFunctionSourceString("true not")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(!value.evaluateAsBoolean());
+        tearDown();
     }
 
     // Boolean and
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString("false && false")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(!value.evaluateAsBoolean());
@@ -485,10 +512,12 @@ export function runTests() {
         value = evaluateTopLevelFunctionSourceString("true && true")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(value.evaluateAsBoolean());
+        tearDown();
     }
 
     // Boolean or
     {
+        setUp();
         let value = evaluateTopLevelFunctionSourceString("false || false")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(!value.evaluateAsBoolean());
@@ -504,5 +533,6 @@ export function runTests() {
         value = evaluateTopLevelFunctionSourceString("true || true")
         assert.ok(value.isConstantLiteralBooleanValue());
         assert.ok(value.evaluateAsBoolean());
+        tearDown();
     }
 }
