@@ -427,4 +427,15 @@ export function runTests() {
         assert.strictEqual(tupleType.elements[1], context.coreTypes.floatType);
         assert.strictEqual(tupleType.elements[2], context.coreTypes.characterType);
     }
+
+    // Runtime error
+    {
+        assert.throws(() => evaluateTopLevelFunctionSourceString('error: "Test Error"'))
+    }
+
+    // Assertion
+    {
+        evaluateTopLevelFunctionSourceString('assert: true');
+        assert.throws(() => evaluateTopLevelFunctionSourceString('assert: false'))
+    }
 }

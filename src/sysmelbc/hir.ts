@@ -74,6 +74,10 @@ export abstract class HIRValue {
         return false;
     }
 
+    isControlFlowEscapeType() : boolean {
+        return false;
+    }
+
     isDerivedType() : boolean {
         return false;
     }
@@ -483,6 +487,27 @@ export class HIRVoidType extends HIRType {
     }
 
     isVoidType(): boolean {
+        return true;
+    }
+
+    toString(): string {
+        return this.name;
+    }
+}
+
+export class HIRControlFlowEscapeType extends HIRType {
+    name: string;
+
+    constructor(name:string, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.name = name;
+    }
+
+    getName() : string | null {
+        return this.name;
+    }
+
+    isControlFlowEscapeType(): boolean {
         return true;
     }
 
@@ -1831,6 +1856,52 @@ export class HIRReturnInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRAssertConditionInstruction extends HIRInstruction  {
+    condition: HIRValue;
+    message: HIRValue;
+
+    constructor(condition: HIRValue, message: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.condition = condition;
+        this.message = message;
+    }
+
+    fullPrintString(): string {
+        return 'assert ' + this.condition.toString() + ' ' + this.message.toString()
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let condition = this.condition.getValueInEvaluationContext(context);
+        if(!condition.evaluateAsBoolean())
+        {
+            let message = this.message.getValueInEvaluationContext(context) as HIRConstantLiteralStringValue;
+            throw new Error(this.sourcePosition.formatMessage(message.value))
+        }
+    }
+}
+
+export class HIRRuntimeErrorInstruction extends HIRInstruction  {
+    errorMessage: HIRValue;
+
+    constructor(errorMessage: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.errorMessage = errorMessage
+    }
+
+    isTerminatorInstruction(): boolean {
+        return true;
+    }
+
+    fullPrintString(): string {
+        return 'runtimeError ' + this.errorMessage.toString()
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let errorMessage = this.errorMessage.getValueInEvaluationContext(context) as HIRConstantLiteralStringValue;
+        throw new Error(this.sourcePosition.formatMessage(errorMessage.value))
+    }
+}
+
 export class HIRUnreachableInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
@@ -1972,6 +2043,18 @@ export class HIRBuilder {
 
     returnVoid(sourcePosition: AbstractSourcePosition): HIRReturnInstruction {
         return this.returnValue(this.context.coreTypes.voidValue, sourcePosition);
+    }
+
+    assertCondition(condition: HIRValue, message: HIRValue, sourcePosition: AbstractSourcePosition): HIRAssertConditionInstruction {
+        let instruction = new HIRAssertConditionInstruction(condition, message, this.context.coreTypes.controlFlowEscapeType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    runtimeError(errorMessage: HIRValue, sourcePosition: AbstractSourcePosition): HIRRuntimeErrorInstruction {
+        let instruction = new HIRRuntimeErrorInstruction(errorMessage, this.context.coreTypes.controlFlowEscapeType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
     }
 
     unreachable(sourcePosition: AbstractSourcePosition): HIRUnreachableInstruction {
@@ -2266,6 +2349,7 @@ export class HIRCoreTypes {
     dynamicType: HIRDynamicType     = new HIRDynamicType('Dynamic', this, getOrMakeEmptySourcePosition());
     undefinedType: HIRUndefinedType = new HIRUndefinedType('Undefined', this, getOrMakeEmptySourcePosition());
     voidType: HIRVoidType           = new HIRVoidType('Void', this, getOrMakeEmptySourcePosition());
+    controlFlowEscapeType: HIRControlFlowEscapeType  = new HIRControlFlowEscapeType('ControlFlowEscape', this, getOrMakeEmptySourcePosition());
 
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
@@ -3269,10 +3353,14 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error(node.sourcePosition.formatMessage(node.errorMessage));
     }
     visitRuntimeErrorNode(node: parseTree.ParseTreeRuntimeErrorNode): any {
-        throw new Error('visitRuntimeErrorNode')
+        let message = this.visitNodeWithExpectedType(node.errorMessage, this.builder.context.coreTypes.stringType);
+        return this.builder.runtimeError(message, node.sourcePosition);
     }
     visitAssertNode(node: parseTree.ParseTreeAssertNode): any {
-        throw new Error('visitAssertNode')
+        let condition = this.visitBooleanCondition(node.condition);
+        let message = new HIRConstantLiteralStringValue(node.sourcePosition.getValue(), this.builder.context.coreTypes.stringType, node.sourcePosition);
+        this.builder.assertCondition(condition, message, node.sourcePosition);
+        return this.builder.context.coreTypes.voidValue;
     }
 
     visitApplicationNode(node: parseTree.ParseTreeApplicationNode): any {
@@ -3527,9 +3615,7 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         let returnType = this.builder.environment.lookReturnTypeRecursively();
         let resultValue = this.visitNodeWithExpectedType(node.valueExpression, returnType);
         this.builder.returnValue(resultValue, node.sourcePosition);
-
-        // TODO: Use a control flow escape type
-        return this.builder.context.coreTypes.voidValue;
+        return this.builder.context.coreTypes.controlFlowEscapeType;
     }
     
     visitWhileDoNode(node: parseTree.ParseTreeWhileDoNode): any {
