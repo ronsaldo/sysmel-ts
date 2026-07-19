@@ -1065,6 +1065,13 @@ export class HIRPrimitiveMacro extends HIRConstant {
         return evaluator.visitNode(expandedMacro);
     }
 
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let macroContext = new HIRMacroContext(builder.builder.context.coreTypes, node.sourcePosition);
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let expandedMacro = this.primitiveFunction(macroContext, receiverNode, ...node.sendArguments);
+        return builder.visitNode(expandedMacro);
+    }
+
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         let macroContext = new HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition);
         let expandedMacro = this.primitiveFunction(macroContext, ...node.applicationArguments) as parseTree.ParseTreeNode;
