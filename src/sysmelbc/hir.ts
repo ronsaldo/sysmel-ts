@@ -3456,9 +3456,27 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         this.builder.environment = oldEnvironment;
         return functionType;
     }
-    
+
     visitFunctionNode(node: parseTree.ParseTreeFunctionNode): any {
-        throw new Error('visitFunctionNode')
+        let name = this.evaluateOptionalSymbolNode(node.nameExpression);
+        let dependentFunctionType = this.visitNode(node.functionType) as HIRDependentFunctionType;
+
+        let hirFunction = new HIRFunction(name, dependentFunctionType, node.sourcePosition);
+        hirFunction.definitionBody = node.body;
+        hirFunction.definitionContext = this.builder.context;
+        hirFunction.definitionEnvironment = this.builder.environment;
+        hirFunction.ensureAnalysis();
+
+        let functionValue: HIRValue = hirFunction;
+        if(hirFunction.captures.length !== 0) {
+            throw new Error('TODO: Make closure with captures.');
+        }
+
+        if(name) {
+            this.builder.environment.setNewSymbolBinding(name, hirFunction, node.sourcePosition);
+        }
+        
+        return functionValue;
     }
 
     visitLexicalBlockNode(node: parseTree.ParseTreeLexicalBlockNode): any {

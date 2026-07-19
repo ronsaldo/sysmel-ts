@@ -338,6 +338,24 @@ export function runTests() {
         assert.strictEqual(simplifiedFunctionType.resultType, context.coreTypes.integerType);
     }
 
+    // Function
+    {
+        setUp();
+        let functionValue = evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer | x}');
+        assert.ok(functionValue.isFunction())
+        let result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 42);
+
+        functionValue = evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer | x negated}');
+        assert.ok(functionValue.isFunction())
+        result = functionValue.evaluateWithArguments([new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition())]);
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), -42);
+
+        tearDown();
+    }
+
     // If then else
     {
         setUp();
