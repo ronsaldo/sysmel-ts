@@ -548,10 +548,23 @@ export class HIRUniverseType extends HIRType {
         // FIXME: Remove this hack by using a method dictionary
         if(selector === '=>') {
             let functionArguments = receiver.asArrowArguments();
-            let resultType = evaluator.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode)
+            let resultType = evaluator.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
             return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
         }
         return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
+    }
+
+    analyzeAndBuildMessageSendNodeOnType(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = buildPass.evaluateSymbolNode(node.selector);
+
+        // FIXME: Remove this hack by using a method dictionary
+        if(selector === '=>') {
+            let functionArguments = receiver.asArrowArguments();
+            let resultType = buildPass.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
+            return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
+        }
+
+        return super.analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver);
     }
 }
 
