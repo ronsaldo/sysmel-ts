@@ -341,4 +341,22 @@ export function runTests() {
         let topLevelResult = evaluateTopLevelFunctionSourceString('while: false do: {}');
         assert.ok(topLevelResult.isConstantLiteralVoidValue());
     }
+
+    // While do continue with macro
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('while: false do: {} continueWith: {}')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    // Do while macro
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('do: {} while: false')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
+
+    // Do continue with while macro
+    {
+        let topLevelResult = evaluateTopLevelFunctionSourceString('do: {} continueWith: {} while: false')
+        assert.ok(topLevelResult.isConstantLiteralVoidValue());
+    }
 }

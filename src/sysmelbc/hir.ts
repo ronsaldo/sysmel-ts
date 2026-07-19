@@ -3461,6 +3461,44 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitDoWhileNode(node: parseTree.ParseTreeDoWhileNode): any {
-        throw new Error('visitDoWhileNode')
+        let loopHeader = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopHeader", node.sourcePosition)
+        let loopContinueWith = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopContinueWith", node.sourcePosition)
+        let loopCondition = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopCondition", node.sourcePosition)
+        let loopMerge = new HIRBasicBlock(this.builder.context.coreTypes.basicBlockType, "loopMerge", node.sourcePosition)
+
+        this.builder.branch(loopHeader, node.sourcePosition);
+
+        // Loop header
+        this.builder.basicBlock = loopHeader;
+        this.builder.hirFunction.addBasicBlock(loopHeader);
+
+        if(node.bodyExpression)
+            this.visitNode(node.bodyExpression);
+
+        if(!this.builder.isLastTerminator())
+            this.builder.branch(loopContinueWith, node.sourcePosition)
+
+        // Loop continue with.
+        this.builder.basicBlock = loopContinueWith;
+        this.builder.hirFunction.addBasicBlock(loopContinueWith);
+
+        if(node.continueExpression)
+            this.visitNode(node.continueExpression);
+
+        if(!this.builder.isLastTerminator())
+            this.builder.branch(loopCondition, node.sourcePosition);
+
+        // Loop condition
+        this.builder.basicBlock = loopCondition;
+        this.builder.hirFunction.addBasicBlock(loopCondition);
+
+        let conditionValue = this.visitBooleanCondition(node.condition);
+        this.builder.conditionalBranch(conditionValue, loopHeader, loopMerge, node.sourcePosition);
+
+        // Loop merge
+        this.builder.basicBlock = loopMerge;
+        this.builder.hirFunction.addBasicBlock(loopMerge)
+
+        return this.builder.context.coreTypes.voidValue;
     }
 }
