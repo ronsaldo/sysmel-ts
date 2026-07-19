@@ -438,4 +438,15 @@ export function runTests() {
         evaluateTopLevelFunctionSourceString('assert: true');
         assert.throws(() => evaluateTopLevelFunctionSourceString('assert: false'))
     }
+
+    // Boolean not
+    {
+        let value = evaluateTopLevelFunctionSourceString("false not")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(value.evaluateAsBoolean());
+
+        value = evaluateTopLevelFunctionSourceString("true not")
+        assert.ok(value.isConstantLiteralBooleanValue());
+        assert.ok(!value.evaluateAsBoolean());
+    }
 }
