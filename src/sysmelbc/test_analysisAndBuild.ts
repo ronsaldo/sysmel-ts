@@ -106,4 +106,15 @@ export function runTests() {
         tearDown();
     }
 
+    // Literal int32
+    {
+        setUp();
+        let value = evaluateTopLevelFunctionSourceString('42i32');
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual((value as hir.HIRConstantLiteralIntegerValue).value, 42);
+        assert.strictEqual(value.getType(), context.coreTypes.int32Type);
+        tearDown();
+    }
+    
+
 }

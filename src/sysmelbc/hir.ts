@@ -1071,7 +1071,7 @@ export class HIRPrimitiveFunction extends HIRConstant {
     }
 
     evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
-        return this.primitiveFunction(...callArguments);
+        return this.primitiveFunction(...callArguments, resultType, callSourcePosition);
     }
 
     toString(): string {
