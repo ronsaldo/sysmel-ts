@@ -2629,6 +2629,26 @@ export class HIRContext {
         return new HIREvaluationContext(this, this.createTopLevelEnvironment(sourceCode));
     }
 
+    createTopLevelFunctionBuilder(sourcePosition: AbstractSourcePosition) : HIRBuilder {
+        let dependentFunctionType = new HIRDependentFunctionType([], this.coreTypes.dynamicType, this.coreTypes, sourcePosition);
+        let topLevelFunction = new HIRFunction(null, dependentFunctionType, sourcePosition);
+        let topLevelEnvironment = this.createTopLevelEnvironment(null);
+
+        // Alloca
+        let allocaBlock = new HIRBasicBlock(this.coreTypes.basicBlockType, 'alloca', sourcePosition);
+        topLevelFunction.addBasicBlock(allocaBlock);
+        let allocaBuilder = new HIRBuilder(topLevelFunction, this, allocaBlock, topLevelEnvironment);
+
+        // Entry block
+        let entryBlock = new HIRBasicBlock(this.coreTypes.basicBlockType, 'entry', sourcePosition);
+        topLevelFunction.addBasicBlock(entryBlock);
+        let builder = new HIRBuilder(topLevelFunction, this, entryBlock, topLevelEnvironment);
+        builder.allocaBuilder = allocaBuilder;
+        builder.entryBasicBlock = entryBlock;
+
+        return builder;
+    }
+
     getOrCreateAssociationType(keyType: HIRType, valueType: HIRType) {
         return new HIRAssociationType(keyType, valueType, this.coreTypes, getOrMakeEmptySourcePosition())
     }
@@ -3146,7 +3166,7 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     }
 
     visitSequenceNode(node: parseTree.ParseTreeSequenceNode): any {
-        let result: HIRValue = this.builder.context.coreTypes.voidValue
+        let result: HIRValue = this.builder.context.coreTypes.voidValue;
         for(let i = 0; i < node.elements.length; ++i) {
             result = this.visitNode(node.elements[i] as parseTree.ParseTreeNode) as HIRValue
         }
