@@ -1,6 +1,75 @@
 import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
 import * as parseTree from "./parsetree.js"
 
+export abstract class HIRVisitor {
+    abstract visitType(type: HIRType): any;
+    abstract visitNominalType(type: HIRNominalType): any;
+    abstract visitDynamicType(type: HIRDynamicType): any;
+    abstract visitPrimitiveType(type: HIRPrimitiveType): any;
+    abstract visitUndefinedType(type: HIRUndefinedType): any;
+    abstract visitVoidType(type: HIRVoidType): any;
+    abstract visitControlFlowEscapeType(type: HIRControlFlowEscapeType): any;
+    abstract visitUniverseType(type: HIRUniverseType): any;
+    abstract visitDerivedType(type: HIRDerivedType): any;
+    abstract visitPointerLikeType(type: HIRPointerLikeType): any;
+    abstract visitPointerType(type: HIRPointerType): any;
+    abstract visitReferenceType(type: HIRReferenceType): any;
+    abstract visitMutableValueBoxType(type: HIRMutableValueBoxType): any;
+    abstract visitAssociationType(type: HIRAssociationType): any;
+    abstract visitTupleType(type: HIRTupleType): any;
+    abstract visitDependentFunctionType(type: HIRDependentFunctionType): any;
+    abstract visitSimpleFunctionType(type: HIRSimpleFunctionType): any;
+
+    abstract visitConstantLiteralIntegerValue(constant: HIRConstantLiteralIntegerValue): any;
+    abstract visitConstantLiteralFloatValue(constant: HIRConstantLiteralFloatValue): any;
+    abstract visitConstantLiteralBooleanValue(constant: HIRConstantLiteralBooleanValue): any;
+    abstract visitConstantLiteralCharacterValue(constant: HIRConstantLiteralCharacterValue): any;
+    abstract visitConstantLiteralStringValue(constant: HIRConstantLiteralStringValue): any;
+    abstract visitConstantLiteralSymbolValue(constant: HIRConstantLiteralSymbolValue): any;
+    abstract visitConstantLiteralVoidValue(constant: HIRConstantLiteralVoidValue): any;
+    abstract visitConstantLiteralNilValue(constant: HIRConstantLiteralNilValue): any;
+    abstract visitConstantLiteralUndefinedValue(constant: HIRConstantLiteralUndefinedValue): any;
+    abstract visitConstantLiteralParseTree(constant: HIRConstantLiteralParseTree): any;
+    
+    abstract visitConstantAssociation(type: HIRConstantAssociation): any;
+    abstract visitConstantTuple(type: HIRConstantTuple): any;
+
+    abstract visitMacroContext(context: HIRMacroContext): any;
+    abstract visitPrimitiveMacro(macro: HIRPrimitiveMacro): any;
+    abstract visitPrimitiveFunction(primitiveFunction: HIRPrimitiveFunction): any;
+    abstract visitMutableValueBox(valueBox: HIRMutableValueBox): any;
+    abstract visitPointerLikeValue(pointerLike: HIRPointerLikeValue): any;
+    abstract visitPointerValue(pointer: HIRPointerValue): any;
+    abstract visitReferenceValue(reference: HIRReferenceValue): any;
+    abstract visitFunction(hirFunction: HIRFunction): any;
+    abstract visitFunctionClosure(closure: HIRFunctionClosure): any;
+
+    abstract visitArgument(argument: HIRArgument): any;
+    abstract visitCapture(capture: HIRCapture): any;
+    abstract visitBasicBlock(basicBlock: HIRBasicBlock): any;
+
+    abstract visitAllocaInstruction(instruction: HIRAllocaInstruction): any;
+    abstract visitBranchInstruction(instruction: HIRBranchInstruction): any;
+    abstract visitConditionalBranchInstruction(instruction: HIRConditionalBranchInstruction): any;
+    abstract visitCallInstruction(instruction: HIRCallInstruction): any;
+    abstract visitLoadInstruction(instruction: HIRLoadInstruction): any;
+    abstract visitStoreInstruction(instruction: HIRStoreInstruction): any;
+    abstract visitMakeAssociationInstruction(instruction: HIRMakeAssociationInstruction): any;
+    abstract visitMakeClosureInstruction(instruction: HIRMakeClosureInstruction): any;
+    abstract visitMakeTupleInstruction(instruction: HIRMakeTupleInstruction): any;
+    abstract visitPhiInstruction(instruction: HIRPhiInstruction): any;
+    abstract visitPhiSourceInstruction(instruction: HIRPhiSourceInstruction): any;
+    abstract visitReturnInstruction(instruction: HIRReturnInstruction): any;
+    abstract visitAssertConditionInstruction(instruction: HIRAssertConditionInstruction): any;
+    abstract visitRuntimeErrorInstruction(instruction: HIRRuntimeErrorInstruction): any;
+    abstract visitUnreachableInstruction(instruction: HIRUnreachableInstruction): any;
+
+    abstract visitMetaBuilderFactory(factory: HIRMetaBuilderFactory): any;
+    abstract visitMetaBuilder(metaBuilder: HIRMetaBuilder): any;
+    abstract visitPackage(hirPackage: HIRPackage): any;
+    
+}
+
 export abstract class HIRValue {
     sourcePosition: AbstractSourcePosition;
 
@@ -9,6 +78,7 @@ export abstract class HIRValue {
     }
 
     abstract getType(): HIRType;
+    abstract accept(visitor: HIRVisitor): any;
 
     ensureAnalysis(): void {
         // By default do nothing.
@@ -297,6 +367,10 @@ export class HIRType extends HIRValue {
         this.coreTypes = coreTypes;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitType(this);
+    }
+
     getName() : string | null {
         return null;
     }
@@ -383,6 +457,10 @@ export class HIRNominalType extends HIRType {
         this.name = name;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitNominalType(this);
+    }
+
     getName() : string | null {
         return this.name;
     }
@@ -424,6 +502,10 @@ export class HIRDynamicType extends HIRType {
         this.name = name;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitDynamicType(this);
+    }
+
     getName() : string | null {
         return this.name;
     }
@@ -448,6 +530,10 @@ export class HIRPrimitiveType extends HIRNominalType {
         this.alignment = alignment;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitPrimitiveType(this);
+    }
+
     isPrimitiveType(): boolean {
         return true;
     }
@@ -459,6 +545,10 @@ export class HIRUndefinedType extends HIRType {
     constructor(name:string, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
         this.name = name;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitUndefinedType(this)
     }
 
     getName() : string | null {
@@ -482,6 +572,10 @@ export class HIRVoidType extends HIRType {
         this.name = name;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitVoidType(this);
+    }
+
     getName() : string | null {
         return this.name;
     }
@@ -503,6 +597,10 @@ export class HIRControlFlowEscapeType extends HIRType {
         this.name = name;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitControlFlowEscapeType(this);
+    }
+
     getName() : string | null {
         return this.name;
     }
@@ -522,6 +620,10 @@ export class HIRUniverseType extends HIRType {
     constructor(level: number, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
         this.level = level
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitUniverseType(this)
     }
 
     getName() : string | null {
@@ -576,6 +678,10 @@ export class HIRDerivedType extends HIRType {
         this.baseType = baseType;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitDerivedType(this);
+    }
+
     isDerivedType(): boolean {
         return true;
     }
@@ -586,6 +692,10 @@ export class HIRPointerLikeType extends HIRDerivedType {
         super(baseType, coreTypes, sourcePosition);
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitPointerLikeType(this);
+    }
+
     isPointerLikeType(): boolean {
         return true;
     }
@@ -594,6 +704,10 @@ export class HIRPointerLikeType extends HIRDerivedType {
 export class HIRPointerType extends HIRPointerLikeType {
     constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(baseType, coreTypes, sourcePosition);
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitPointerType(this);
     }
 
     isPointerType(): boolean {
@@ -608,6 +722,10 @@ export class HIRPointerType extends HIRPointerLikeType {
 export class HIRReferenceType extends HIRPointerLikeType {
     constructor(baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(baseType, coreTypes, sourcePosition);
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitReferenceType(this);
     }
 
     isReferenceType(): boolean {
@@ -636,16 +754,14 @@ export class HIRMutableValueBoxType extends HIRPointerLikeType {
         super(baseType, coreTypes, sourcePosition);
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMutableValueBoxType(this);
+    }
+
     isMutableValueBoxType(): boolean {
         return true;
     }
 }
-
-/*
-    isTupleType() : boolean {
-        return false;
-    }
-*/
 
 export class HIRAssociationType extends HIRType {
     keyType: HIRType;
@@ -655,6 +771,10 @@ export class HIRAssociationType extends HIRType {
         super(coreTypes, sourcePosition);
         this.keyType = keyType;
         this.valueType = valueType;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitAssociationType(this);
     }
 
     isAssociationType(): boolean {
@@ -668,6 +788,10 @@ export class HIRTupleType extends HIRType {
     constructor(elements: HIRType[], coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
         this.elements = elements;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitTupleType(this);
     }
 
     isTupleType(): boolean {
@@ -687,6 +811,10 @@ export class HIRDependentFunctionType extends HIRType {
         super(coreTypes, sourcePosition);
         this.functionArguments = functionArguments;
         this.resultType = resultType;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitDependentFunctionType(this);
     }
 
     canSimplifiy(): boolean {
@@ -722,6 +850,10 @@ export class HIRSimpleFunctionType extends HIRType {
         super(coreTypes, sourcePosition);
         this.argumentTypes = argumentTypes;
         this.resultType = resultType;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitSimpleFunctionType(this);
     }
 
     isSimpleFunctionType(): boolean {
@@ -802,6 +934,10 @@ export class HIRConstantLiteralIntegerValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralIntegerValue(this);
+    }
+
     evaluateAsInteger(): number {
         return this.value;
     }
@@ -825,6 +961,10 @@ export class HIRConstantLiteralFloatValue extends HIRConstantLiteralValue {
     constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantLiteralFloatValue(this);
     }
     
     evaluateAsFloat(): number {
@@ -853,6 +993,10 @@ export class HIRConstantLiteralBooleanValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralBooleanValue(this);
+    }
+
     evaluateAsBoolean(): boolean {
         return this.value;
     }
@@ -872,6 +1016,10 @@ export class HIRConstantLiteralCharacterValue extends HIRConstantLiteralValue {
     constructor(value:number, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantLiteralCharacterValue(this);
     }
     
     evaluateAsInteger(): number {
@@ -899,6 +1047,10 @@ export class HIRConstantLiteralStringValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralStringValue(this);
+    }
+
     evaluateAsString(): string {
         return this.value;
     }
@@ -920,6 +1072,10 @@ export class HIRConstantLiteralSymbolValue extends HIRConstantLiteralValue {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralSymbolValue(this);
+    }
+
     evaluateAsSymbol(): string {
         return this.value;
     }
@@ -938,6 +1094,10 @@ export class HIRConstantLiteralVoidValue extends HIRConstantLiteralValue {
         super(type, sourcePosition);
     }
 
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantLiteralVoidValue(this);
+    }
+
     isConstantLiteralVoidValue() : boolean {
         return true
     }
@@ -950,6 +1110,10 @@ export class HIRConstantLiteralVoidValue extends HIRConstantLiteralValue {
 export class HIRConstantLiteralNilValue extends HIRConstantLiteralValue {
     constructor(type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantLiteralNilValue(this);
     }
 
     isConstantLiteralNilValue() : boolean {
@@ -967,10 +1131,13 @@ export class HIRConstantLiteralUndefinedValue extends HIRConstantLiteralValue {
         super(type, sourcePosition);
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralUndefinedValue(this);
+    }
+
     isConstantLiteralUndefinedValue() : boolean {
         return true
     }
-
 
     toString(): string {
         return 'constantLiteralUndefined';
@@ -983,6 +1150,10 @@ export class HIRConstantLiteralParseTree extends HIRConstantLiteralValue {
     constructor(value: parseTree.ParseTreeNode, type: HIRType, sourcePosition: AbstractSourcePosition) {
         super(type, sourcePosition);
         this.value = value;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantLiteralParseTree(this);
     }
 
     isConstantLiteralParseTree(): boolean {
@@ -1004,6 +1175,10 @@ export class HIRConstantAssociation extends HIRConstant {
         this.key = key;
         this.value = value;
         this.type = type;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantAssociation(this);
     }
 
     getType(): HIRType {
@@ -1029,6 +1204,10 @@ export class HIRConstantTuple extends HIRConstant {
         this.type = type;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConstantTuple(this);
+    }
+
     getType(): HIRType {
         return this.type;
     }
@@ -1050,6 +1229,10 @@ export class HIRMacroContext extends HIRValue {
         this.coreTypes = coreTypes;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMacroContext(this);
+    }
+
     getType(): HIRType {
         return this.coreTypes.macroContextType;
     }
@@ -1065,6 +1248,10 @@ export class HIRPrimitiveMacro extends HIRConstant {
         this.name = name;
         this.type = type;
         this.primitiveFunction = primitiveFunction;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPrimitiveMacro(this);
     }
 
     getType(): HIRType {
@@ -1114,6 +1301,10 @@ export class HIRPrimitiveFunction extends HIRConstant {
         this.primitiveFunction = primitiveFunction;
         this.isCompileTime = isCompileTime;
         this.isPure = isPure;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPrimitiveFunction(this);
     }
 
     getType(): HIRType {
@@ -1167,6 +1358,10 @@ export class HIRMutableValueBox extends HIRValue {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMutableValueBox(this);
+    }
+
     getType(): HIRType {
         return this.type;
     }
@@ -1197,6 +1392,10 @@ export class HIRPointerLikeValue extends HIRValue {
         this.index = index;
     }
 
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPointerLikeValue(this);
+    }
+
     getType(): HIRType {
         return this.type;
     }
@@ -1218,11 +1417,19 @@ export class HIRPointerValue extends HIRPointerLikeValue {
     isPointerValue(): boolean {
         return true;
     }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPointerValue(this);
+    }
 }
 
 export class HIRReferenceValue extends HIRPointerLikeValue {
     isReferenceValue(): boolean {
         return true;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitReferenceValue(this);
     }
 
     analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
@@ -1250,6 +1457,10 @@ export class HIRFunction extends HIRConstant {
         this.name = name;
         this.dependentFunctionType = dependentFunctionType;
         this.simplifiedType = dependentFunctionType.asSimplifiedType();
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitFunction(this);
     }
 
     getType(): HIRType {
@@ -1431,6 +1642,10 @@ export class HIRFunctionClosure extends HIRConstant {
         this.captureVector = captureVector;
     }
 
+    accept(visitor: HIRVisitor) {
+        return visitor.visitFunctionClosure(this);
+    }
+
     getType(): HIRType {
         return this.hirFunction.simplifiedType;
     }
@@ -1564,6 +1779,10 @@ export class HIRArgument extends HIRFunctionLocalValue {
         super(type, name, sourcePosition);
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitArgument(this);
+    }
+
     isArgument(): boolean {
         return true;
     }
@@ -1584,6 +1803,10 @@ export class HIRCapture extends HIRFunctionLocalValue {
     constructor(sourceValue: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition);
         this.sourceValue = sourceValue;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitCapture(this);
     }
 
     isCapture(): boolean {
@@ -1608,6 +1831,10 @@ export class HIRBasicBlock extends HIRFunctionLocalValue {
 
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition);
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitBasicBlock(this)
     }
 
     addInstruction(instruction: HIRInstruction) : void {
@@ -1663,6 +1890,10 @@ export class HIRAllocaInstruction extends HIRInstruction  {
         this.valueBoxType = valueBoxType;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitAllocaInstruction(this);
+    }
+
     fullPrintString(): string {
         return `${this.toString()} := alloca ${this.valueType.toString()} as ${this.type.toString()}`
     }
@@ -1688,6 +1919,10 @@ export class HIRBranchInstruction extends HIRInstruction  {
         this.destination = destination
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitBranchInstruction(this);
+    }
+
     isTerminatorInstruction(): boolean {
         return true;
     }
@@ -1711,6 +1946,10 @@ export class HIRConditionalBranchInstruction extends HIRInstruction  {
         this.condition = condition;
         this.trueDestination = trueDestination;
         this.falseDestination = falseDestination;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitConditionalBranchInstruction(this);
     }
 
     isTerminatorInstruction(): boolean {
@@ -1740,6 +1979,10 @@ export class HIRCallInstruction extends HIRInstruction  {
         super(type, name, sourcePosition);
         this.functional = functional;
         this.callArguments = callArguments;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitCallInstruction(this);
     }
 
     fullPrintString(): string {
@@ -1788,6 +2031,10 @@ export class HIRLoadInstruction extends HIRInstruction  {
         this.storage = storage;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitLoadInstruction(this);
+    }
+
     fullPrintString(): string {
         return `${this.toString()} := load ${this.storage.toString()} as ${this.type.toString()}`
     }
@@ -1806,6 +2053,10 @@ export class HIRStoreInstruction extends HIRInstruction  {
         super(type, name, sourcePosition);
         this.storage = storage;
         this.valueToStore = valueToStore;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitStoreInstruction(this);
     }
 
     fullPrintString(): string {
@@ -1829,6 +2080,10 @@ export class HIRMakeAssociationInstruction extends HIRInstruction  {
         this.value = value;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMakeAssociationInstruction(this);
+    }
+
     fullPrintString(): string {
         return `${this.toString()} := makeAssocation ${this.key.toString()} with ${this.value.toString()}`
     }
@@ -1847,6 +2102,10 @@ export class HIRMakeTupleInstruction extends HIRInstruction  {
     constructor(elements: HIRValue[], type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition);
         this.elements = elements;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMakeTupleInstruction(this);
     }
 
     fullPrintString(): string {
@@ -1870,6 +2129,10 @@ export class HIRMakeClosureInstruction extends HIRInstruction  {
         this.captureVector = captureVector;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMakeClosureInstruction(this);
+    }
+
     fullPrintString(): string {
         return `${this.toString()} := makeClosure ${this.hirFunction.toString()} captures ${this.captureVector.toString()}`
     }
@@ -1884,6 +2147,10 @@ export class HIRMakeClosureInstruction extends HIRInstruction  {
 export class HIRPhiInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitPhiInstruction(this);
     }
 
     isPhiInstruction(): boolean {
@@ -1909,6 +2176,10 @@ export class HIRPhiSourceInstruction extends HIRInstruction  {
         this.sourceValue = sourceValue;
     }
 
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPhiSourceInstruction(this);
+    }
+
     fullPrintString(): string {
         return `phi: ${this.targetPhi.toString()} source: ${this.sourceValue.toString()}`;
     }
@@ -1926,6 +2197,10 @@ export class HIRReturnInstruction extends HIRInstruction  {
     constructor(valueToReturn: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition);
         this.valueToReturn = valueToReturn
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitReturnInstruction(this);
     }
 
     isTerminatorInstruction(): boolean {
@@ -1952,6 +2227,10 @@ export class HIRAssertConditionInstruction extends HIRInstruction  {
         this.message = message;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitAssertConditionInstruction(this);
+    }
+
     fullPrintString(): string {
         return 'assert ' + this.condition.toString() + ' ' + this.message.toString()
     }
@@ -1974,6 +2253,10 @@ export class HIRRuntimeErrorInstruction extends HIRInstruction  {
         this.errorMessage = errorMessage
     }
 
+    accept(visitor: HIRVisitor) : any {
+        return visitor.visitRuntimeErrorInstruction(this);
+    }
+
     isTerminatorInstruction(): boolean {
         return true;
     }
@@ -1991,6 +2274,10 @@ export class HIRRuntimeErrorInstruction extends HIRInstruction  {
 export class HIRUnreachableInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitUnreachableInstruction(this);
     }
 
     isTerminatorInstruction(): boolean {
@@ -2285,6 +2572,10 @@ export class HIRMetaBuilderFactory extends HIRValue {
         this.coreTypes = coreTypes;
     }
 
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMetaBuilderFactory(this);
+    }
+
     getType(): HIRType {
         return this.coreTypes.metaBuilderFactoryType;
     }
@@ -2304,6 +2595,10 @@ export class HIRMetaBuilder extends HIRValue {
     constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
         this.coreTypes = coreTypes;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMetaBuilder(this);
     }
 
     getType(): HIRType {
@@ -2892,6 +3187,10 @@ export class HIRPackage extends HIRValue {
     constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
         this.coreTypes = coreTypes;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitPackage(this);
     }
 
     getType(): HIRType {
