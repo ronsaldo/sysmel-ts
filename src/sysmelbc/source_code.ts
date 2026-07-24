@@ -1,3 +1,6 @@
+import * as fs from "fs"
+import * as path from "node:path"
+
 export class SourceCode {
     text: string;
     name: string;
@@ -11,7 +14,7 @@ export class SourceCode {
 
     toString(): string {
         if (this.directory.length !== 0)
-            return this.directory + '/' + this.name;
+            return path.join(this.directory, this.name);
         return this.name;
     }
 }
@@ -97,7 +100,15 @@ export class SourcePosition extends AbstractSourcePosition{
 }
 
 let emptySourcePosition = new EmptySourcePosition;
-export function getOrMakeEmptySourcePosition()
-{
+export function getOrMakeEmptySourcePosition() {
     return emptySourcePosition;
+}
+
+export function makeSourceCodeForFileNamed(fileName: string) : SourceCode {
+    let absolutePath = path.resolve(fileName);
+    let dirname = path.dirname(absolutePath);
+    let basename = path.basename(absolutePath);
+    let contents = fs.readFileSync(absolutePath, 'utf-8');
+    let sourceCode = new SourceCode(contents, basename, dirname);
+    return sourceCode
 }

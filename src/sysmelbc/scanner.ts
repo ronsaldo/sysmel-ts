@@ -1,4 +1,4 @@
-import {SourceCode, SourcePosition} from "./source_code.js"
+import {SourceCode, SourcePosition, makeSourceCodeForFileNamed} from "./source_code.js"
 
 export const enum TokenKind
 {
@@ -534,4 +534,8 @@ export function scanSourceCode(sourceCode: SourceCode): Token[] {
 
 export function scanSourceString(sourceString: string): Token[] {
     return scanSourceCode(new SourceCode(sourceString, '<str>', ''))
+}
+
+export function scanFileNamed(fileName: string): Token[] {
+    return scanSourceCode(makeSourceCodeForFileNamed(fileName))
 }

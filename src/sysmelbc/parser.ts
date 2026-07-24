@@ -1,4 +1,4 @@
-import {SourceCode, SourcePosition} from "./source_code.js"
+import {SourceCode, SourcePosition, makeSourceCodeForFileNamed} from "./source_code.js"
 import * as scanner from "./scanner.js"
 import * as parseTree from "./parsetree.js"
 
@@ -793,4 +793,8 @@ export function parseSourceCode(sourceCode: SourceCode) : parseTree.ParseTreeNod
 
 export function parseSourceString(sourceString: string) : parseTree.ParseTreeNode {
     return parseSourceCode(new SourceCode(sourceString, "<string>", ""))
+}
+
+export function parseFileNamed(fileName: string) : parseTree.ParseTreeNode {
+    return parseSourceCode(makeSourceCodeForFileNamed(fileName))
 }

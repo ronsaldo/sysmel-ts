@@ -1,53 +1,102 @@
-import * as fs from "fs"
+import * as parseTree from "./parsetree.js"
+import * as parser from "./parser.js"
+import * as hir from "./hir.js"
+import * as assert from 'assert';
 
-let inputFileNames: string[] = [];
-let outputFileName: string | null = null;
+class FrontEndDriver {
+    context: hir.HIRContext;
+    outputFileName: string | null = null;
 
-function printHelp() {
-    console.log('nod sysmelbc.js <options> <inputFile>')
-}
+    constructor() {
+        this.context = new hir.HIRContext();
+    }
 
-function printVersion() {
-    console.log('sysmelbc version 0.1')
-}
+    printHelp() {
+        console.log('node sysmelbc.js <options> <inputFile>')
+    }
 
-function parseCommandLine() {
-    for(let i = 2; i < process.argv.length; ++i) {
-        let arg = process.argv[i];
-        if (!arg)
-            throw new Error('Expected an argument');
+    printVersion() {
+        console.log('sysmelbc version 0.1')
+    }
 
-        if (arg.startsWith('-')) {
-            if(arg == '-h') {
-                printHelp();
-                process.exit(0);
-            } else if(arg == '-v') {
-                printVersion();
-                process.exit(0);
-            } else if(arg == '-o') {
-                let output = process.argv[++i];
-                if(!output) {
-                    printHelp();
+    evaluateAST(ast: parseTree.ParseTreeNode) : hir.HIRValue {
+        assert.ok(new parseTree.ParseTreeParseErrorVisitor().checkAndPrintErrors(ast));
+        let evaluationContext = this.context.createTopLevelEvaluationContext(ast.sourcePosition.getSourceCode());
+        return new hir.AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast);
+    }
+
+    evaluateString(sourceString: string) : hir.HIRValue {
+        let ast = parser.parseSourceString(sourceString)
+        return this.evaluateAST(ast);
+    }
+    
+    evaluateAndPrintString(sourceString: string) {
+        let value = this.evaluateString(sourceString);
+        console.log(value.toString())
+    }
+
+    evaluateFileNamed(fileName: string) : hir.HIRValue {
+        let ast = parser.parseFileNamed(fileName);
+        return this.evaluateAST(ast);
+    }
+
+    parseCommandLine() {
+        let hasInput = false;
+
+        for(let i = 2; i < process.argv.length; ++i) {
+            let arg = process.argv[i];
+            if (!arg)
+                throw new Error('Expected an argument');
+
+            if (arg.startsWith('-')) {
+                if(arg == '-h') {
+                    this.printHelp();
                     process.exit(0);
+                } else if(arg == '-v') {
+                    this.printVersion();
+                    process.exit(0);
+                } else if(arg == '-o') {
+                    let output = process.argv[++i];
+                    if(!output) {
+                        this.printHelp();
+                        process.exit(0);
+                    }
+                    this.outputFileName = output;
+                } else if(arg == '-print-eval') {
+                    let script = process.argv[++i];
+                    if(!script)
+                        throw new Error('Expected script to evaluate and print.')
+                    this.evaluateAndPrintString(script);
+                    hasInput = true;
+                } else if(arg == '-eval') {
+                    let script = process.argv[++i];
+                    if(!script)
+                        throw new Error('Expected script to evaluate.')
+                    this.evaluateString(script);
+                    hasInput = true;
+                } else {
+                    this.printHelp();
+                    process.exit(1);
                 }
-                outputFileName = output;
             } else {
-                printHelp();
-                process.exit(1);
+                hasInput = true;
+                this.evaluateFileNamed(arg);
             }
-        } else {
-            inputFileNames.push(arg);
         }
+
+        // Check the pressence of input files.
+        if(!hasInput) {
+            this.printHelp();
+            process.exit(0);
+        }
+
+        if(!this.outputFileName)
+            return;
     }
 
-    // Check the pressence of input files.
-    if(inputFileNames.length == 0) {
-        printHelp();
-        process.exit(0);
+    main() {
+        this.parseCommandLine();
     }
-
-    console.log(inputFileNames);
-    console.log(outputFileName);
 }
 
-parseCommandLine();
+new FrontEndDriver().main()
