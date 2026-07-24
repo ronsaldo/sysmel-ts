@@ -514,6 +514,10 @@ export class HIRDynamicType extends HIRType {
         return true;
     }
 
+    isSatisfiedByType(subtype: HIRValue) {
+        return true
+    }
+
     toString(): string {
         return this.name;
     }
@@ -1328,7 +1332,8 @@ export class HIRPrimitiveFunction extends HIRConstant {
     }
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
-        throw new Error('TODO: HIRPrimitiveFunction analyzeAndEvaluateApplicationNode')
+        let [typecheckedArguments, resultType] = this.type.evaluateAndTypecheckArguments(evaluator, node.applicationArguments, node.sourcePosition);
+        return this.primitiveFunction(...typecheckedArguments, resultType, node.sourcePosition)
     }
 
     analyzeAndBuildApplicationNode(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
@@ -2887,6 +2892,7 @@ export class HIRCoreTypes {
     }
     
     createCorePrimitiveFunctions() {
+        this.createGlobalPrimitiveFunctions();
         this.createBooleanPrimitiveFunctions();
 
         this.createIntegerPrimitiveFunctions(this.integerType, true);
@@ -2902,6 +2908,33 @@ export class HIRCoreTypes {
         this.createNumericalPrimitiveConversionMethods(this.characterType);
         this.createNumericalPrimitiveConversionMethods(this.floatType);
         this.createNumericalPrimitiveConversionMethods(this.integerType);
+    }
+
+    createGlobalPrimitiveFunctions() {
+        let voidValue = this.voidValue;
+        function printPrimitive(value: HIRValue) {
+            process.stdout.write(value.toString());
+            return voidValue;
+        }
+        function printLinePrimitive(value: HIRValue) {
+            process.stdout.write(value.toString());
+            process.stdout.write('\n');
+            return voidValue;
+        }
+        function writePrimitive(value: HIRValue) {
+            process.stdout.write(value.evaluateAsString());
+            return voidValue;
+        }
+        function writeLinePrimitive(value: HIRValue) {
+            process.stdout.write(value.evaluateAsString());
+            process.stdout.write('\n');
+            return voidValue;
+        }
+
+        this.coreValueList.push(['print', new HIRPrimitiveFunction('print', 'IO::print', this.getOrCreateSimpleFunctionType([this.dynamicType], this.voidType), printPrimitive, false, false, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['printLine', new HIRPrimitiveFunction('printLine', 'IO::printLine', this.getOrCreateSimpleFunctionType([this.dynamicType], this.voidType), printLinePrimitive, false, false, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['write', new HIRPrimitiveFunction('write', 'IO::write', this.getOrCreateSimpleFunctionType([this.stringType], this.voidType), writePrimitive, false, false, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['writeLine', new HIRPrimitiveFunction('writeLine', 'IO::writeLine', this.getOrCreateSimpleFunctionType([this.stringType], this.voidType), writeLinePrimitive, false, false, getOrMakeEmptySourcePosition())]);
     }
 
     createBooleanPrimitiveFunctions() {
