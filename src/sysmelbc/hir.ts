@@ -3330,10 +3330,12 @@ export class HIRCoreTypes {
 }
 
 export class HIRPackage extends HIRValue {
+    name: string | null = null;
     coreTypes: HIRCoreTypes;
     children: HIRValue[] = []
     publicSymbolTable: Record<string, HIRValue> = {};
     pendingAnalysisList: HIRValue[] = [];
+    usedPackages: HIRPackage[] = [];
 
     constructor(coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
@@ -3414,6 +3416,16 @@ export class HIRPackage extends HIRValue {
     lookSymbolRecursivelyOrNone(symbol: string): HIRValue | null {
         if (symbol in this.publicSymbolTable)
             return this.publicSymbolTable[symbol] as HIRValue;
+        for(let i = 0; i < this.usedPackages.length; ++i) {
+            let usedPackage = this.usedPackages[this.usedPackages.length - i - 1];
+            if (!usedPackage)
+                throw new Error('Expected a package.');
+
+            let exportedSymbol = usedPackage.lookSymbolRecursivelyOrNone(symbol);
+            if(exportedSymbol)
+                return exportedSymbol;
+        }
+
         return null;
     }
 }
@@ -3428,6 +3440,13 @@ export class HIRContext {
         this.corePackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
         this.currentPackage = this.corePackage;
         this.corePackage.addCoreTypeMembers();
+    }
+
+    newPackage(): HIRPackage {
+        let newPackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
+        newPackage.usedPackages.push(this.corePackage);
+        this.currentPackage = newPackage;
+        return newPackage;
     }
 
     addEntityWithPendingAnalysis(entity: HIRValue) {

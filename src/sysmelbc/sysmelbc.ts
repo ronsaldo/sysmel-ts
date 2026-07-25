@@ -9,6 +9,7 @@ class FrontEndDriver {
 
     constructor() {
         this.context = new hir.HIRContext();
+        this.context.newPackage();
     }
 
     printHelp() {
@@ -62,6 +63,11 @@ class FrontEndDriver {
                         process.exit(0);
                     }
                     this.outputFileName = output;
+                } else if(arg == '-package') {
+                    let name = process.argv[++i];
+                    if(!name)
+                        throw new Error('Expected a package name.')
+                    this.context.currentPackage.name = name;
                 } else if(arg == '-print-eval') {
                     let script = process.argv[++i];
                     if(!script)
