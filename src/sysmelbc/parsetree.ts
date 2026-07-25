@@ -307,6 +307,22 @@ export class ParseTreeApplicationNode extends ParseTreeNode {
     isApplicationNode(): boolean {
         return true;
     }
+
+    parseAsArgumentDefinition(): ParseTreeArgumentDefinitionNode {
+        if (!this.functional.isIdentifierReferenceNode() || this.applicationArguments.length != 1)
+            throw new Error(this.sourcePosition.formatMessage('Expected an argument definition expression.'));
+        
+        let identifier = this.functional as ParseTreeIdentifierReferenceNode;
+        let name = identifier.symbol;
+        if(name.endsWith(':'))
+            name = name.substring(0, name.length - 1);
+
+        let typeExpression = this.applicationArguments[0];
+        if(!typeExpression)
+            throw new Error(this.sourcePosition.formatMessage('Expected a type expression.'));
+
+        return new ParseTreeArgumentDefinitionNode(this.sourcePosition, name, typeExpression, false)
+    }
 }
 
 export class ParseTreeAssignmentNode extends ParseTreeNode {
