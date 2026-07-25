@@ -657,6 +657,22 @@ export class HIRUniverseType extends HIRType {
             let resultType = evaluator.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
             return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
         }
+        else if(selector === 'pointer') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreatePointerType(receiver as HIRType)
+        }
+        else if(selector === 'ref') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreateReferenceType(receiver as HIRType)
+        }
+        else if(selector === 'mutableValueBox') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreateMutableValueBoxType(receiver as HIRType)
+        }
+
         return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
     }
 
@@ -668,6 +684,21 @@ export class HIRUniverseType extends HIRType {
             let functionArguments = receiver.asArrowArguments();
             let resultType = buildPass.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
             return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
+        }
+        else if(selector === 'pointer') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreatePointerType(receiver as HIRType)
+        }
+        else if(selector === 'ref') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreateReferenceType(receiver as HIRType)
+        }
+        else if(selector === 'mutableValueBox') {
+            if(!receiver.isType())
+                throw new Error('Expected a receiver type');
+            return this.coreTypes.getOrCreateMutableValueBoxType(receiver as HIRType)
         }
 
         return super.analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver);
@@ -765,6 +796,11 @@ export class HIRMutableValueBoxType extends HIRPointerLikeType {
     isMutableValueBoxType(): boolean {
         return true;
     }
+
+
+    toString(): string {
+        return this.baseType.toString() + ' mutableValueBox';
+    }
 }
 
 export class HIRAssociationType extends HIRType {
@@ -805,6 +841,21 @@ export class HIRTupleType extends HIRType {
     asArrowArguments(): HIRType[] {
         return this.elements;
     }
+
+    toString(): string {
+        let string = '(';
+        for(let i = 0; i < this.elements.length; ++i) {
+            let element = this.elements[i];
+            if(!element)
+                throw new Error('Expected an element type.');
+            if(i > 0)
+                string += ', ';
+            string += element.toString();
+        }
+        string += ')';
+        return string;
+    }
+
 }
 
 export class HIRDependentFunctionType extends HIRType {
@@ -862,6 +913,21 @@ export class HIRSimpleFunctionType extends HIRType {
 
     isSimpleFunctionType(): boolean {
         return true;
+    }
+
+    toString(): string {
+        let string = '(';
+        for(let i = 0; i < this.argumentTypes.length; ++i) {
+            let argument = this.argumentTypes[i];
+            if(!argument)
+                throw new Error('Expected an argument type.');
+            if(i > 0)
+                string += ', ';
+            string += argument.toString();
+        }
+        string += ') => ';
+        string += this.resultType.toString();
+        return string;
     }
 
     evaluateAndTypecheckArguments(evaluator: AnalysisAndEvaluationPass, callArguments: parseTree.ParseTreeNode[], sourcePosition: AbstractSourcePosition): [HIRValue[], HIRType] {
@@ -3209,6 +3275,26 @@ export class HIRCoreTypes {
         this.universeLevels[level] = universe;
         return universe;
     }
+
+    getOrCreateAssociationType(keyType: HIRType, valueType: HIRType) {
+        return new HIRAssociationType(keyType, valueType, this, getOrMakeEmptySourcePosition())
+    }
+
+    getOrCreateTupleType(elements: HIRType[]) {
+        return new HIRTupleType(elements, this, getOrMakeEmptySourcePosition())
+    }
+
+    getOrCreatePointerType(baseType: HIRType) : HIRPointerType {
+        return new HIRPointerType(baseType, this, getOrMakeEmptySourcePosition());
+    }
+
+    getOrCreateReferenceType(baseType: HIRType) : HIRPointerType {
+        return new HIRReferenceType(baseType, this, getOrMakeEmptySourcePosition());
+    }
+
+    getOrCreateMutableValueBoxType(baseType: HIRType) : HIRPointerType {
+        return new HIRMutableValueBoxType(baseType, this, getOrMakeEmptySourcePosition());
+    }
 }
 
 export class HIRPackage extends HIRValue {
@@ -3355,25 +3441,24 @@ export class HIRContext {
     }
 
     getOrCreateAssociationType(keyType: HIRType, valueType: HIRType) {
-        return new HIRAssociationType(keyType, valueType, this.coreTypes, getOrMakeEmptySourcePosition())
+        return this.coreTypes.getOrCreateAssociationType(keyType, valueType);
     }
 
     getOrCreateTupleType(elements: HIRType[]) {
-        return new HIRTupleType(elements, this.coreTypes, getOrMakeEmptySourcePosition())
+        return this.coreTypes.getOrCreateTupleType(elements);
     }
 
     getOrCreatePointerType(baseType: HIRType) : HIRPointerType {
-        return new HIRPointerType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+        return this.coreTypes.getOrCreatePointerType(baseType)
     }
 
     getOrCreateReferenceType(baseType: HIRType) : HIRPointerType {
-        return new HIRReferenceType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+        return this.coreTypes.getOrCreateReferenceType(baseType)
     }
 
     getOrCreateMutableValueBoxType(baseType: HIRType) : HIRPointerType {
-        return new HIRMutableValueBoxType(baseType, this.coreTypes, getOrMakeEmptySourcePosition());
+        return this.coreTypes.getOrCreateMutableValueBoxType(baseType)
     }
-
 }
 
 export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
