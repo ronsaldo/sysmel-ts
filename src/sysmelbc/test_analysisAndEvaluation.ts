@@ -355,6 +355,23 @@ export function runTests() {
         tearDown();
     }
 
+    // public Sum integer function
+    {
+        setUp();
+
+        let functionValue = evaluateTopLevelSourceString('public function sumInteger(a: Integer. b: Integer) => Integer := a + b.');
+        assert.ok(functionValue.isFunction())
+        let result = functionValue.evaluateWithArguments([
+            new hir.HIRConstantLiteralIntegerValue(42, context.coreTypes.integerType, getOrMakeEmptySourcePosition()),
+            new hir.HIRConstantLiteralIntegerValue(4, context.coreTypes.integerType, getOrMakeEmptySourcePosition()),])
+        assert.ok(result.isConstantLiteralIntegerValue());
+        assert.strictEqual(result.evaluateAsInteger(), 46);
+
+        assert.strictEqual(functionValue, context.corePackage.lookSymbolRecursivelyOrNone('sumInteger'));
+
+        tearDown();
+    }
+
     // If then else
     {
         let topLevelResult = evaluateTopLevelSourceString('if: true then: 1 else: 2')

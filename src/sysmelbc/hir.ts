@@ -80,6 +80,10 @@ export abstract class HIRValue {
     abstract getType(): HIRType;
     abstract accept(visitor: HIRVisitor): any;
 
+    addPublicNamedElement(name: string, binding: HIRValue, sourcePosition: AbstractSourcePosition): void {
+        throw Error(sourcePosition.formatMessage('Program entity owner does not support public members.'))
+    }
+
     ensureAnalysis(): void {
         // By default do nothing.
     }
@@ -2517,6 +2521,7 @@ export class HIRBuilder {
 export abstract class HIREnvironment {
     abstract lookSymbolRecursively(symbol: string): HIRValue | null;
     abstract lookReturnTypeRecursively(): HIRType | null;
+    abstract lookupProgramEntityOwner(): HIRValue | null
 }
 
 export class HIREmptyEnvironment extends HIREnvironment {
@@ -2525,6 +2530,10 @@ export class HIREmptyEnvironment extends HIREnvironment {
     }
 
     lookReturnTypeRecursively(): HIRType | null {
+        return null;
+    }
+
+    lookupProgramEntityOwner(): HIRValue | null {
         return null;
     }
 }
@@ -2539,7 +2548,6 @@ export class HIRPackageEnvironment extends HIREnvironment {
         this.parent = parent;
     }
 
-
     lookSymbolRecursively(symbol: string): HIRValue | null {
         let packageSymbolBinding = this.packageValue.lookSymbolRecursivelyOrNone(symbol);
         if(packageSymbolBinding)
@@ -2550,6 +2558,10 @@ export class HIRPackageEnvironment extends HIREnvironment {
 
     lookReturnTypeRecursively(): HIRType | null {
         return this.parent.lookReturnTypeRecursively();
+    }
+
+    lookupProgramEntityOwner(): HIRValue | null {
+        return this.packageValue;
     }
 }
 
@@ -2583,6 +2595,10 @@ export class HIRLexicalEnvironment extends HIREnvironment {
 
     lookReturnTypeRecursively(): HIRType | null {
         return this.parent.lookReturnTypeRecursively();
+    }
+    
+    lookupProgramEntityOwner(): HIRValue | null {
+        return this.parent.lookupProgramEntityOwner();
     }
 }
 
@@ -2794,6 +2810,21 @@ export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIRPublicMetaBuilder extends HIRMetaBuilder {
+    supportsSelector(selector: string): boolean {
+        return selector === 'function'
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector === 'function') {
+            let functionMetabuilder = new HIRFunctionMetaBuilder(this.coreTypes, this.sourcePosition);
+            functionMetabuilder.isPublic = true;
+            return functionMetabuilder;
+        }
+        return this;
+    }
+}
+
 export class HIRCoreTypes {
     pointerSize = 8;
     pointerAlignment = 8;
@@ -2955,6 +2986,7 @@ export class HIRCoreTypes {
     createCorePrimitiveMetaBuilders() {
         this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['public', new HIRMetaBuilderFactory(HIRPublicMetaBuilder, this, getOrMakeEmptySourcePosition())]);
     }
     
     createCorePrimitiveFunctions() {
@@ -3373,6 +3405,12 @@ export class HIRPackage extends HIRValue {
         this.publicSymbolTable[symbol] = binding;
     }
 
+    addPublicNamedElement(name: string, binding: HIRValue, sourcePosition: AbstractSourcePosition): void {
+        if(name in this.publicSymbolTable)
+            throw Error(sourcePosition.formatMessage(`There is already a public binding for #${name}`));
+        this.addSymbolWithBinding(name, binding);
+    }
+
     lookSymbolRecursivelyOrNone(symbol: string): HIRValue | null {
         if (symbol in this.publicSymbolTable)
             return this.publicSymbolTable[symbol] as HIRValue;
@@ -3624,6 +3662,14 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         if(name) {
             this.evaluationContext.environment.setNewSymbolBinding(name, hirFunction, node.sourcePosition);
             // TODO: add method and public functions
+            if(node.isMethod) {
+                throw new Error('TODO: visitFunctionNode isMethod')
+            } else if(node.isPublic) { 
+                let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
+                if(!owner)
+                    throw Error(node.sourcePosition.formatMessage('Location does not have a program entity owner.'))
+                owner.addPublicNamedElement(name, hirFunction, node.sourcePosition)
+            }
         }
         return hirFunction;
     }
