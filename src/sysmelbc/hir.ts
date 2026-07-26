@@ -3438,6 +3438,7 @@ export class HIRContext {
     constructor() {
         this.coreTypes = new HIRCoreTypes();
         this.corePackage = new HIRPackage(this.coreTypes, getOrMakeEmptySourcePosition());
+        this.corePackage.name = '__CorePrimitives__';
         this.currentPackage = this.corePackage;
         this.corePackage.addCoreTypeMembers();
     }
