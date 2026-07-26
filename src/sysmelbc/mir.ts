@@ -1,3 +1,6 @@
+import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
+import * as hir from "./hir.js"
+
 export const enum MirOpcode
 {
     Nop,
@@ -81,6 +84,8 @@ export const enum MirOpcode
 export abstract class MirVisitor {
     abstract visitPackage(mirPackage: MirPackage): any;
     abstract visitImportedFunction(importedFunction: MirImportedFunction): any;
+    abstract visitFunction(mirFunction: MirFunction): any;
+    
 }
 
 export class MirPackage {
@@ -120,13 +125,41 @@ export abstract class MirPackageElement {
 }
 
 export class MirImportedFunction extends MirPackageElement {
-    accept(visitor: MirVisitor) {
+    accept(visitor: MirVisitor): any {
         return visitor.visitImportedFunction(this);
     }
 
     isImportedFunction(): boolean {
         return true;
     }
+}
+
+export abstract class MirGlobalConstant extends MirPackageElement {
+}
+
+export class MirFunction extends MirPackageElement {
+    sourcePosition: AbstractSourcePosition = getOrMakeEmptySourcePosition();
+    sourceFunction: hir.HIRFunction | null = null;
+    firstBasicBlock: MirBasicBlock | null = null;
+    lastBasicBlock: MirBasicBlock | null = null;
+    temporaries: MirTemporary[] = []
+
+
+    accept(visitor: MirVisitor): any {
+        return visitor.visitFunction(this);
+    }
+}
+
+export class MirTemporary {
+
+}
+
+export class MirFunctionLocal {
+
+}
+
+export class MirBasicBlock extends MirFunctionLocal {
+
 }
 
 export class MirContext {
