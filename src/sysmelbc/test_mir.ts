@@ -102,4 +102,41 @@ export function runTests() {
         }
         tearDown();
     }
+
+    // Test int32 min
+    {
+        setUp();
+
+        let mirFunction = new mir.MirFunction('main')
+        mirPackage.addElement(mirFunction);
+
+        let entryBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'entry');
+        mirFunction.addBasicBlock(entryBlock);
+
+        let builder = new mir.MirBuilder(mirFunction, entryBlock);
+        let firstArgument = builder.argumentInt32At(getOrMakeEmptySourcePosition(), 'first');
+        let secondArgument = builder.argumentInt32At(getOrMakeEmptySourcePosition(), 'second');
+        let isLessThan = builder.int32LessThanAt(firstArgument, secondArgument, getOrMakeEmptySourcePosition());
+
+        let lessThanBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'lessThan');
+        let greaterThanBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'greaterThan');
+        builder.conditionalBranchAt(isLessThan, lessThanBlock, greaterThanBlock, getOrMakeEmptySourcePosition());
+
+        mirFunction.addBasicBlock(lessThanBlock);
+        builder.basicBlock = lessThanBlock;
+        builder.returnInt32At(firstArgument, getOrMakeEmptySourcePosition());
+
+        mirFunction.addBasicBlock(greaterThanBlock);
+        builder.basicBlock = greaterThanBlock;
+        builder.returnInt32At(secondArgument, getOrMakeEmptySourcePosition());
+
+        console.log(mirPackage.fullPrintString());
+        let result = mirFunction.evaluateWithArguments([1, 2]);
+        assert.strictEqual(result, 1);
+
+        result = mirFunction.evaluateWithArguments([2, 1]);
+        assert.strictEqual(result, 1);
+
+        tearDown();
+    }
 }

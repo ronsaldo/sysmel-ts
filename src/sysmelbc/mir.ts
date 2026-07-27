@@ -704,10 +704,35 @@ export class MirInstruction extends MirFunctionLocal {
             }
             break;
 
+        // Jump
+        case MirOpcode.Jump:
+            context.pc = (this.firstArgument as MirBasicBlock).index
+            break;
+        case MirOpcode.JumpIfTrue:
+            if (context.getTempOrConstantValue(this.firstArgument as MirValue))
+                context.pc = (this.secondArgument as MirBasicBlock).index
+            break;
+        case MirOpcode.JumpIfFalse:
+            if (!context.getTempOrConstantValue(this.firstArgument as MirValue))
+                context.pc = (this.secondArgument as MirBasicBlock).index
+            break;
+
+        // Nop
+        case MirOpcode.Nop:
+            // Nothing is required here
+            break;
+
         // Arithmetic
         case MirOpcode.Int32Add:
         case MirOpcode.Int64Add:
             context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) + context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32LessThan:
+        case MirOpcode.Int64LessThan:
+        case MirOpcode.UInt32LessThan:
+        case MirOpcode.UInt64LessThan:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) < context.getTempValue(this.secondArgument as MirTemporary))
             break;
 
         // Constants
@@ -955,6 +980,26 @@ export class MirBuilder {
         return module.context;
     }
 
+    conditionalBranchAt(condition: MirTemporary, trueDestination: MirBasicBlock, falseDestination: MirBasicBlock, sourcePosition: AbstractSourcePosition) {
+        this.jumpIfFalseAt(condition, falseDestination, sourcePosition);
+        this.jumpAt(trueDestination, sourcePosition);
+    }
+
+    jumpAt(destination: MirBasicBlock, sourcePosition: AbstractSourcePosition) {
+        let instruction = new MirInstruction(null, MirOpcode.Jump, destination, null, sourcePosition, null);
+        this.addInstruction(instruction);
+    }
+
+    jumpIfTrueAt(condition: MirTemporary, destination: MirBasicBlock, sourcePosition: AbstractSourcePosition) {
+        let instruction = new MirInstruction(null, MirOpcode.JumpIfTrue, condition, destination, sourcePosition, null);
+        this.addInstruction(instruction);
+    }
+
+    jumpIfFalseAt(condition: MirTemporary, destination: MirBasicBlock, sourcePosition: AbstractSourcePosition) {
+        let instruction = new MirInstruction(null, MirOpcode.JumpIfFalse, condition, destination, sourcePosition, null);
+        this.addInstruction(instruction);
+    }
+
     argumentInt32At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, name);
         let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
@@ -982,6 +1027,13 @@ export class MirBuilder {
     int32AddAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
         let instruction = new MirInstruction(temp, MirOpcode.Int32Add, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32LessThanAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32LessThan, left, right, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }
