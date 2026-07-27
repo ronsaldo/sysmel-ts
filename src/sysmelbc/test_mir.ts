@@ -39,4 +39,23 @@ export function runTests() {
         assert.strictEqual(result, null);
         tearDown();
     }
+
+    // Test return int32
+    {
+        setUp();
+
+        let mirFunction = new mir.MirFunction('main')
+        mirPackage.addElement(mirFunction);
+
+        let entryBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'entry');
+        mirFunction.addBasicBlock(entryBlock);
+
+        let builder = new mir.MirBuilder(mirFunction, entryBlock);
+        let constant = builder.constInt32At(42, getOrMakeEmptySourcePosition())
+        builder.returnInt32At(constant, getOrMakeEmptySourcePosition());
+
+        let result = mirFunction.evaluateWithArguments([])
+        assert.strictEqual(result, 42);
+        tearDown();
+    }
 }

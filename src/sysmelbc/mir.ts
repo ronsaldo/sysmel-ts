@@ -89,6 +89,8 @@ export abstract class MirVisitor {
     abstract visitTemporary(temporary: MirTemporary): any;
     abstract visitBasicBlock(basicBlock: MirBasicBlock): any;
     abstract visitInstruction(instruction: MirInstruction): any;
+    abstract visitIntegerConstantValue(instruction: MirIntegerConstantValue): any;
+    abstract visitFloatConstantValue(instruction: MirFloatConstantValue): any;
     
 }
 
@@ -170,6 +172,18 @@ export abstract class MirValue {
     abstract accept(visitor: MirVisitor): any;
 
     abstract getSymbolName(): string;
+
+    isTemporary(): boolean {
+        return false;
+    }
+
+    isConstantValue(): boolean {
+        return false;
+    }
+
+    evaluateAsConstantValue(): any {
+        throw new Error('Not a constant value.');
+    }
 }
 
 export class MirPackage extends MirValue {
@@ -279,6 +293,58 @@ export class MirImportedFunction extends MirPackageElement {
 }
 
 export abstract class MirGlobalConstant extends MirPackageElement {
+}
+
+export abstract class MirConstantValue extends MirValue {
+    getSymbolName(): string {
+        throw new Error('constant does not have a symbol name.');
+    }
+
+    isConstantValue(): boolean {
+        return true;
+    }
+}
+
+export class MirIntegerConstantValue extends MirConstantValue {
+    value: number;
+
+    constructor(value: number) {
+        super();
+        this.value = value;
+    }
+
+    accept(visitor: MirVisitor) {
+        return visitor.visitIntegerConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return this.value;
+    }
+
+    toString(): string {
+        return 'integer ' + this.value;
+    }
+}
+
+export class MirFloatConstantValue extends MirConstantValue {
+    value: number;
+
+    constructor(value: number) {
+        super();
+        this.value = value;
+    }
+
+    accept(visitor: MirVisitor) {
+        return visitor.visitFloatConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return this.value;
+    }
+
+    toString(): string {
+        return 'float ' + this.value;
+    }
 }
 
 export class MirFunction extends MirPackageElement {
@@ -408,6 +474,14 @@ class MirFunctionActivationContext {
         return this.temporaries[temp.index];
     }
 
+    getTempOrConstantValue(tempOrConstant: MirValue): any {
+        if(tempOrConstant.isTemporary())
+            return this.getTempValue(tempOrConstant as MirTemporary)
+        if(tempOrConstant.isConstantValue())
+            return tempOrConstant.evaluateAsConstantValue();
+        throw new Error('Not valid tempt or constant value.');
+    }
+
     setTempValue(temp: MirTemporary, value: any): any {
         this.temporaries[temp.index] = value;
     }
@@ -430,16 +504,6 @@ class MirFunctionActivationContext {
     }
 };
 
-/*
-class MirFunctionActivationContext:
-
-    def getTempOrConstantValue(self, tempOrConstant):
-        if tempOrConstant.isTemporary():
-            return self.getTempValue(tempOrConstant)
-        return tempOrConstant
-
-*/
-
 export class MirTemporary extends MirValue {
     type: MirType;
     index: number;
@@ -456,6 +520,10 @@ export class MirTemporary extends MirValue {
 
     accept(visitor: MirVisitor) {
         return visitor.visitTemporary(this);
+    }
+
+    isTemporary(): boolean {
+        return true;
     }
 
     getSymbolName(): string {
@@ -573,12 +641,44 @@ export class MirInstruction extends MirFunctionLocal {
 
         result += MirOpcode[this.opcode];
 
+        if(this.firstArgument) {
+            result += ' ';
+            result += this.firstArgument.toString();
+        }
+        if(this.secondArgument) {
+            result += ', ';
+            result += this.secondArgument.toString();
+        }
+
         return result;
     }
 
     evaluateInContext(context: MirFunctionActivationContext): void {
         switch(this.opcode) {
+        case MirOpcode.ConstInt32:
+        case MirOpcode.ConstInt64:
+        case MirOpcode.ConstPointer:
+        case MirOpcode.ConstFloat32:
+        case MirOpcode.ConstFloat64:
+        case MirOpcode.ConstGCPointer:
+        case MirOpcode.ConstInteger:
+        case MirOpcode.ConstCharacter:
+        case MirOpcode.ConstFloat:
+            context.setTempValue(this.result as MirTemporary, this.firstArgument?.evaluateAsConstantValue());
+            break;
+        case MirOpcode.ConstVoid:
+            context.setTempValue(this.result as MirTemporary, null);
+            break;
+        case MirOpcode.ReturnInt32:
+        case MirOpcode.ReturnInt64:
+        case MirOpcode.ReturnPointer:
+        case MirOpcode.ReturnFloat32:
+        case MirOpcode.ReturnFloat64:
+        case MirOpcode.ReturnGCPointer:
+            context.setReturnValue(context.getTempOrConstantValue(this.firstArgument as MirValue));
+            break;
         case MirOpcode.ReturnVoid:
+
             context.setReturnValue(null);
             break
         default:
@@ -784,6 +884,27 @@ export class MirBuilder {
 
     addInstruction(instruction: MirInstruction) : MirInstruction {
         this.basicBlock.addInstruction(instruction);
+        return instruction;
+    }
+
+    getContext(): MirContext {
+        let module = this.mirFunction.module;
+        if(!module)
+            throw new Error('Expected a module.');
+        return module.context;
+    }
+
+    constInt32At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstInt32, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    returnInt32At(temp: MirTemporary, sourcePosition: AbstractSourcePosition) : MirInstruction {
+        let instruction = new MirInstruction(null, MirOpcode.ReturnInt32, temp, null, sourcePosition, null);
+        this.addInstruction(instruction);
         return instruction;
     }
 
