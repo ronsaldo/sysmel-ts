@@ -54,8 +54,52 @@ export function runTests() {
         let constant = builder.constInt32At(42, getOrMakeEmptySourcePosition())
         builder.returnInt32At(constant, getOrMakeEmptySourcePosition());
 
-        let result = mirFunction.evaluateWithArguments([])
+        let result = mirFunction.evaluateWithArguments([]);
         assert.strictEqual(result, 42);
+        tearDown();
+    }
+
+    // Sum int32
+    {
+        setUp();
+
+        let sumFunction = new mir.MirFunction('sum')
+        mirPackage.addElement(sumFunction);
+
+        {
+            let entryBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'entry');
+            sumFunction.addBasicBlock(entryBlock);
+
+            let builder = new mir.MirBuilder(sumFunction, entryBlock);
+            let firstArgument = builder.argumentInt32At(getOrMakeEmptySourcePosition(), 'first')
+            let secondArgument = builder.argumentInt32At(getOrMakeEmptySourcePosition(), 'second')
+            let sum = builder.int32AddAt(firstArgument, secondArgument, getOrMakeEmptySourcePosition());
+            builder.returnInt32At(sum, getOrMakeEmptySourcePosition());
+
+            let result = sumFunction.evaluateWithArguments([2, 3]);
+            assert.strictEqual(result, 5);
+        }
+
+        {
+            let callSumFunction = new mir.MirFunction('callSum')
+            mirPackage.addElement(callSumFunction);
+
+            let entryBlock = new mir.MirBasicBlock(getOrMakeEmptySourcePosition(), 'entry');
+            callSumFunction.addBasicBlock(entryBlock);
+
+            let builder = new mir.MirBuilder(callSumFunction, entryBlock);
+            let firstArgument = builder.constInt32At(1, getOrMakeEmptySourcePosition());
+            let secondArgument = builder.constInt32At(2, getOrMakeEmptySourcePosition());
+
+            builder.beginCallAt(getOrMakeEmptySourcePosition());
+            builder.callArgumentInt32At(firstArgument, getOrMakeEmptySourcePosition());
+            builder.callArgumentInt32At(secondArgument, getOrMakeEmptySourcePosition());
+            let callResult = builder.callInt32ResultAt(sumFunction, getOrMakeEmptySourcePosition());
+            builder.returnInt32At(callResult, getOrMakeEmptySourcePosition());
+
+            let result = callSumFunction.evaluateWithArguments([]);
+            assert.strictEqual(result, 3);
+        }
         tearDown();
     }
 }

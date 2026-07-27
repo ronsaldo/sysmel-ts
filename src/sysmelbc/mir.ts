@@ -181,6 +181,14 @@ export abstract class MirValue {
         return false;
     }
 
+    isImportedFunction(): boolean {
+        return false;
+    }
+
+    isFunction(): boolean {
+        return false;
+    }
+
     evaluateAsConstantValue(): any {
         throw new Error('Not a constant value.');
     }
@@ -245,14 +253,6 @@ export abstract class MirPackageElement extends MirValue {
     constructor(name: string) {
         super();
         this.name = name;
-    }
-
-    isImportedFunction(): boolean {
-        return false;
-    }
-
-    isFunction(): boolean {
-        return false;
     }
 
     abstract fullPrintString(): string;
@@ -410,6 +410,10 @@ export class MirFunction extends MirPackageElement {
         return context.evaluate();
     }
 
+    toString(): string {
+        return this.getSymbolName();
+    }
+
     fullPrintString(): string {
         this.enumerateInstructions();
         let result = `function ${this.getSymbolName()} {\n`;
@@ -479,7 +483,10 @@ class MirFunctionActivationContext {
             return this.getTempValue(tempOrConstant as MirTemporary)
         if(tempOrConstant.isConstantValue())
             return tempOrConstant.evaluateAsConstantValue();
-        throw new Error('Not valid tempt or constant value.');
+        if(tempOrConstant.isFunction() || tempOrConstant.isImportedFunction())
+            return tempOrConstant;
+
+        throw new Error('Not valid temp or constant value.');
     }
 
     setTempValue(temp: MirTemporary, value: any): any {
@@ -655,6 +662,55 @@ export class MirInstruction extends MirFunctionLocal {
 
     evaluateInContext(context: MirFunctionActivationContext): void {
         switch(this.opcode) {
+        case MirOpcode.ArgumentInt32:
+        case MirOpcode.ArgumentInt64:
+        case MirOpcode.ArgumentPointer:
+        case MirOpcode.ArgumentGCPointer:
+        case MirOpcode.ArgumentFloat32:
+        case MirOpcode.ArgumentFloat64:
+            context.setTempValue(this.result as MirTemporary, context.callArguments[this.index - 1])
+            break;
+
+        case MirOpcode.BeginCall:
+            context.beginCall();
+            break;
+
+        case MirOpcode.CallArgumentInt32:
+        case MirOpcode.CallArgumentInt64:
+        case MirOpcode.CallArgumentPointer:
+        case MirOpcode.CallArgumentGCPointer:
+        case MirOpcode.CallArgumentFloat32:
+        case MirOpcode.CallArgumentFloat64:
+            context.addCallArgument(context.getTempOrConstantValue(this.firstArgument as MirValue));
+            break;
+
+        case MirOpcode.CallInt32Result:
+        case MirOpcode.CallInt64Result:
+        case MirOpcode.CallPointerResult:
+        case MirOpcode.CallGCPointerResult:
+        case MirOpcode.CallFloat32Result:
+        case MirOpcode.CallFloat64Result:
+            {
+                let functional = context.getTempOrConstantValue(this.firstArgument as MirValue);
+                let result = functional.evaluateWithArguments(context.calloutArguments);
+                context.setTempValue(this.result as MirTemporary, result);
+            }
+            break;
+
+        case MirOpcode.CallVoidResult:
+            {
+                let functional = context.getTempOrConstantValue(this.firstArgument as MirValue);
+                functional.evaluateWithArguments(context.calloutArguments);
+            }
+            break;
+
+        // Arithmetic
+        case MirOpcode.Int32Add:
+        case MirOpcode.Int64Add:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) + context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        // Constants
         case MirOpcode.ConstInt32:
         case MirOpcode.ConstInt64:
         case MirOpcode.ConstPointer:
@@ -669,6 +725,8 @@ export class MirInstruction extends MirFunctionLocal {
         case MirOpcode.ConstVoid:
             context.setTempValue(this.result as MirTemporary, null);
             break;
+
+        // Returns
         case MirOpcode.ReturnInt32:
         case MirOpcode.ReturnInt64:
         case MirOpcode.ReturnPointer:
@@ -678,7 +736,6 @@ export class MirInstruction extends MirFunctionLocal {
             context.setReturnValue(context.getTempOrConstantValue(this.firstArgument as MirValue));
             break;
         case MirOpcode.ReturnVoid:
-
             context.setReturnValue(null);
             break
         default:
@@ -699,6 +756,10 @@ export class MirType {
         this.name = name;
         this.valueSize = valueSize;
         this.valueAlignment = valueAlignment;
+    }
+
+    toString(): string {
+        return this.name;
     }
 
     isVoidType(): boolean {
@@ -892,6 +953,37 @@ export class MirBuilder {
         if(!module)
             throw new Error('Expected a module.');
         return module.context;
+    }
+
+    argumentInt32At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    beginCallAt(sourcePosition: AbstractSourcePosition): void {
+        let instruction = new MirInstruction(null, MirOpcode.BeginCall, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+    }
+
+    callArgumentInt32At(value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
+        let instruction = new MirInstruction(null, MirOpcode.CallArgumentInt32, value, null, sourcePosition, null);
+        this.addInstruction(instruction);
+    }
+
+    callInt32ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallInt32Result, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32AddAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32Add, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
     }
 
     constInt32At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
