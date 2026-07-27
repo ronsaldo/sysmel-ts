@@ -338,6 +338,12 @@ export class MirFunction extends MirPackageElement {
         return this.enumeratedInstructions;
     }
 
+    evaluateWithArguments(callArguments: any[]): any {
+        let instructions = this.enumerateInstructions();
+        let context = new MirFunctionActivationContext(this, instructions, callArguments);
+        return context.evaluate();
+    }
+
     fullPrintString(): string {
         this.enumerateInstructions();
         let result = `function ${this.getSymbolName()} {\n`;
@@ -363,6 +369,76 @@ export class MirFunction extends MirPackageElement {
         return result
     }
 }
+
+class MirFunctionActivationContext {
+    mirFunction: MirFunction;
+    instructions: MirFunctionLocal[];
+    callArguments: any[];
+    calloutArguments: any[] = [];
+    temporaries: any[];
+    instructionPC: number = 0;
+    pc: number = 0;
+    hasReturnValue: boolean = false;
+    returnValue: any = null;
+
+    constructor(mirFunction: MirFunction, instructions: MirFunctionLocal[], callArguments: any[]) {
+        this.mirFunction = mirFunction;
+        this.instructions = instructions;
+        this.callArguments = callArguments;
+
+        this.temporaries = Array(mirFunction.temporaries.length).fill(null);
+    }
+
+    evaluate() {
+        while (this.pc < this.instructions.length) {
+            this.instructionPC = this.pc;
+            ++this.pc;
+
+            let instruction = this.instructions[this.instructionPC];
+            if(!instruction)
+                throw new Error('Expected an instruction');
+            instruction.evaluateInContext(this);
+            if(this.hasReturnValue)
+                return this.returnValue;
+        }
+        throw new Error('Reached beyond the instruction list.')
+    }
+
+    getTempValue(temp: MirTemporary): any {
+        return this.temporaries[temp.index];
+    }
+
+    setTempValue(temp: MirTemporary, value: any): any {
+        this.temporaries[temp.index] = value;
+    }
+
+    setReturnValue(value: any): void {
+        this.returnValue = value;
+        this.hasReturnValue = true;
+    }
+
+    getArgumentValue(index: number): any {
+        return this.callArguments[index];
+    }
+
+    beginCall(): void {
+        this.calloutArguments = []
+    }
+
+    addCallArgument(argument: any) {
+        this.calloutArguments.push(argument);
+    }
+};
+
+/*
+class MirFunctionActivationContext:
+
+    def getTempOrConstantValue(self, tempOrConstant):
+        if tempOrConstant.isTemporary():
+            return self.getTempValue(tempOrConstant)
+        return tempOrConstant
+
+*/
 
 export class MirTemporary extends MirValue {
     type: MirType;
@@ -410,6 +486,8 @@ export abstract class MirFunctionLocal extends MirValue {
         this.name = name;
     }
 
+    abstract evaluateInContext(context: MirFunctionActivationContext): void;
+
     getSymbolName(): string {
         throw new Error('Function local value does not have a symbol name')
     }
@@ -434,6 +512,10 @@ export class MirBasicBlock extends MirFunctionLocal {
 
     accept(visitor: MirVisitor) {
         return visitor.visitBasicBlock(this);
+    }
+
+    evaluateInContext(context: MirFunctionActivationContext) {
+        // Nothing is required here.
     }
 
     addInstruction(instruction: MirInstruction) : void {
@@ -492,6 +574,16 @@ export class MirInstruction extends MirFunctionLocal {
         result += MirOpcode[this.opcode];
 
         return result;
+    }
+
+    evaluateInContext(context: MirFunctionActivationContext): void {
+        switch(this.opcode) {
+        case MirOpcode.ReturnVoid:
+            context.setReturnValue(null);
+            break
+        default:
+            throw new Error(`Unsupported instruction opcode ${MirOpcode[this.opcode]}`)
+        }
     }
 
 }

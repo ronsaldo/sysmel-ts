@@ -35,7 +35,8 @@ export function runTests() {
         let builder = new mir.MirBuilder(mirFunction, entryBlock);
         builder.returnVoidAt(getOrMakeEmptySourcePosition());
 
-        console.log(mirPackage.fullPrintString());
+        let result = mirFunction.evaluateWithArguments([])
+        assert.strictEqual(result, null);
         tearDown();
     }
 }
