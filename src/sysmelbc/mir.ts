@@ -91,7 +91,28 @@ export abstract class MirVisitor {
     abstract visitInstruction(instruction: MirInstruction): any;
     abstract visitIntegerConstantValue(instruction: MirIntegerConstantValue): any;
     abstract visitFloatConstantValue(instruction: MirFloatConstantValue): any;
-    
+
+    abstract visitVoidType(type: MirVoidType): any;
+    abstract visitBasicBlockType(type: MirBasicBlockType): any;
+    abstract visitFunctionType(type: MirFunctionType): any;
+    abstract visitClosureType(type: MirClosureType): any;
+    abstract visitGCPointerType(type: MirGCPointerType): any;
+    abstract visitPointerType(type: MirPointerType): any;
+
+    abstract visitBoolean8Type(type: MirBoolean8Type): any;
+    abstract visitInt8Type(type:  MirInt8Type): any;
+    abstract visitInt16Type(type: MirInt16Type): any;
+    abstract visitInt32Type(type: MirInt32Type): any;
+    abstract visitInt64Type(type: MirInt64Type): any;
+
+    abstract visitUInt8Type(type:  MirUInt8Type): any;
+    abstract visitUInt16Type(type: MirUInt16Type): any;
+    abstract visitUInt32Type(type: MirUInt32Type): any;
+    abstract visitUInt64Type(type: MirUInt64Type): any;
+
+    abstract visitFloat32Type(type: MirFloat32Type): any;
+    abstract visitFloat64Type(type: MirFloat64Type): any;
+
 }
 
 export class MirContext {
@@ -186,6 +207,10 @@ export abstract class MirValue {
     }
 
     isFunction(): boolean {
+        return false;
+    }
+
+    isType(): boolean {
         return false;
     }
 
@@ -770,21 +795,30 @@ export class MirInstruction extends MirFunctionLocal {
 
 }
 
-export class MirType {
+export abstract class MirType extends MirValue {
     context: MirContext;
     name: string;
     valueSize: number;
     valueAlignment: number;
 
     constructor(context: MirContext, name: string, valueSize: number, valueAlignment: number) {
+        super();
         this.context = context;
         this.name = name;
         this.valueSize = valueSize;
         this.valueAlignment = valueAlignment;
     }
 
+    getSymbolName(): string {
+        return this.name;
+    }
+
     toString(): string {
         return this.name;
+    }
+
+    isType(): boolean {
+        return true;
     }
 
     isVoidType(): boolean {
@@ -858,102 +892,170 @@ export class MirType {
 };
 
 export class MirVoidType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitVoidType(this);
+    }
+
     isVoidType(): boolean {
         return true;
     }
 }
 
 export class MirBasicBlockType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitBasicBlockType(this);
+    }
+
     isBasicBlockType(): boolean {
         return true;
     }
 }
 
 export class MirFunctionType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitFunctionType(this);
+    }
+
     isFunctionType(): boolean {
         return true;
     }
 }
 
 export class MirClosureType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitClosureType(this);
+    }
+
     isClosureType(): boolean {
         return true;
     }
 }
 
 export class MirGCPointerType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitGCPointerType(this);
+    }
+
     isGCPointerType(): boolean {
         return true;
     }
 }
 
 export class MirPointerType extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitPointerType(this);
+    }
+
     isPointerType(): boolean {
         return true;
     }
 }
 
 export class MirBoolean8Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitBoolean8Type(this);
+    }
+
     isBoolean8Type(): boolean {
         return true;
     }
 }
 
 export class MirInt8Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitInt8Type(this);
+    }
+
     isInt8Type(): boolean {
         return true;
     }
 }
 
 export class MirInt16Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitInt16Type(this);
+    }
+
     isInt16Type(): boolean {
         return true;
     }
 }
 
 export class MirInt32Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitInt32Type(this);
+    }
+
     isInt32Type(): boolean {
         return true;
     }
 }
 
 export class MirInt64Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitInt64Type(this);
+    }
+
     isInt64Type(): boolean {
         return true;
     }
 }
 
 export class MirUInt8Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitUInt8Type(this);
+    }
+
     isUInt8Type(): boolean {
         return true;
     }
 }
 
 export class MirUInt16Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitUInt16Type(this);
+    }
+
     isUInt16Type(): boolean {
         return true;
     }
 }
 
 export class MirUInt32Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitUInt32Type(this);
+    }
+
     isUInt32Type(): boolean {
         return true;
     }
 }
 
 export class MirUInt64Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitUInt64Type(this);
+    }
+
     isUInt64Type(): boolean {
         return true;
     }
 }
 
 export class MirFloat32Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitFloat32Type(this);
+    }
+
     isFloat32Type(): boolean {
         return true;
     }
 }
 
 export class MirFloat64Type extends MirType {
+    accept(visitor: MirVisitor) {
+        return visitor.visitFloat64Type(this);
+    }
+
     isFloat64Type(): boolean {
         return true;
     }
