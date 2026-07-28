@@ -130,7 +130,6 @@ export function runTests() {
         builder.basicBlock = greaterThanBlock;
         builder.returnInt32At(secondArgument, getOrMakeEmptySourcePosition());
 
-        console.log(mirPackage.fullPrintString());
         let result = mirFunction.evaluateWithArguments([1, 2]);
         assert.strictEqual(result, 1);
 
