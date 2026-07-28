@@ -144,16 +144,16 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     }
 
     visitConstantLiteralIntegerValue(constant: hir.HIRConstantLiteralIntegerValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirIntegerConstantValue(constant.value);
     }
     visitConstantLiteralFloatValue(constant: hir.HIRConstantLiteralFloatValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirFloatConstantValue(constant.value);
     }
     visitConstantLiteralBooleanValue(constant: hir.HIRConstantLiteralBooleanValue): any {
         return new mir.MirBooleanConstantValue(constant.value);
     }
     visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirIntegerConstantValue(constant.value);
     }
     visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
         throw new Error('TODO: HirPackage2Mir')
