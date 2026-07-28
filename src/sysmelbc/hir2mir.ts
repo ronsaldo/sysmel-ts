@@ -116,16 +116,16 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitDerivedType(type: hir.HIRDerivedType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.visitNextValue(type.baseType);
     }
     visitPointerLikeType(type: hir.HIRPointerLikeType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        throw new Error('TODO: HirPackage2Mir visitPointerLikeType')
     }
     visitPointerType(type: hir.HIRPointerType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.visitPointerLikeType(type);
     }
     visitReferenceType(type: hir.HIRReferenceType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.visitPointerLikeType(type);
     }
     visitMutableValueBoxType(type: hir.HIRMutableValueBoxType): any {
         throw new Error('TODO: HirPackage2Mir')
