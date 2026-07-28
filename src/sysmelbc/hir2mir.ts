@@ -67,7 +67,18 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         this.valueMap.set(hirPackage, mirPackage);
         this.currentMirPackage = mirPackage;
 
+        // Translate the used packages.
+        for(let i = 0; i < hirPackage.usedPackages.length; ++i) {
+            let usedPackage = hirPackage.usedPackages[i] as hir.HIRPackage;
+            this.translateValue(usedPackage);
+        }
+
+        // Translate the children.
         hirPackage.finishPendingAnalysis();
+        for(let i = 0; i < hirPackage.children.length; ++i) {
+            let child = hirPackage.children[i] as hir.HIRPackage;
+            this.translateValue(child);
+        }
 
         this.currentMirPackage = oldPackage;
         return mirPackage;
@@ -77,7 +88,7 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitNominalType(type: hir.HIRNominalType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        throw new Error('TODO: HirPackage2Mir visitNominalType')
     }
     visitDynamicType(type: hir.HIRDynamicType): any {
         throw new Error('TODO: HirPackage2Mir')
