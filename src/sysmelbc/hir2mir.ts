@@ -203,8 +203,15 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitFunction(hirFunction: hir.HIRFunction): any {
-        throw new Error('TODO: HirPackage2Mir')
+        let mirFunction = new mir.MirFunction(hirFunction.name);
+        mirFunction.sourceFunction = hirFunction;
+
+        this.valueMap.set(hirFunction, mirFunction);
+        this.currentMirPackage?.addMirFunction(mirFunction);
+
+        return mirFunction;
     }
+
     visitFunctionClosure(closure: hir.HIRFunctionClosure): any {
         throw new Error('TODO: HirPackage2Mir')
     }
@@ -272,4 +279,190 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('Not supported')
     }
 
+}
+
+export class HirFunction2Mir extends hir.HIRVisitor {
+    visitType(type: hir.HIRType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitNominalType(type: hir.HIRNominalType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitDynamicType(type: hir.HIRDynamicType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPrimitiveType(type: hir.HIRPrimitiveType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitUndefinedType(type: hir.HIRUndefinedType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitVoidType(type: hir.HIRVoidType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitControlFlowEscapeType(type: hir.HIRControlFlowEscapeType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitUniverseType(type: hir.HIRUniverseType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitDerivedType(type: hir.HIRDerivedType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPointerLikeType(type: hir.HIRPointerLikeType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPointerType(type: hir.HIRPointerType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitReferenceType(type: hir.HIRReferenceType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMutableValueBoxType(type: hir.HIRMutableValueBoxType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitAssociationType(type: hir.HIRAssociationType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitTupleType(type: hir.HIRTupleType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitDependentFunctionType(type: hir.HIRDependentFunctionType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitSimpleFunctionType(type: hir.HIRSimpleFunctionType): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitConstantLiteralIntegerValue(constant: hir.HIRConstantLiteralIntegerValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralFloatValue(constant: hir.HIRConstantLiteralFloatValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralBooleanValue(constant: hir.HIRConstantLiteralBooleanValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralSymbolValue(constant: hir.HIRConstantLiteralSymbolValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralVoidValue(constant: hir.HIRConstantLiteralVoidValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralNilValue(constant: hir.HIRConstantLiteralNilValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralUndefinedValue(constant: hir.HIRConstantLiteralUndefinedValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantLiteralParseTree(constant: hir.HIRConstantLiteralParseTree): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    
+    visitConstantAssociation(type: hir.HIRConstantAssociation): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantTuple(type: hir.HIRConstantTuple): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitMacroContext(context: hir.HIRMacroContext): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPrimitiveMacro(macro: hir.HIRPrimitiveMacro): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPrimitiveFunction(primitiveFunction: hir.HIRPrimitiveFunction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMutableValueBox(valueBox: hir.HIRMutableValueBox): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPointerLikeValue(pointerLike: hir.HIRPointerLikeValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPointerValue(pointer: hir.HIRPointerValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitReferenceValue(reference: hir.HIRReferenceValue): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitFunction(hirFunction: hir.HIRFunction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitFunctionClosure(closure: hir.HIRFunctionClosure): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitArgument(argument: hir.HIRArgument): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitCapture(capture: hir.HIRCapture): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitBasicBlock(basicBlock: hir.HIRBasicBlock): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitAllocaInstruction(instruction: hir.HIRAllocaInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitBranchInstruction(instruction: hir.HIRBranchInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConditionalBranchInstruction(instruction: hir.HIRConditionalBranchInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitCallInstruction(instruction: hir.HIRCallInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitStoreInstruction(instruction: hir.HIRStoreInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMakeAssociationInstruction(instruction: hir.HIRMakeAssociationInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMakeClosureInstruction(instruction: hir.HIRMakeClosureInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMakeTupleInstruction(instruction: hir.HIRMakeTupleInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPhiInstruction(instruction: hir.HIRPhiInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPhiSourceInstruction(instruction: hir.HIRPhiSourceInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitReturnInstruction(instruction: hir.HIRReturnInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitAssertConditionInstruction(instruction: hir.HIRAssertConditionInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitRuntimeErrorInstruction(instruction: hir.HIRRuntimeErrorInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitUnreachableInstruction(instruction: hir.HIRUnreachableInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitMetaBuilderFactory(factory: hir.HIRMetaBuilderFactory): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMetaBuilder(metaBuilder: hir.HIRMetaBuilder): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitPackage(hirPackage: hir.HIRPackage): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
 }

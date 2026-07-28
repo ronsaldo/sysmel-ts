@@ -40,6 +40,13 @@ function compilePackageToMir(): mir.MirPackage {
     return mirPackage;
 }
 
+function compileFunctionToMir(sourceString: string): mir.MirFunction {
+    let hirFunction = evaluateTopLevelSourceString(sourceString);
+    assert.ok(hirFunction.isFunction());
+    let mirPackage = compilePackageToMir();
+    return mirPackage.translatedFunctionMap.get(hirFunction as hir.HIRFunction) as mir.MirFunction
+}
+
 export function runTests() {
     // Empty
     {
@@ -47,6 +54,14 @@ export function runTests() {
         evaluateTopLevelSourceString("");
         let mirPackage = compilePackageToMir();
         assert.ok(mirPackage.elementTable.length == 0);
+        tearDown();
+    }
+
+    // Integer identity function
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function identity(value: Int32) => Int32 := value");
+        console.log(mirFunction.fullPrintString());
         tearDown();
     }
 }

@@ -227,6 +227,7 @@ export class MirPackage extends MirValue {
     name: string;
     elementTable: MirPackageElement[] = [];
     anonSymbolCount: number = 0
+    translatedFunctionMap: Map<hir.HIRFunction, MirFunction> = new Map();
 
     constructor(context: MirContext, name: string) {
         super();
@@ -246,6 +247,13 @@ export class MirPackage extends MirValue {
 
         element.module = this;
         element.owner = this;
+    }
+
+    addMirFunction(mirFunction: MirFunction) {
+        this.addElement(mirFunction);
+        if (mirFunction.sourceFunction) {
+            this.translatedFunctionMap.set(mirFunction.sourceFunction, mirFunction)
+        }
     }
 
     generateAnonymousSymbol() : string {
@@ -278,7 +286,7 @@ export abstract class MirPackageElement extends MirValue {
     owner: MirValue | null = null;
     isExternC: boolean = false;
 
-    constructor(name: string) {
+    constructor(name: string | null) {
         super();
         this.name = name;
     }
