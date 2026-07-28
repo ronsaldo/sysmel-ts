@@ -87,23 +87,30 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitType(type: hir.HIRType): any {
         throw new Error('TODO: HirPackage2Mir')
     }
+
     visitNominalType(type: hir.HIRNominalType): any {
-        throw new Error('TODO: HirPackage2Mir visitNominalType')
+        let mirType = this.mirContext.gcPointerType;
+        if(this.coreTypeMappings.has(type)) {
+            mirType = this.coreTypeMappings.get(type) as mir.MirType
+        }
+        this.valueMap.set(type, mirType);
+        return mirType;
     }
+
     visitDynamicType(type: hir.HIRDynamicType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.mirContext.gcPointerType
     }
     visitPrimitiveType(type: hir.HIRPrimitiveType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.visitNominalType(type);
     }
     visitUndefinedType(type: hir.HIRUndefinedType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.mirContext.pointerType
     }
     visitVoidType(type: hir.HIRVoidType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.mirContext.voidType
     }
     visitControlFlowEscapeType(type: hir.HIRControlFlowEscapeType): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return this.mirContext.voidType
     }
     visitUniverseType(type: hir.HIRUniverseType): any {
         throw new Error('TODO: HirPackage2Mir')
