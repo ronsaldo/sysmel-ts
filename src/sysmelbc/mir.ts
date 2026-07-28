@@ -89,8 +89,11 @@ export abstract class MirVisitor {
     abstract visitTemporary(temporary: MirTemporary): any;
     abstract visitBasicBlock(basicBlock: MirBasicBlock): any;
     abstract visitInstruction(instruction: MirInstruction): any;
+    abstract visitBooleanConstantValue(instruction: MirBooleanConstantValue): any;
     abstract visitIntegerConstantValue(instruction: MirIntegerConstantValue): any;
     abstract visitFloatConstantValue(instruction: MirFloatConstantValue): any;
+    abstract visitVoidConstantValue(instruction: MirVoidConstantValue): any;
+    abstract visitNilConstantValue(instruction: MirNilConstantValue): any;
 
     abstract visitVoidType(type: MirVoidType): any;
     abstract visitBasicBlockType(type: MirBasicBlockType): any;
@@ -330,6 +333,27 @@ export abstract class MirConstantValue extends MirValue {
     }
 }
 
+export class MirBooleanConstantValue extends MirConstantValue {
+    value: boolean;
+
+    constructor(value: boolean) {
+        super();
+        this.value = value;
+    }
+
+    accept(visitor: MirVisitor) {
+        return visitor.visitBooleanConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return this.value;
+    }
+
+    toString(): string {
+        return 'boolean ' + this.value;
+    }
+}
+
 export class MirIntegerConstantValue extends MirConstantValue {
     value: number;
 
@@ -369,6 +393,34 @@ export class MirFloatConstantValue extends MirConstantValue {
 
     toString(): string {
         return 'float ' + this.value;
+    }
+}
+
+export class MirVoidConstantValue extends MirConstantValue {
+    accept(visitor: MirVisitor) {
+        return visitor.visitVoidConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return null;
+    }
+
+    toString(): string {
+        return 'void';
+    }
+}
+
+export class MirNilConstantValue extends MirConstantValue {
+    accept(visitor: MirVisitor) {
+        return visitor.visitNilConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return null;
+    }
+
+    toString(): string {
+        return 'nil';
     }
 }
 

@@ -150,7 +150,7 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitConstantLiteralBooleanValue(constant: hir.HIRConstantLiteralBooleanValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirBooleanConstantValue(constant.value);
     }
     visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
         throw new Error('TODO: HirPackage2Mir')
@@ -162,10 +162,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitConstantLiteralVoidValue(constant: hir.HIRConstantLiteralVoidValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirVoidConstantValue();
     }
     visitConstantLiteralNilValue(constant: hir.HIRConstantLiteralNilValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return new mir.MirNilConstantValue();
     }
     visitConstantLiteralUndefinedValue(constant: hir.HIRConstantLiteralUndefinedValue): any {
         throw new Error('TODO: HirPackage2Mir')
@@ -185,10 +185,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitPrimitiveMacro(macro: hir.HIRPrimitiveMacro): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return null;
     }
     visitPrimitiveFunction(primitiveFunction: hir.HIRPrimitiveFunction): any {
-        throw new Error('TODO: HirPackage2Mir')
+        return null;
     }
     visitMutableValueBox(valueBox: hir.HIRMutableValueBox): any {
         throw new Error('TODO: HirPackage2Mir')
@@ -266,7 +266,7 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     }
 
     visitMetaBuilderFactory(factory: hir.HIRMetaBuilderFactory): any {
-        throw new Error('Not supported')
+        return null;
     }
     visitMetaBuilder(metaBuilder: hir.HIRMetaBuilder): any {
         throw new Error('Not supported')
