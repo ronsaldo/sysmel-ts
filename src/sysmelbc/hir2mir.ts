@@ -531,6 +531,13 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitCallInstruction(instruction: hir.HIRCallInstruction): any {
+        if (instruction.functional.isPrimitiveFunction()) {
+            let primitive = instruction.functional as hir.HIRPrimitiveFunction;
+            let primitiveName = primitive.name;
+            let translator = this.packageTranslator.mirContext.getPrimitiveTranslatorFor(primitiveName);
+            return translator(this, instruction);
+        }
+        
         throw new Error('TODO: HirFunction2Mir');
     }
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {

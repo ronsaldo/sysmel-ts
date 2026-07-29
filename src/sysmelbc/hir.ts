@@ -256,6 +256,10 @@ export abstract class HIRValue {
         return false;
     }
 
+    isPrimitiveFunction(): boolean {
+        return false;
+    }
+
     isFunction() : boolean {
         return false;
     }
@@ -1379,6 +1383,10 @@ export class HIRPrimitiveFunction extends HIRConstant {
 
     accept(visitor: HIRVisitor) {
         return visitor.visitPrimitiveFunction(this);
+    }
+
+    isPrimitiveFunction() {
+        return true;
     }
 
     getType(): HIRType {

@@ -124,7 +124,8 @@ export class MirContext {
     gcPointerSize: number;
     gcPointerAlignment: number;
 
-    typeNameMap: Record<string, MirType> = {}
+    typeNameMap: Record<string, MirType> = {};
+    primitiveTranslatorMap: Record<string, (hir2mir: any, callInstruction: hir.HIRCallInstruction) => MirValue> = {};
 
     basicBlockType: MirType;
     gcPointerType: MirType;
@@ -184,11 +185,47 @@ export class MirContext {
         this.typeNameMap['Size'] = this.sizeType
         this.typeNameMap['UIntPointer'] = this.uintPointerType
         this.typeNameMap['IntPointer'] = this.intPointerType
+
+        this.addPrimitiveTranslators();
     }
 
     addNamedType(type: MirType): MirType {
         this.typeNameMap[type.name] = type;
         return type;
+    }
+    
+    addPrimitiveTranslators(): void {
+        this.addInt32Primitives();
+    }
+
+    addInt32Primitives(): void {
+        this.primitiveTranslatorMap['Int32::+'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32AddAt(left, right, sourcePosition);
+        });
+
+    }
+
+    makeBuilderTranslator(translationFunction: any): (hir2mir: any, callInstruction: hir.HIRCallInstruction) => MirValue {
+        return (hir2mir: any, callInstruction: hir.HIRCallInstruction) => {
+            let callArguments: MirValue[] = [];
+            for(let i = 0; i < callInstruction.callArguments.length; ++i)  {
+                let hirArgument = callInstruction.callArguments[i];
+                if(!hirArgument)
+                    throw new Error('Expected a hir argument');
+
+                let mirArgument = hir2mir.translateValue(hirArgument);
+                callArguments.push(mirArgument);
+            }
+
+            return translationFunction(hir2mir.builder, callInstruction.sourcePosition, ...callArguments);
+        }
+    }
+
+    getPrimitiveTranslatorFor(primitiveName: string): (hir2mir: any, callInstruction: hir.HIRCallInstruction) => MirValue {
+        let translator = this.primitiveTranslatorMap[primitiveName];
+        if(!translator)
+            throw new Error(`Missing primitive translator for ${primitiveName}.`)
+        return translator;
     }
 }
 

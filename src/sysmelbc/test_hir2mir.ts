@@ -74,4 +74,13 @@ export function runTests() {
         assert.strictEqual(result, 42);
         tearDown();
     }
+
+    // Int32 sum function
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function sum(a: Int32. b: Int32) => Int32 := a + b");
+        let result = mirFunction.evaluateWithArguments([1, 2]);
+        assert.strictEqual(result, 3);
+        tearDown();
+    }
 }
