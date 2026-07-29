@@ -60,8 +60,18 @@ export function runTests() {
     // Integer identity function
     {
         setUp();
+        let mirFunction = compileFunctionToMir("public function identity(value: Integer) => Integer := value");
+        let result = mirFunction.evaluateWithArguments([42]);
+        assert.strictEqual(result, 42);
+        tearDown();
+    }
+
+    // Int32 identity function
+    {
+        setUp();
         let mirFunction = compileFunctionToMir("public function identity(value: Int32) => Int32 := value");
-        console.log(mirFunction.fullPrintString());
+        let result = mirFunction.evaluateWithArguments([42]);
+        assert.strictEqual(result, 42);
         tearDown();
     }
 }

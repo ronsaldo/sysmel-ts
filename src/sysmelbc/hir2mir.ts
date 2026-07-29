@@ -316,11 +316,76 @@ export class HirFunction2Mir extends hir.HIRVisitor {
             this.visitNextValue(argument)
         }
 
+        // Create the basic blocks
+        this.createAndMapBasicBlocks();
+
+        // Translate the basic block
+        this.translateBasicBlocks();
+
         // End the prologue
+        let firstBasicBlock = this.valueMap.get(this.hirFunction.firstBasicBlock as hir.HIRValue) as mir.MirBasicBlock;
+        this.prologueBuilder.jumpAt(firstBasicBlock, this.hirFunction.sourcePosition);
+    }
+
+    createAndMapBasicBlocks() {
+        let basicBlock = this.hirFunction.firstBasicBlock;
+        while(basicBlock) {
+            let mirBasicBlock = new mir.MirBasicBlock(basicBlock.sourcePosition, basicBlock.name);
+            this.mirFunction.addBasicBlock(mirBasicBlock);
+            this.valueMap.set(basicBlock, mirBasicBlock);
+            this.translateBasicBlockPhis(basicBlock, mirBasicBlock);
+
+            basicBlock = basicBlock.nextBasicBlock;
+        }
+    }
+
+    translateBasicBlockPhis(basicBlock: hir.HIRBasicBlock, mirBasicBlock: mir.MirBasicBlock): void {
 
     }
 
-    visitNextValue(value: hir.HIRValue) : any {
+    translateBasicBlocks(): void {
+        let basicBlock = this.hirFunction.firstBasicBlock;
+        while(basicBlock) {
+            this.translateBasicBlock(basicBlock);
+            basicBlock = basicBlock.nextBasicBlock;
+        }
+    }
+
+    translateBasicBlock(basicBlock: hir.HIRBasicBlock): void {
+        let mirBasicBlock = this.valueMap.get(basicBlock) as mir.MirBasicBlock;
+        this.builder.basicBlock = mirBasicBlock;
+
+        let instruction = basicBlock.firstInstruction;
+        while(instruction) {
+            this.translateInstruction(instruction);
+            instruction = instruction.nextInstruction;
+        }
+    }
+
+    translateInstruction(instruction: hir.HIRInstruction) {
+        if(instruction.isPhiInstruction())
+        {
+            assert.ok(this.valueMap.has(instruction));
+            return;
+        }
+
+        assert.ok(!this.valueMap.has(instruction));
+        let value = this.visitNextValue(instruction);
+        this.valueMap.set(instruction, value);
+    }
+
+    translateValue(value: hir.HIRValue): mir.MirValue {
+        if(this.valueMap.has(value)) {
+            return this.valueMap.get(value) as mir.MirValue;
+        }
+
+        assert.ok(!value.isFunctionLocalValue());
+        let translatedValue = this.visitNextValue(value);
+        this.valueMap.set(value, translatedValue);
+        return translatedValue;
+    }
+
+    visitNextValue(value: hir.HIRValue) : mir.MirValue {
         return value.accept(this);
     }
 
@@ -459,7 +524,8 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitBranchInstruction(instruction: hir.HIRBranchInstruction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let destination = this.translateValue(instruction.destination);
+        this.builder.jumpAt(destination as mir.MirBasicBlock, instruction.sourcePosition);
     }
     visitConditionalBranchInstruction(instruction: hir.HIRConditionalBranchInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
@@ -483,14 +549,23 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitPhiInstruction(instruction: hir.HIRPhiInstruction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('Phi should be translated during the basic block creation pass');
     }
     visitPhiSourceInstruction(instruction: hir.HIRPhiSourceInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitReturnInstruction(instruction: hir.HIRReturnInstruction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let hirReturnType = instruction.valueToReturn.getType();
+        if(hirReturnType.isVoidType()) {
+            return this.builder.returnVoidAt(instruction.sourcePosition);
+        }
+
+        let returnType = this.packageTranslator.translateValue(hirReturnType) as mir.MirType;
+        let returnValue = this.translateValue(instruction.valueToReturn);
+        assert.ok(returnValue.isTemporary())
+        return returnType.emitReturnWithBuilder(this.builder, returnValue as mir.MirTemporary, instruction.sourcePosition);
     }
+
     visitAssertConditionInstruction(instruction: hir.HIRAssertConditionInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }
