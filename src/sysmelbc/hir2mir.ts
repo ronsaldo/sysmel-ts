@@ -509,7 +509,7 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitFunction(hirFunction: hir.HIRFunction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        return this.packageTranslator.translateValue(hirFunction);
     }
     visitFunctionClosure(closure: hir.HIRFunctionClosure): any {
         throw new Error('TODO: HirFunction2Mir');
@@ -550,9 +550,24 @@ export class HirFunction2Mir extends hir.HIRVisitor {
             return translator(this, instruction);
         }
 
-        throw new Error('TODO: HirFunction2Mir');
+        let functional = this.translateValue(instruction.functional);
+        this.builder.beginCallAt(instruction.sourcePosition);
+
+        for(let i = 0; i < instruction.callArguments.length; ++i) {
+            let argument = instruction.callArguments[i];
+            if(!argument)
+                throw new Error('Expected an argument.');
+
+            let argumentValue = this.translateValue(argument);
+            
+            let argumentType = this.packageTranslator.translateValue(argument.getType()) as mir.MirType
+            argumentType.emitCallArgumentWithBuilder(this.builder, argumentValue as mir.MirTemporary, argument.sourcePosition)
+        }
+
+        let callType = this.packageTranslator.translateValue(instruction.type) as mir.MirType;
+        throw new Error('TODO: HirFunction2Mir visitCallInstruction');
     }
-    
+
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }
