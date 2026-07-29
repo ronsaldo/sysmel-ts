@@ -104,13 +104,12 @@ export function runTests() {
         setUp();
 
         let mirFunction = compileFunctionToMir("function sum(a: Int32. b: Int32) => Int32 := a + b. public function callSum() => Int32 := sum(1i32. 2i32).");
-        console.log(mirFunction.fullPrintString())
         
         let result = mirFunction.evaluateWithArguments([1, 2]);
-        assert.strictEqual(result, 1);
+        assert.strictEqual(result, 3);
         
         result = mirFunction.evaluateWithArguments([2, 1]);
-        assert.strictEqual(result, 1);
+        assert.strictEqual(result, 3);
 
         tearDown();
     }

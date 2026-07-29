@@ -935,9 +935,11 @@ export abstract class MirType extends MirValue {
 
     abstract emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary;
     abstract emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void;
+    abstract emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary;
     abstract emitReturnWithBuilder(builder: MirBuilder, valueToReturn: MirTemporary, sourcePosition: AbstractSourcePosition): void;
     abstract emitPhiWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition): MirTemporary;
     abstract emitPhiSourceWithBuilder(builder: MirBuilder, targetPhi: MirTemporary, sourceValue: MirTemporary, sourcePosition: AbstractSourcePosition): MirInstruction;
+    abstract emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary;
 
     getSymbolName(): string {
         return this.name;
@@ -1044,6 +1046,12 @@ export class MirVoidType extends MirType {
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         throw new Error('Unsupported value for argument passing.')
     }
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callVoidResultAt(functional, sourcePosition);
+    }
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for integer constant.')
+    }
 
     isVoidType(): boolean {
         return true;
@@ -1056,23 +1064,29 @@ export class MirBasicBlockType extends MirType {
     }
 
     emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
-        throw new Error('Unsupported value as argument.')
+        throw new Error('Unsupported value as argument.');
     }
 
     emitReturnWithBuilder(builder: MirBuilder, valueToReturn: MirTemporary, sourcePosition: AbstractSourcePosition): void {
-        throw new Error('Unsupported value for returning.')
+        throw new Error('Unsupported value for returning.');
     }
 
     emitPhiWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition): MirTemporary {
-        throw new Error('Unsupported value in Phi.')
+        throw new Error('Unsupported value in Phi.');
     }
 
     emitPhiSourceWithBuilder(builder: MirBuilder, targetPhi: MirTemporary, sourceValue: MirTemporary, sourcePosition: AbstractSourcePosition): MirInstruction {
-        throw new Error('Unsupported value in Phi.')
+        throw new Error('Unsupported value in Phi.');
     }
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
-        throw new Error('Cannot pass a basic block as an argument.')
+        throw new Error('Cannot pass a basic block as an argument.');
+    }
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Cannot call something that returns a basic block.');
+    }
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for integer constant.');
     }
 
     isBasicBlockType(): boolean {
@@ -1105,6 +1119,14 @@ export class MirFunctionType extends MirType {
         return builder.callArgumentPointerAt(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callPointerResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for integer constant.')
+    }
+
     isFunctionType(): boolean {
         return true;
     }
@@ -1133,6 +1155,14 @@ export class MirClosureType extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentGCPointerAt(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callGCPointerResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for integer constant.')
     }
 
     isClosureType(): boolean {
@@ -1165,6 +1195,14 @@ export class MirGCPointerType extends MirType {
         return builder.callArgumentGCPointerAt(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callGCPointerResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constIntegerAt(value, sourcePosition)
+    }
+
     isGCPointerType(): boolean {
         return true;
     }
@@ -1193,6 +1231,14 @@ export class MirPointerType extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentPointerAt(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callPointerResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('MirPointer does not support integer constant.');
     }
 
     isPointerType(): boolean {
@@ -1225,6 +1271,14 @@ export class MirBoolean8Type extends MirType {
         builder.callArgumentBoolean8At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callBoolean8ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constBoolean8At(value !== 0, sourcePosition);
+    }
+
     isBoolean8Type(): boolean {
         return true;
     }
@@ -1253,6 +1307,14 @@ export class MirInt8Type extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentInt8At(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt8ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt8At(value, sourcePosition);
     }
 
     isInt8Type(): boolean {
@@ -1285,6 +1347,14 @@ export class MirInt16Type extends MirType {
         builder.callArgumentInt16At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt16ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt16At(value, sourcePosition);
+    }
+
     isInt16Type(): boolean {
         return true;
     }
@@ -1313,6 +1383,14 @@ export class MirInt32Type extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentInt32At(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt32ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt32At(value, sourcePosition);
     }
 
     isInt32Type(): boolean {
@@ -1345,6 +1423,13 @@ export class MirInt64Type extends MirType {
         builder.callArgumentInt64At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt64ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt64At(value, sourcePosition);
+    }
 
     isInt64Type(): boolean {
         return true;
@@ -1376,6 +1461,13 @@ export class MirUInt8Type extends MirType {
         builder.callArgumentUInt8At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callUInt8ResultAt(functional, sourcePosition);
+    }
+    
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constUInt8At(value, sourcePosition);
+    }
 
     isUInt8Type(): boolean {
         return true;
@@ -1405,6 +1497,14 @@ export class MirUInt16Type extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentUInt16At(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callUInt16ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constUInt16At(value, sourcePosition);
     }
 
     isUInt16Type(): boolean {
@@ -1437,6 +1537,14 @@ export class MirUInt32Type extends MirType {
         builder.callArgumentInt32At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt32ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt32At(value, sourcePosition);
+    }
+
     isUInt32Type(): boolean {
         return true;
     }
@@ -1465,6 +1573,14 @@ export class MirUInt64Type extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentInt64At(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callInt64ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt64At(value, sourcePosition);
     }
 
     isUInt64Type(): boolean {
@@ -1497,6 +1613,14 @@ export class MirFloat32Type extends MirType {
         builder.callArgumentFloat32At(value, sourcePosition);
     }
 
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callFloat32ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constFloat32At(value, sourcePosition);
+    }
+
     isFloat32Type(): boolean {
         return true;
     }
@@ -1525,6 +1649,14 @@ export class MirFloat64Type extends MirType {
 
     emitCallArgumentWithBuilder(builder: MirBuilder, value: MirTemporary, sourcePosition: AbstractSourcePosition): void {
         builder.callArgumentFloat64At(value, sourcePosition);
+    }
+
+    emitCallWithBuilder(builder: MirBuilder, functional: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.callFloat64ResultAt(functional, sourcePosition);
+    }
+
+    emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constFloat64At(value, sourcePosition);
     }
 
     isFloat64Type(): boolean {
@@ -1688,9 +1820,60 @@ export class MirBuilder {
         this.addInstruction(instruction);
     }
 
+    callBoolean8ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return this.callInt32ResultAt(calledFunction, sourcePosition);
+    }
+    callInt8ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return this.callInt32ResultAt(calledFunction, sourcePosition);
+    }
+    callInt16ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return this.callInt32ResultAt(calledFunction, sourcePosition);
+    }
+    callUInt8ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return this.callInt32ResultAt(calledFunction, sourcePosition);
+    }
+    callUInt16ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return this.callInt32ResultAt(calledFunction, sourcePosition);
+    }
     callInt32ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
         let instruction = new MirInstruction(temp, MirOpcode.CallInt32Result, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callInt64ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int64Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallInt64Result, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callPointerResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().pointerType, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallPointerResult, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callGCPointerResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallGCPointerResult, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callVoidResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().voidType, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallVoidResult, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callFloat32ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallFloat32Result, calledFunction, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    callFloat64ResultAt(calledFunction: MirValue, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float64Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.CallFloat64Result, calledFunction, null, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }
@@ -1708,11 +1891,90 @@ export class MirBuilder {
         this.addInstruction(instruction);
         return temp;
     }
+    constBoolean8At(value: boolean, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        return this.constInt8At(value ? 1 : 0, sourcePosition);
+    }
+    constInt8At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        return this.constInt32At(value, sourcePosition);
+    }
+    constInt16At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        return this.constInt32At(value, sourcePosition);
+    }
+    constUInt8At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        return this.constInt32At(value, sourcePosition);
+    }
+    constUInt16At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        return this.constInt32At(value, sourcePosition);
+    }
 
     constInt32At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
         let constant = new MirIntegerConstantValue(value);
         let instruction = new MirInstruction(temp, MirOpcode.ConstInt32, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constInt64At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int64Type, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstInt64, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constFloat32At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float32Type, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstFloat32, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constFloat64At(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float64Type, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstFloat64, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    constPointerAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().pointerType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstPointer, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constGCPointerAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstGCPointer, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constIntegerAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstInteger, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constCharacterAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstCharacter, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constFloatAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstFloat, constant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    constVoidAt(value: number, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().voidType, sourcePosition, null);
+        let constant = new MirIntegerConstantValue(value);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstVoid, constant, null, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }

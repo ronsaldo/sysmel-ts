@@ -450,28 +450,29 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
 
     visitConstantLiteralIntegerValue(constant: hir.HIRConstantLiteralIntegerValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let constantType = this.packageTranslator.translateValue(constant.getType()) as mir.MirType;
+        return constantType.emitIntegerConstantWithBuilder(this.prologueBuilder, constant.value, constant.sourcePosition)
     }
     visitConstantLiteralFloatValue(constant: hir.HIRConstantLiteralFloatValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralFloatValue');
     }
     visitConstantLiteralBooleanValue(constant: hir.HIRConstantLiteralBooleanValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralBooleanValue');
     }
     visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralCharacterValue');
     }
     visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralStringValue');
     }
     visitConstantLiteralSymbolValue(constant: hir.HIRConstantLiteralSymbolValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralSymbolValue');
     }
     visitConstantLiteralVoidValue(constant: hir.HIRConstantLiteralVoidValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralVoidValue');
     }
     visitConstantLiteralNilValue(constant: hir.HIRConstantLiteralNilValue): any {
-        throw new Error('TODO: HirFunction2Mir');
+        throw new Error('TODO: HirFunction2Mir visitConstantLiteralNilValue');
     }
     visitConstantLiteralUndefinedValue(constant: hir.HIRConstantLiteralUndefinedValue): any {
         throw new Error('TODO: HirFunction2Mir');
@@ -565,7 +566,7 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         }
 
         let callType = this.packageTranslator.translateValue(instruction.type) as mir.MirType;
-        throw new Error('TODO: HirFunction2Mir visitCallInstruction');
+        return callType.emitCallWithBuilder(this.builder, functional, instruction.sourcePosition);
     }
 
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
