@@ -82,6 +82,15 @@ export function runTests() {
         assert.strictEqual(result, 65);
         tearDown();
     }
+    // Float constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Float := 42.5");
+        console.log(mirFunction.fullPrintString());
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, 42.5);
+        tearDown();
+    }
 
     // Int32 identity function
     {
