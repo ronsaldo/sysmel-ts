@@ -66,6 +66,23 @@ export function runTests() {
         tearDown();
     }
 
+    // Integer constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Integer := 42");
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, 42);
+        tearDown();
+    }
+    // Character constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Character := 'A'");
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, 65);
+        tearDown();
+    }
+
     // Int32 identity function
     {
         setUp();

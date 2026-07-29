@@ -35,7 +35,7 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         this.coreTypeMappings.set(this.hirCoreTypes.char16Type, this.mirContext.uint16Type);
         this.coreTypeMappings.set(this.hirCoreTypes.char32Type, this.mirContext.uint32Type);
 
-        this.coreTypeMappings.set(this.hirCoreTypes.float32Type,  this.mirContext.float32Type);
+        this.coreTypeMappings.set(this.hirCoreTypes.float32Type, this.mirContext.float32Type);
         this.coreTypeMappings.set(this.hirCoreTypes.float64Type, this.mirContext.float64Type);
     }
 
@@ -460,7 +460,8 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir visitConstantLiteralBooleanValue');
     }
     visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
-        throw new Error('TODO: HirFunction2Mir visitConstantLiteralCharacterValue');
+        let constantType = this.packageTranslator.translateValue(constant.getType()) as mir.MirType;
+        return constantType.emitCharacterConstantWithBuilder(this.prologueBuilder, constant.value, constant.sourcePosition)
     }
     visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
         throw new Error('TODO: HirFunction2Mir visitConstantLiteralStringValue');

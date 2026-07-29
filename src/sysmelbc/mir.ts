@@ -939,6 +939,7 @@ export abstract class MirType extends MirValue {
     abstract emitReturnWithBuilder(builder: MirBuilder, valueToReturn: MirTemporary, sourcePosition: AbstractSourcePosition): void;
     abstract emitPhiWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition): MirTemporary;
     abstract emitPhiSourceWithBuilder(builder: MirBuilder, targetPhi: MirTemporary, sourceValue: MirTemporary, sourcePosition: AbstractSourcePosition): MirInstruction;
+    abstract emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary;
     abstract emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary;
 
     getSymbolName(): string {
@@ -1052,6 +1053,9 @@ export class MirVoidType extends MirType {
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         throw new Error('Unsupported value for integer constant.')
     }
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
+    }
 
     isVoidType(): boolean {
         return true;
@@ -1087,6 +1091,9 @@ export class MirBasicBlockType extends MirType {
     }
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         throw new Error('Unsupported value for integer constant.');
+    }
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
     }
 
     isBasicBlockType(): boolean {
@@ -1127,6 +1134,10 @@ export class MirFunctionType extends MirType {
         throw new Error('Unsupported value for integer constant.')
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
+    }
+
     isFunctionType(): boolean {
         return true;
     }
@@ -1165,6 +1176,10 @@ export class MirClosureType extends MirType {
         throw new Error('Unsupported value for integer constant.')
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
+    }
+
     isClosureType(): boolean {
         return true;
     }
@@ -1201,6 +1216,10 @@ export class MirGCPointerType extends MirType {
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constIntegerAt(value, sourcePosition)
+    }
+    
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constCharacterAt(value, sourcePosition);
     }
 
     isGCPointerType(): boolean {
@@ -1241,6 +1260,11 @@ export class MirPointerType extends MirType {
         throw new Error('MirPointer does not support integer constant.');
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
+    }
+
+
     isPointerType(): boolean {
         return true;
     }
@@ -1279,6 +1303,10 @@ export class MirBoolean8Type extends MirType {
         return builder.constBoolean8At(value !== 0, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Unsupported value for character constant.')
+    }
+
     isBoolean8Type(): boolean {
         return true;
     }
@@ -1314,6 +1342,10 @@ export class MirInt8Type extends MirType {
     }
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt8At(value, sourcePosition);
+    }
+
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constInt8At(value, sourcePosition);
     }
 
@@ -1355,6 +1387,10 @@ export class MirInt16Type extends MirType {
         return builder.constInt16At(value, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt16At(value, sourcePosition);
+    }
+
     isInt16Type(): boolean {
         return true;
     }
@@ -1393,6 +1429,10 @@ export class MirInt32Type extends MirType {
         return builder.constInt32At(value, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt32At(value, sourcePosition);
+    }
+
     isInt32Type(): boolean {
         return true;
     }
@@ -1428,6 +1468,9 @@ export class MirInt64Type extends MirType {
     }
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt64At(value, sourcePosition);
+    }
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constInt64At(value, sourcePosition);
     }
 
@@ -1469,6 +1512,10 @@ export class MirUInt8Type extends MirType {
         return builder.constUInt8At(value, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constUInt8At(value, sourcePosition);
+    }
+
     isUInt8Type(): boolean {
         return true;
     }
@@ -1504,6 +1551,10 @@ export class MirUInt16Type extends MirType {
     }
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constUInt16At(value, sourcePosition);
+    }
+
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constUInt16At(value, sourcePosition);
     }
 
@@ -1545,6 +1596,10 @@ export class MirUInt32Type extends MirType {
         return builder.constInt32At(value, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt32At(value, sourcePosition);
+    }
+
     isUInt32Type(): boolean {
         return true;
     }
@@ -1580,6 +1635,10 @@ export class MirUInt64Type extends MirType {
     }
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        return builder.constInt64At(value, sourcePosition);
+    }
+
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constInt64At(value, sourcePosition);
     }
 
@@ -1621,6 +1680,10 @@ export class MirFloat32Type extends MirType {
         return builder.constFloat32At(value, sourcePosition);
     }
 
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Not valid type for character constant');
+    }
+
     isFloat32Type(): boolean {
         return true;
     }
@@ -1657,6 +1720,10 @@ export class MirFloat64Type extends MirType {
 
     emitIntegerConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
         return builder.constFloat64At(value, sourcePosition);
+    }
+
+    emitCharacterConstantWithBuilder(builder: MirBuilder, value: number, sourcePosition: AbstractSourcePosition): MirTemporary {
+        throw new Error('Not valid type for character constant');
     }
 
     isFloat64Type(): boolean {
