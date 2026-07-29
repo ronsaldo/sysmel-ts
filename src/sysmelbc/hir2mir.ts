@@ -340,7 +340,15 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
 
     translateBasicBlockPhis(basicBlock: hir.HIRBasicBlock, mirBasicBlock: mir.MirBasicBlock): void {
+        this.builder.basicBlock = mirBasicBlock;
+        let instruction = basicBlock.firstInstruction;
+        while (instruction && instruction.isPhiInstruction()) {
+            let phiType = this.packageTranslator.translateValue(instruction.getType()) as mir.MirType;
+            let phiValue = phiType.emitPhiWithBuilder(this.builder, instruction.sourcePosition);
+            this.valueMap.set(instruction, phiValue);
 
+            instruction = instruction.nextInstruction;
+        }
     }
 
     translateBasicBlocks(): void {
@@ -524,12 +532,16 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitBranchInstruction(instruction: hir.HIRBranchInstruction): any {
-        let destination = this.translateValue(instruction.destination);
-        this.builder.jumpAt(destination as mir.MirBasicBlock, instruction.sourcePosition);
+        let destination = this.translateValue(instruction.destination) as mir.MirBasicBlock;
+        this.builder.jumpAt(destination, instruction.sourcePosition);
     }
     visitConditionalBranchInstruction(instruction: hir.HIRConditionalBranchInstruction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let condition = this.translateValue(instruction.condition) as mir.MirTemporary;
+        let trueDestination = this.translateValue(instruction.trueDestination) as mir.MirBasicBlock;
+        let falseDestination = this.translateValue(instruction.falseDestination) as mir.MirBasicBlock;
+        this.builder.conditionalBranchAt(condition, trueDestination, falseDestination, instruction.sourcePosition);
     }
+
     visitCallInstruction(instruction: hir.HIRCallInstruction): any {
         if (instruction.functional.isPrimitiveFunction()) {
             let primitive = instruction.functional as hir.HIRPrimitiveFunction;
@@ -537,7 +549,7 @@ export class HirFunction2Mir extends hir.HIRVisitor {
             let translator = this.packageTranslator.mirContext.getPrimitiveTranslatorFor(primitiveName);
             return translator(this, instruction);
         }
-        
+
         throw new Error('TODO: HirFunction2Mir');
     }
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
@@ -555,12 +567,18 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     visitMakeTupleInstruction(instruction: hir.HIRMakeTupleInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }
+
     visitPhiInstruction(instruction: hir.HIRPhiInstruction): any {
         throw new Error('Phi should be translated during the basic block creation pass');
     }
+
     visitPhiSourceInstruction(instruction: hir.HIRPhiSourceInstruction): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let targetPhi = this.valueMap.get(instruction.targetPhi) as mir.MirTemporary;
+        let sourceValue = this.translateValue(instruction.sourceValue) as mir.MirTemporary;
+        let sourceValueType = sourceValue.type;
+        sourceValueType.emitPhiSourceWithBuilder(this.builder, targetPhi, sourceValue, instruction.sourcePosition)
     }
+
     visitReturnInstruction(instruction: hir.HIRReturnInstruction): any {
         let hirReturnType = instruction.valueToReturn.getType();
         if(hirReturnType.isVoidType()) {

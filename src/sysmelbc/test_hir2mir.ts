@@ -83,4 +83,19 @@ export function runTests() {
         assert.strictEqual(result, 3);
         tearDown();
     }
+
+    // Int32 min function
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function sum(a: Int32. b: Int32) => Int32 := (if: a < b then: a else: b)");
+        
+        let result = mirFunction.evaluateWithArguments([1, 2]);
+        assert.strictEqual(result, 1);
+        
+        result = mirFunction.evaluateWithArguments([2, 1]);
+        assert.strictEqual(result, 1);
+
+        tearDown();
+    }
 }
