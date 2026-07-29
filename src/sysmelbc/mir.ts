@@ -869,6 +869,8 @@ export abstract class MirType extends MirValue {
         this.valueAlignment = valueAlignment;
     }
 
+    abstract emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary;
+
     getSymbolName(): string {
         return this.name;
     }
@@ -956,6 +958,10 @@ export class MirVoidType extends MirType {
         return visitor.visitVoidType(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        throw new Error('Unsupported value as argument.')
+    }
+
     isVoidType(): boolean {
         return true;
     }
@@ -964,6 +970,10 @@ export class MirVoidType extends MirType {
 export class MirBasicBlockType extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitBasicBlockType(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        throw new Error('Unsupported value as argument.')
     }
 
     isBasicBlockType(): boolean {
@@ -976,6 +986,10 @@ export class MirFunctionType extends MirType {
         return visitor.visitFunctionType(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentPointerAt(sourcePosition, name);
+    }
+
     isFunctionType(): boolean {
         return true;
     }
@@ -984,6 +998,10 @@ export class MirFunctionType extends MirType {
 export class MirClosureType extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitClosureType(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentGCPointerAt(sourcePosition, name);
     }
 
     isClosureType(): boolean {
@@ -996,6 +1014,10 @@ export class MirGCPointerType extends MirType {
         return visitor.visitGCPointerType(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentGCPointerAt(sourcePosition, name);
+    }
+
     isGCPointerType(): boolean {
         return true;
     }
@@ -1006,6 +1028,10 @@ export class MirPointerType extends MirType {
         return visitor.visitPointerType(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentPointerAt(sourcePosition, name);
+    }
+    
     isPointerType(): boolean {
         return true;
     }
@@ -1014,6 +1040,10 @@ export class MirPointerType extends MirType {
 export class MirBoolean8Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitBoolean8Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentBoolean8At(sourcePosition, name);
     }
 
     isBoolean8Type(): boolean {
@@ -1026,6 +1056,10 @@ export class MirInt8Type extends MirType {
         return visitor.visitInt8Type(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt8At(sourcePosition, name);
+    }
+
     isInt8Type(): boolean {
         return true;
     }
@@ -1034,6 +1068,10 @@ export class MirInt8Type extends MirType {
 export class MirInt16Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitInt16Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt16At(sourcePosition, name);
     }
 
     isInt16Type(): boolean {
@@ -1046,6 +1084,10 @@ export class MirInt32Type extends MirType {
         return visitor.visitInt32Type(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt32At(sourcePosition, name);
+    }
+
     isInt32Type(): boolean {
         return true;
     }
@@ -1054,6 +1096,10 @@ export class MirInt32Type extends MirType {
 export class MirInt64Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitInt64Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt64At(sourcePosition, name);
     }
 
     isInt64Type(): boolean {
@@ -1066,6 +1112,10 @@ export class MirUInt8Type extends MirType {
         return visitor.visitUInt8Type(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentUInt8At(sourcePosition, name);
+    }
+
     isUInt8Type(): boolean {
         return true;
     }
@@ -1074,6 +1124,10 @@ export class MirUInt8Type extends MirType {
 export class MirUInt16Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitUInt16Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentUInt16At(sourcePosition, name);
     }
 
     isUInt16Type(): boolean {
@@ -1086,6 +1140,10 @@ export class MirUInt32Type extends MirType {
         return visitor.visitUInt32Type(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt32At(sourcePosition, name);
+    }
+
     isUInt32Type(): boolean {
         return true;
     }
@@ -1094,6 +1152,10 @@ export class MirUInt32Type extends MirType {
 export class MirUInt64Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitUInt64Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentInt64At(sourcePosition, name);
     }
 
     isUInt64Type(): boolean {
@@ -1106,6 +1168,10 @@ export class MirFloat32Type extends MirType {
         return visitor.visitFloat32Type(this);
     }
 
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentFloat32At(sourcePosition, name);
+    }
+
     isFloat32Type(): boolean {
         return true;
     }
@@ -1114,6 +1180,10 @@ export class MirFloat32Type extends MirType {
 export class MirFloat64Type extends MirType {
     accept(visitor: MirVisitor) {
         return visitor.visitFloat64Type(this);
+    }
+
+    emitArgumentWithBuilder(builder: MirBuilder, sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        return builder.argumentFloat64At(sourcePosition, name);
     }
 
     isFloat64Type(): boolean {
@@ -1162,12 +1232,74 @@ export class MirBuilder {
         this.addInstruction(instruction);
     }
 
+    argumentBoolean8At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentInt8At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int8Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentInt16At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int16Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentUInt8At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().uint8Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentUInt16At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().uint16Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
     argumentInt32At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, name);
         let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt32, null, null, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }
+    argumentInt64At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int64Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentInt64, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentPointerAt(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().pointerType, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentPointer, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentGCPointerAt(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentGCPointer, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentFloat32At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float32Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentFloat32, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    argumentFloat64At(sourcePosition: AbstractSourcePosition, name: string | null): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().float64Type, sourcePosition, name);
+        let instruction = new MirInstruction(temp, MirOpcode.ArgumentFloat64, null, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
 
     beginCallAt(sourcePosition: AbstractSourcePosition): void {
         let instruction = new MirInstruction(null, MirOpcode.BeginCall, null, null, sourcePosition, null);

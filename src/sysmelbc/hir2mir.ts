@@ -209,6 +209,8 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         this.valueMap.set(hirFunction, mirFunction);
         this.currentMirPackage?.addMirFunction(mirFunction);
 
+        new HirFunction2Mir(this, hirFunction, mirFunction).translateFunction();
+
         return mirFunction;
     }
 
@@ -282,6 +284,46 @@ export class HirPackage2Mir extends hir.HIRVisitor {
 }
 
 export class HirFunction2Mir extends hir.HIRVisitor {
+    packageTranslator: HirPackage2Mir;
+    hirFunction: hir.HIRFunction;
+    mirFunction: mir.MirFunction;
+    prologueBlock: mir.MirBasicBlock;
+    prologueBuilder: mir.MirBuilder;
+    builder: mir.MirBuilder;
+    valueMap: Map<hir.HIRValue, mir.MirValue> = new Map();
+
+    constructor(packageTranslator: HirPackage2Mir, hirFunction: hir.HIRFunction, mirFunction: mir.MirFunction) {
+        super();
+
+        assert.ok(hirFunction.firstBasicBlock);
+
+        this.packageTranslator = packageTranslator;
+        this.hirFunction = hirFunction;
+        this.mirFunction = mirFunction;
+
+        this.prologueBlock = new mir.MirBasicBlock(hirFunction.sourcePosition, 'prologue');
+        mirFunction.addBasicBlock(this.prologueBlock);
+        this.prologueBuilder = new mir.MirBuilder(mirFunction, this.prologueBlock);
+        this.builder = new mir.MirBuilder(mirFunction, this.prologueBlock);
+    }
+
+    translateFunction() {
+        // Arguments
+        for(let i = 0; i < this.hirFunction.dependentFunctionType.functionArguments.length; ++i) {
+            let argument = this.hirFunction.dependentFunctionType.functionArguments[i];
+            if(!argument)
+                throw new Error('Expected an argument.');
+            this.visitNextValue(argument)
+        }
+
+        // End the prologue
+
+    }
+
+    visitNextValue(value: hir.HIRValue) : any {
+        return value.accept(this);
+    }
+
     visitType(type: hir.HIRType): any {
         throw new Error('TODO: HirFunction2Mir');
     }
@@ -401,7 +443,10 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
 
     visitArgument(argument: hir.HIRArgument): any {
-        throw new Error('TODO: HirFunction2Mir');
+        let argumentType = this.packageTranslator.translateValue(argument.type);
+        let argumentTemporary = (argumentType as mir.MirType).emitArgumentWithBuilder(this.builder, argument.sourcePosition, argument.name);
+        this.valueMap.set(argument, argumentTemporary);
+        return argumentTemporary;
     }
     visitCapture(capture: hir.HIRCapture): any {
         throw new Error('TODO: HirFunction2Mir');
