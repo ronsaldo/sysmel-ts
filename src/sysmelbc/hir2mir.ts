@@ -552,6 +552,7 @@ export class HirFunction2Mir extends hir.HIRVisitor {
 
         throw new Error('TODO: HirFunction2Mir');
     }
+    
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }

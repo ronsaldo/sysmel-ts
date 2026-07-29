@@ -333,7 +333,8 @@ export abstract class HIRValue {
     }
 
     analyzeAndBuildApplicationNode(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
-        throw new Error(node.sourcePosition.formatMessage('Non-functional value cannot be applied.'))
+        let selfType = this.getType();
+        return selfType.analyzeAndBuildApplicationNodeOnType(analyzer, node, functional)
     }
 
     analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode) : HIRValue {
@@ -408,6 +409,10 @@ export class HIRType extends HIRValue {
 
     isSatisfiedByType(subtype: HIRValue) {
         return this === subtype;
+    }
+
+    analyzeAndBuildApplicationNodeOnType(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        throw new Error('Non-functional value cannot be applied.')
     }
 
     analyzeAndEvaluateMessageSendNodeOnType(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue) : HIRValue {
@@ -975,6 +980,10 @@ export class HIRSimpleFunctionType extends HIRType {
         return [typecheckedArguments, this.resultType];
     }
 
+    analyzeAndBuildApplicationNodeOnType(analyzer: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        let [typecheckedArguments, resultType] = this.analyzeBuildAndTypecheckArguments(analyzer, node.applicationArguments, node.sourcePosition);
+        return analyzer.builder.call(functional, typecheckedArguments, resultType, node.sourcePosition);
+    }
 }
 
 export abstract class HIRConstant extends HIRValue {
