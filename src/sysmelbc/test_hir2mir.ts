@@ -203,4 +203,33 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Int32 negated
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function int32Neg(a: Int32) => Int32 := a negated");
+        
+        let result = mirFunction.evaluateWithArguments([1]);
+        assert.strictEqual(result, -1);
+        
+        result = mirFunction.evaluateWithArguments([-1]);
+        assert.strictEqual(result, 1);
+
+        tearDown();
+    }
+
+    // Int32 arithmetic
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function arithmetic(a: Int32. b: Int32. c: Int32. d: Int32. e: Int32) => Int32 := a negated + b - ((c * d) // e)");
+        
+        let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5]);
+        assert.strictEqual(result, -1);
+        
+        tearDown();
+    }
+
+
 }

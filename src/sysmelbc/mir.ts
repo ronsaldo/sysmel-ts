@@ -209,8 +209,24 @@ export class MirContext {
     }
 
     addInt32Primitives(): void {
+        this.primitiveTranslatorMap['Int32::negated'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, operand: MirTemporary) => {
+            return builder.int32NegAt(operand, sourcePosition)
+        });
+
         this.primitiveTranslatorMap['Int32::+'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
             return builder.int32AddAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::-'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32SubAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::*'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32MulAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32:://'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32SDivAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::%'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32SModAt(left, right, sourcePosition);
         });
 
         this.primitiveTranslatorMap['Int32::<'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
@@ -867,10 +883,40 @@ export class MirInstruction extends MirFunctionLocal {
             break;
 
         // Arithmetic
+        case MirOpcode.Int32Neg:
+        case MirOpcode.Int64Neg:
+            context.setTempValue(this.result as MirTemporary, -context.getTempValue(this.firstArgument as MirTemporary))
+            break;
+
         case MirOpcode.Int32Add:
         case MirOpcode.Int64Add:
             context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) + context.getTempValue(this.secondArgument as MirTemporary))
             break;
+
+        case MirOpcode.Int32Sub:
+        case MirOpcode.Int64Sub:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) - context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32Mul:
+        case MirOpcode.Int64Mul:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) * context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32SDiv:
+        case MirOpcode.Int64SDiv:
+        case MirOpcode.Int32UDiv:
+        case MirOpcode.Int64UDiv:
+            context.setTempValue(this.result as MirTemporary, Math.trunc(context.getTempValue(this.firstArgument as MirTemporary) / context.getTempValue(this.secondArgument as MirTemporary)))
+            break;
+
+        case MirOpcode.Int32SMod:
+        case MirOpcode.Int64SMod:
+        case MirOpcode.Int32UMod:
+        case MirOpcode.Int64UMod:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) % context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
 
         case MirOpcode.Int32LessThan:
         case MirOpcode.Int64LessThan:
@@ -2108,9 +2154,56 @@ export class MirBuilder {
         return temp;
     }
 
+    int32NegAt(operand: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32Neg, operand, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
     int32AddAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
         let instruction = new MirInstruction(temp, MirOpcode.Int32Add, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32SubAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32Sub, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32MulAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32Mul, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    int32SDivAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32SDiv, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    int32UDivAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32UDiv, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32SModAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32SMod, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    int32UModAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().int32Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32UMod, left, right, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }
