@@ -458,7 +458,8 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         return constantType.emitFloatConstantWithBuilder(this.prologueBuilder, constant.value, constant.sourcePosition)
     }
     visitConstantLiteralBooleanValue(constant: hir.HIRConstantLiteralBooleanValue): any {
-        throw new Error('TODO: HirFunction2Mir visitConstantLiteralBooleanValue');
+        let constantType = this.packageTranslator.translateValue(constant.getType()) as mir.MirType;
+        return constantType.emitBooleanConstantWithBuilder(this.prologueBuilder, constant.value, constant.sourcePosition)
     }
     visitConstantLiteralCharacterValue(constant: hir.HIRConstantLiteralCharacterValue): any {
         let constantType = this.packageTranslator.translateValue(constant.getType()) as mir.MirType;

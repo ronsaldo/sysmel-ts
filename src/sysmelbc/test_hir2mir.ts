@@ -66,6 +66,62 @@ export function runTests() {
         tearDown();
     }
 
+    // Boolean false constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Boolean8 := false");
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, false);
+        tearDown();
+    }
+
+    // Boolean true constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Boolean8 := true");
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, true);
+        tearDown();
+    }
+
+    // Boolean not
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function not(v: Boolean8) => Boolean8 := v not");
+
+        assert.strictEqual(mirFunction.evaluateWithArguments([false]), true);
+        assert.strictEqual(mirFunction.evaluateWithArguments([true]), false);
+
+        tearDown();
+    }
+
+    // Boolean and
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function and(a: Boolean8. b: Boolean8) => Boolean8 := a && b");
+
+        assert.strictEqual(mirFunction.evaluateWithArguments([false, false]), false);
+        assert.strictEqual(mirFunction.evaluateWithArguments([false, true]), false);
+        assert.strictEqual(mirFunction.evaluateWithArguments([true, false]), false);
+        assert.strictEqual(mirFunction.evaluateWithArguments([true, true]), true);
+
+        tearDown();
+    }
+
+    // Boolean or
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function or(a: Boolean8. b: Boolean8) => Boolean8 := a || b");
+
+        assert.strictEqual(mirFunction.evaluateWithArguments([false, false]), false);
+        assert.strictEqual(mirFunction.evaluateWithArguments([false, true]), true);
+        assert.strictEqual(mirFunction.evaluateWithArguments([true, false]), true);
+        assert.strictEqual(mirFunction.evaluateWithArguments([true, true]), true);
+
+        tearDown();
+    }
+
+
     // Integer constant
     {
         setUp();
@@ -86,7 +142,15 @@ export function runTests() {
     {
         setUp();
         let mirFunction = compileFunctionToMir("public function constant() => Float := 42.5");
-        console.log(mirFunction.fullPrintString());
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, 42.5);
+        tearDown();
+    }
+
+    // Float32 constant
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function constant() => Float32 := 42.5f32");
         let result = mirFunction.evaluateWithArguments([]);
         assert.strictEqual(result, 42.5);
         tearDown();
