@@ -156,10 +156,14 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         return new mir.MirIntegerConstantValue(constant.value);
     }
     visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        let mirConstant = new mir.MirStringConstantValue(constant.value);
+        this.currentMirPackage?.addElement(mirConstant);
+        return mirConstant;
     }
     visitConstantLiteralSymbolValue(constant: hir.HIRConstantLiteralSymbolValue): any {
-        throw new Error('TODO: HirPackage2Mir')
+        let mirConstant = new mir.MirSymbolConstantValue(constant.value);
+        this.currentMirPackage?.addElement(mirConstant);
+        return mirConstant;
     }
     visitConstantLiteralVoidValue(constant: hir.HIRConstantLiteralVoidValue): any {
         return new mir.MirVoidConstantValue();
@@ -465,10 +469,14 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         return constantType.emitCharacterConstantWithBuilder(this.prologueBuilder, constant.value, constant.sourcePosition)
     }
     visitConstantLiteralStringValue(constant: hir.HIRConstantLiteralStringValue): any {
-        throw new Error('TODO: HirFunction2Mir visitConstantLiteralStringValue');
+        let globalConstant = this.packageTranslator.translateValue(constant);
+        assert.ok(globalConstant.isGlobalConstant());
+        return this.prologueBuilder.constGlobalCGPointerAt(globalConstant as mir.MirGlobalConstant, constant.sourcePosition);
     }
     visitConstantLiteralSymbolValue(constant: hir.HIRConstantLiteralSymbolValue): any {
-        throw new Error('TODO: HirFunction2Mir visitConstantLiteralSymbolValue');
+        let globalConstant = this.packageTranslator.translateValue(constant);
+        assert.ok(globalConstant.isGlobalConstant());
+        return this.prologueBuilder.constGlobalCGPointerAt(globalConstant as mir.MirGlobalConstant, constant.sourcePosition);
     }
     visitConstantLiteralVoidValue(constant: hir.HIRConstantLiteralVoidValue): any {
         throw new Error('TODO: HirFunction2Mir visitConstantLiteralVoidValue');

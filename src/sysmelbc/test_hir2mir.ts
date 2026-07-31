@@ -308,5 +308,27 @@ export function runTests() {
         tearDown();
     }
 
+    // String constant
+    {
+        setUp();
 
+        let mirFunction = compileFunctionToMir('public function stringConstant() => String := "Hello World"');
+        
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, "Hello World");
+        
+        tearDown();
+    }
+
+    // Symbol constant
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir('public function stringConstant() => Symbol := #test');
+        
+        let result = mirFunction.evaluateWithArguments([]);
+        assert.strictEqual(result, 'test');
+        
+        tearDown();
+    }
 }

@@ -97,6 +97,8 @@ export abstract class MirVisitor {
     abstract visitFloatConstantValue(instruction: MirFloatConstantValue): any;
     abstract visitVoidConstantValue(instruction: MirVoidConstantValue): any;
     abstract visitNilConstantValue(instruction: MirNilConstantValue): any;
+    abstract visitStringConstantValue(instruction: MirStringConstantValue): any;
+    abstract visitSymbolConstantValue(instruction: MirSymbolConstantValue): any;
 
     abstract visitVoidType(type: MirVoidType): any;
     abstract visitBasicBlockType(type: MirBasicBlockType): any;
@@ -502,6 +504,10 @@ export abstract class MirValue {
         return false;
     }
 
+    isGlobalConstant(): boolean {
+        return false;
+    }
+
     isImportedFunction(): boolean {
         return false;
     }
@@ -652,6 +658,9 @@ export class MirImportedFunction extends MirPackageElement {
 }
 
 export abstract class MirGlobalConstant extends MirPackageElement {
+    isGlobalConstant() {
+        return true;
+    }
 }
 
 export abstract class MirConstantValue extends MirValue {
@@ -752,6 +761,56 @@ export class MirNilConstantValue extends MirConstantValue {
 
     toString(): string {
         return 'nil';
+    }
+}
+
+export class MirStringConstantValue extends MirGlobalConstant {
+    value: string;
+
+    constructor(value: string) {
+        super(null);
+        this.value = value;
+    }
+
+    accept(visitor: MirVisitor) {
+        return visitor.visitStringConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return this.value;
+    }
+
+    toString(): string {
+        return 'string ' + this.value;
+    }
+
+    fullPrintString(): string {
+        return this.toString();
+    }
+}
+
+export class MirSymbolConstantValue extends MirGlobalConstant {
+    value: string;
+
+    constructor(value: string) {
+        super(null);
+        this.value = value;
+    }
+
+    accept(visitor: MirVisitor) {
+        return visitor.visitSymbolConstantValue(this);
+    }
+
+    evaluateAsConstantValue(): any {
+        return this.value;
+    }
+
+    toString(): string {
+        return 'symbol ' + this.value;
+    }
+
+    fullPrintString(): string {
+        return this.toString();
     }
 }
 
@@ -2702,6 +2761,13 @@ export class MirBuilder {
         this.addInstruction(instruction);
         return temp;
     }
+    constGlobalCGPointerAt(globalConstant: MirGlobalConstant, sourcePosition: AbstractSourcePosition) : MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.ConstGCPointer, globalConstant, null, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
     constBooleanAt(value: boolean, sourcePosition: AbstractSourcePosition) : MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().gcPointerType, sourcePosition, null);
         let constant = new MirBooleanConstantValue(value);
