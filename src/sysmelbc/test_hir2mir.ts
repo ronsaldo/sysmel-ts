@@ -236,12 +236,36 @@ export function runTests() {
         setUp();
 
         let mirFunction = compileFunctionToMir("public function bitwise(a: Int32. b: Int32. c: Int32. d: Int32. e: Int32. f: Int32) => Int32 := a bitInvert & b | c ^ d << e >> f");
-        console.log(mirFunction.fullPrintString());
         
         let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6]);
         assert.strictEqual(result, 3);
         
         tearDown();
     }
+
+    // UInt32 arithmetic
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function arithmetic(a: UInt32. b: UInt32. c: UInt32. d: UInt32. e: UInt32) => UInt32 := a negated + b - ((c * d) // e)");
+        
+        let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5]);
+        assert.strictEqual(result, -1);
+        
+        tearDown();
+    }
+
+    // UInt32 bitwise
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function bitwise(a: UInt32. b: UInt32. c: UInt32. d: UInt32. e: UInt32. f: UInt32) => UInt32 := a bitInvert & b | c ^ d << e >> f");
+        
+        let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6]);
+        assert.strictEqual(result, 3);
+        
+        tearDown();
+    }
+
 
 }

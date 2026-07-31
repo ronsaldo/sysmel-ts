@@ -200,6 +200,7 @@ export class MirContext {
     addPrimitiveTranslators(): void {
         this.addBoolean8Primitives();
         this.addInt32Primitives();
+        this.addUInt32Primitives();
     }
 
     addBoolean8Primitives(): void {
@@ -209,6 +210,7 @@ export class MirContext {
     }
 
     addInt32Primitives(): void {
+        // Unary
         this.primitiveTranslatorMap['Int32::negated'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, operand: MirTemporary) => {
             return builder.int32NegAt(operand, sourcePosition)
         });
@@ -216,6 +218,7 @@ export class MirContext {
             return builder.int32BitNotAt(operand, sourcePosition)
         });
 
+        // Arithmetic
         this.primitiveTranslatorMap['Int32::+'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
             return builder.int32AddAt(left, right, sourcePosition);
         });
@@ -232,6 +235,7 @@ export class MirContext {
             return builder.int32SModAt(left, right, sourcePosition);
         });
 
+        // Bitwise and logical
         this.primitiveTranslatorMap['Int32::&'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
             return builder.int32BitAndAt(left, right, sourcePosition);
         });
@@ -247,11 +251,90 @@ export class MirContext {
         this.primitiveTranslatorMap['Int32::>>'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
             return builder.int32AShiftRightAt(left, right, sourcePosition);
         });
-
+        
+        // Comparisons
+        this.primitiveTranslatorMap['Int32::='] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32EqualsAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::~'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32NotEqualsAt(left, right, sourcePosition);
+        });
         this.primitiveTranslatorMap['Int32::<'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
             return builder.int32LessThanAt(left, right, sourcePosition);
         });
+        this.primitiveTranslatorMap['Int32::<=)'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32LessOrEqualsAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::>'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32GreaterThanAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['Int32::>=)'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32GreaterOrEqualsAt(left, right, sourcePosition);
+        });
+    }
 
+    addUInt32Primitives(): void {
+        // Unary
+        this.primitiveTranslatorMap['UInt32::negated'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, operand: MirTemporary) => {
+            return builder.int32NegAt(operand, sourcePosition)
+        });
+        this.primitiveTranslatorMap['UInt32::bitInvert'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, operand: MirTemporary) => {
+            return builder.int32BitNotAt(operand, sourcePosition)
+        });
+
+        // Arithmetic
+        this.primitiveTranslatorMap['UInt32::+'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32AddAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::-'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32SubAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::*'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32MulAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32:://'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32UDivAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::%'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32UModAt(left, right, sourcePosition);
+        });
+
+        // Bitwise and logical
+        this.primitiveTranslatorMap['UInt32::&'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32BitAndAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::|'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32BitOrAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::^'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32BitXorAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::<<'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32ShiftLeftAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::>>'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32LShiftRightAt(left, right, sourcePosition);
+        });
+        
+        // Comparisons
+        this.primitiveTranslatorMap['UInt32::='] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32EqualsAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::~'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.int32NotEqualsAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::<'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.uint32LessThanAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::<=)'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.uint32LessOrEqualsAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::>'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.uint32GreaterThanAt(left, right, sourcePosition);
+        });
+        this.primitiveTranslatorMap['UInt32::>=)'] = this.makeBuilderTranslator((builder: MirBuilder, sourcePosition: AbstractSourcePosition, left: MirTemporary, right: MirTemporary) => {
+            return builder.uint32GreaterOrEqualsAt(left, right, sourcePosition);
+        });
     }
 
     makeBuilderTranslator(translationFunction: any): (hir2mir: any, callInstruction: hir.HIRCallInstruction) => MirValue {
@@ -972,11 +1055,45 @@ export class MirInstruction extends MirFunctionLocal {
             context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) >> context.getTempValue(this.secondArgument as MirTemporary))
             break;
 
+        // Comparisons
+        case MirOpcode.Int32Equals:
+        case MirOpcode.Int64Equals:
+        case MirOpcode.PointerEquals:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) === context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32NotEquals:
+        case MirOpcode.Int64NotEquals:
+        case MirOpcode.PointerNotEquals:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) !== context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
         case MirOpcode.Int32LessThan:
         case MirOpcode.Int64LessThan:
         case MirOpcode.UInt32LessThan:
         case MirOpcode.UInt64LessThan:
             context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) < context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32LessOrEquals:
+        case MirOpcode.Int64LessOrEquals:
+        case MirOpcode.UInt32LessOrEquals:
+        case MirOpcode.UInt64LessOrEquals:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) <= context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32GreaterThan:
+        case MirOpcode.Int64GreaterThan:
+        case MirOpcode.UInt32GreaterThan:
+        case MirOpcode.UInt64GreaterThan:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) > context.getTempValue(this.secondArgument as MirTemporary))
+            break;
+
+        case MirOpcode.Int32GreaterOrEqual:
+        case MirOpcode.Int64GreaterOrEqual:
+        case MirOpcode.UInt32GreaterOrEqual:
+        case MirOpcode.UInt64GreaterOrEqual:
+            context.setTempValue(this.result as MirTemporary, context.getTempValue(this.firstArgument as MirTemporary) >= context.getTempValue(this.secondArgument as MirTemporary))
             break;
 
         // Constants
@@ -2306,13 +2423,68 @@ export class MirBuilder {
         return temp;
     }
 
+    int32EqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32Equals, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    int32NotEqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32NotEquals, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
     int32LessThanAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
         let instruction = new MirInstruction(temp, MirOpcode.Int32LessThan, left, right, sourcePosition, null);
         this.addInstruction(instruction);
         return temp;
     }
-    
+    int32LessOrEqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32LessOrEquals, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    int32GreaterThanAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32GreaterThan, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    int32GreaterOrEqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.Int32GreaterOrEqual, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
+    uint32LessThanAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.UInt32LessThan, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    uint32LessOrEqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.UInt32LessOrEquals, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    uint32GreaterThanAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.UInt32GreaterThan, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+    uint32GreaterOrEqualsAt(left: MirTemporary, right: MirTemporary, sourcePosition: AbstractSourcePosition): MirTemporary {
+        let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
+        let instruction = new MirInstruction(temp, MirOpcode.UInt32GreaterOrEqual, left, right, sourcePosition, null);
+        this.addInstruction(instruction);
+        return temp;
+    }
+
     constBoolean8At(value: boolean, sourcePosition: AbstractSourcePosition) : MirTemporary {
         let temp = this.mirFunction.newTemporary(this.getContext().boolean8Type, sourcePosition, null);
         let constant = new MirBooleanConstantValue(value);
