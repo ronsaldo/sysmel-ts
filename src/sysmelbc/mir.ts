@@ -339,6 +339,52 @@ export class MirContext {
     }
 
     addCalloutPrimitives(): void {
+        // IO
+        this.addCalloutPrimitive('IO::print', '__sysmel_io_print', (x: any) => process.stdout.write(x.toString()));
+        this.addCalloutPrimitive('IO::printLine', '__sysmel_io_printLine', (x: any) => console.log(x.toString()));
+        this.addCalloutPrimitive('IO::write', '__sysmel_io_write', (x: string) => process.stdout.write(x));
+        this.addCalloutPrimitive('IO::writeLine', '__sysmel_io_writeLine', (x: string) => console.log(x));
+
+        // Characters
+        this.addCalloutPrimitive('Character::negated', '__sysmel_character_negated', (x: number) => -x);
+        this.addCalloutPrimitive('Character::bitInvert', '__sysmel_character_bitInvert', (x: number) => 1 - x);
+
+        this.addCalloutPrimitive('Character::+', '__sysmel_character_add', (x: number, y: number) => x + y);
+        this.addCalloutPrimitive('Character::-', '__sysmel_character_sub', (x: number, y: number) => x - y);
+        this.addCalloutPrimitive('Character::*', '__sysmel_character_mul', (x: number, y: number) => x * y);
+        this.addCalloutPrimitive('Character:://', '__sysmel_character_div', (x: number, y: number) => Math.trunc(x / y));
+        this.addCalloutPrimitive('Character::%', '__sysmel_character_mod', (x: number, y: number) => x % y);
+
+        this.addCalloutPrimitive('Character::&', '__sysmel_character_and', (x: number, y: number) => x & y);
+        this.addCalloutPrimitive('Character::|', '__sysmel_character_or', (x: number, y: number) => x | y);
+        this.addCalloutPrimitive('Character::^', '__sysmel_character_xor', (x: number, y: number) => x ^ y);
+        this.addCalloutPrimitive('Character::<<', '__sysmel_character_shiftLeft', (x: number, y: number) => x << y);
+        this.addCalloutPrimitive('Character::>>', '__sysmel_character_shiftRight', (x: number, y: number) => x >> y);
+
+        this.addCalloutPrimitive('Character::=', '__sysmel_character_equals', (x: number, y: number) => x === y);
+        this.addCalloutPrimitive('Character::~=', '__sysmel_character_notEquals', (x: number, y: number) => x !== y);
+        //this.addCalloutPrimitive('Character::hash', '__sysmel_character_hash', (x: number, y: number) => hash);
+
+        this.addCalloutPrimitive('Character::<',  '__sysmel_character_lessThan', (x: number, y: number) => x < y);
+        this.addCalloutPrimitive('Character::<=', '__sysmel_character_lessOrEquals', (x: number, y: number) => x <= y);
+        this.addCalloutPrimitive('Character::>',  '__sysmel_character_greaterThan', (x: number, y: number) => x > y);
+        this.addCalloutPrimitive('Character::>=', '__sysmel_character_greaterOrEquals', (x: number, y: number) => x >= y);
+
+        this.addCalloutPrimitive('Character::asInt8',  '__sysmel_character_asInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Character::asInt16', '__sysmel_character_asInt16', (x: number) => x);
+        this.addCalloutPrimitive('Character::asInt32', '__sysmel_character_asInt32', (x: number) => x);
+        this.addCalloutPrimitive('Character::asInt64', '__sysmel_character_asInt64', (x: number) => x);
+        
+        this.addCalloutPrimitive('Character::asUInt8',  '__sysmel_character_asUInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Character::asUInt16', '__sysmel_character_asUInt16', (x: number) => x);
+        this.addCalloutPrimitive('Character::asUInt32', '__sysmel_character_asUInt32', (x: number) => x);
+        this.addCalloutPrimitive('Character::asUInt64', '__sysmel_character_asUInt64', (x: number) => x);
+
+        this.addCalloutPrimitive('Character::asChar8',  '__sysmel_character_asChar8',  (x: number) => x);
+        this.addCalloutPrimitive('Character::asChar16', '__sysmel_character_asChar16', (x: number) => x);
+        this.addCalloutPrimitive('Character::asChar32', '__sysmel_character_asChar32', (x: number) => x);
+
+        // Integers
         this.addCalloutPrimitive('Integer::negated', '__sysmel_integer_negated', (x: number) => -x);
         this.addCalloutPrimitive('Integer::bitInvert', '__sysmel_integer_bitInvert', (x: number) => 1 - x);
 
@@ -353,6 +399,62 @@ export class MirContext {
         this.addCalloutPrimitive('Integer::^', '__sysmel_integer_xor', (x: number, y: number) => x ^ y);
         this.addCalloutPrimitive('Integer::<<', '__sysmel_integer_shiftLeft', (x: number, y: number) => x << y);
         this.addCalloutPrimitive('Integer::>>', '__sysmel_integer_shiftRight', (x: number, y: number) => x >> y);
+
+        this.addCalloutPrimitive('Integer::=', '__sysmel_integer_equals', (x: number, y: number) => x === y);
+        this.addCalloutPrimitive('Integer::~=', '__sysmel_integer_notEquals', (x: number, y: number) => x !== y);
+        //this.addCalloutPrimitive('Integer::hash', '__sysmel_integer_hash', (x: number, y: number) => hash);
+
+        this.addCalloutPrimitive('Integer::<',  '__sysmel_integer_lessThan', (x: number, y: number) => x < y);
+        this.addCalloutPrimitive('Integer::<=', '__sysmel_integer_lessOrEquals', (x: number, y: number) => x <= y);
+        this.addCalloutPrimitive('Integer::>',  '__sysmel_integer_greaterThan', (x: number, y: number) => x > y);
+        this.addCalloutPrimitive('Integer::>=', '__sysmel_integer_greaterOrEquals', (x: number, y: number) => x >= y);
+
+        this.addCalloutPrimitive('Integer::asInt8',  '__sysmel_integer_asInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Integer::asInt16', '__sysmel_integer_asInt16', (x: number) => x);
+        this.addCalloutPrimitive('Integer::asInt32', '__sysmel_integer_asInt32', (x: number) => x);
+        this.addCalloutPrimitive('Integer::asInt64', '__sysmel_integer_asInt64', (x: number) => x);
+        
+        this.addCalloutPrimitive('Integer::asUInt8',  '__sysmel_integer_asUInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Integer::asUInt16', '__sysmel_integer_asUInt16', (x: number) => x);
+        this.addCalloutPrimitive('Integer::asUInt32', '__sysmel_integer_asUInt32', (x: number) => x);
+        this.addCalloutPrimitive('Integer::asUInt64', '__sysmel_integer_asUInt64', (x: number) => x);
+
+        this.addCalloutPrimitive('Integer::asChar8',  '__sysmel_integer_asChar8',  (x: number) => x);
+        this.addCalloutPrimitive('Integer::asChar16', '__sysmel_integer_asChar16', (x: number) => x);
+        this.addCalloutPrimitive('Integer::asChar32', '__sysmel_integer_asChar32', (x: number) => x);
+
+        // Float
+        this.addCalloutPrimitive('Float::negated', '__sysmel_float_negated', (x: number) => -x);
+        this.addCalloutPrimitive('Float::sqrt', '__sysmel_float_sqrt', (x: number) => Math.sqrt(x));
+
+        this.addCalloutPrimitive('Float::+', '__sysmel_float_add', (x: number, y: number) => x + y);
+        this.addCalloutPrimitive('Float::-', '__sysmel_float_sub', (x: number, y: number) => x - y);
+        this.addCalloutPrimitive('Float::*', '__sysmel_float_mul', (x: number, y: number) => x * y);
+        this.addCalloutPrimitive('Float:://', '__sysmel_float_div', (x: number, y: number) => Math.trunc(x / y));
+        this.addCalloutPrimitive('Float::%', '__sysmel_float_mod', (x: number, y: number) => x % y);
+
+        this.addCalloutPrimitive('Float::=', '__sysmel_float_equals', (x: number, y: number) => x === y);
+        this.addCalloutPrimitive('Float::~=', '__sysmel_float_notEquals', (x: number, y: number) => x !== y);
+        //this.addCalloutPrimitive('Float::hash', '__sysmel_float_hash', (x: number, y: number) => hash);
+
+        this.addCalloutPrimitive('Float::<',  '__sysmel_float_lessThan', (x: number, y: number) => x < y);
+        this.addCalloutPrimitive('Float::<=', '__sysmel_float_lessOrEquals', (x: number, y: number) => x <= y);
+        this.addCalloutPrimitive('Float::>',  '__sysmel_float_greaterThan', (x: number, y: number) => x > y);
+        this.addCalloutPrimitive('Float::>=', '__sysmel_float_greaterOrEquals', (x: number, y: number) => x >= y);
+
+        this.addCalloutPrimitive('Float::asInt8',  '__sysmel_float_asInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Float::asInt16', '__sysmel_float_asInt16', (x: number) => x);
+        this.addCalloutPrimitive('Float::asInt32', '__sysmel_float_asInt32', (x: number) => x);
+        this.addCalloutPrimitive('Float::asInt64', '__sysmel_float_asInt64', (x: number) => x);
+        
+        this.addCalloutPrimitive('Float::asUInt8',  '__sysmel_float_asUInt8',  (x: number) => x);
+        this.addCalloutPrimitive('Float::asUInt16', '__sysmel_float_asUInt16', (x: number) => x);
+        this.addCalloutPrimitive('Float::asUInt32', '__sysmel_float_asUInt32', (x: number) => x);
+        this.addCalloutPrimitive('Float::asUInt64', '__sysmel_float_asUInt64', (x: number) => x);
+
+        this.addCalloutPrimitive('Float::asChar8',  '__sysmel_float_asChar8',  (x: number) => x);
+        this.addCalloutPrimitive('Float::asChar16', '__sysmel_float_asChar16', (x: number) => x);
+        this.addCalloutPrimitive('Float::asChar32', '__sysmel_float_asChar32', (x: number) => x);
     }
 
     addCalloutPrimitive(primitiveName: string, runtimeName: string, implementation: any): void {
