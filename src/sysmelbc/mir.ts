@@ -347,6 +347,11 @@ export class MirContext {
         this.addCalloutPrimitive('IO::write', '__sysmel_io_write', (x: string) => process.stdout.write(x));
         this.addCalloutPrimitive('IO::writeLine', '__sysmel_io_writeLine', (x: string) => console.log(x));
 
+        // Strings
+        this.addCalloutPrimitive('String::size', '__sysmel_string_size', (x: string) => x.length);
+        this.addCalloutPrimitive('String::at:', '__sysmel_string_at', (x: string, index: number) => x.codePointAt(index));
+        this.addCalloutPrimitive('String::asSymbol', '__sysmel_string_asSymbol', (x: string) => x);
+
         // Characters
         this.addCalloutPrimitive('Character::negated', '__sysmel_character_negated', (x: number) => -x);
         this.addCalloutPrimitive('Character::bitInvert', '__sysmel_character_bitInvert', (x: number) => 1 - x);

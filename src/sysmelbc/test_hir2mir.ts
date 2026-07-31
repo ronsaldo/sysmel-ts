@@ -320,6 +320,44 @@ export function runTests() {
         tearDown();
     }
 
+    // String size
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir('public function stringSize(s: String) => Size := s size');
+        
+        let result = mirFunction.evaluateWithArguments(['Hello World']);
+        assert.strictEqual(result, 11);
+        
+        tearDown();
+    }
+
+
+    // String at
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir('public function stringAt(s: String) => Char8 := s at: 0sz');
+        
+        let result = mirFunction.evaluateWithArguments(['Hello World']);
+        assert.strictEqual(result, 72);
+        
+        tearDown();
+    }
+
+    // String asSymbol
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir('public function stringAsSymbol(s: String) => Symbol := s asSymbol');
+        
+        let result = mirFunction.evaluateWithArguments(['Hello World']);
+        assert.strictEqual(result, 'Hello World');
+        
+        tearDown();
+    }
+
+
     // Symbol constant
     {
         setUp();

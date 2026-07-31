@@ -2876,6 +2876,10 @@ export class HIRCoreTypes {
     float32Type: HIRPrimitiveType = new HIRPrimitiveType('Float32', 4, 4, this, getOrMakeEmptySourcePosition());
     float64Type: HIRPrimitiveType = new HIRPrimitiveType('Float64', 8, 8, this, getOrMakeEmptySourcePosition());
 
+    sizeType: HIRPrimitiveType;
+    intPointerType: HIRPrimitiveType;
+    uintPointerType: HIRPrimitiveType;
+
     dynamicType: HIRDynamicType     = new HIRDynamicType('Dynamic', this, getOrMakeEmptySourcePosition());
     undefinedType: HIRUndefinedType = new HIRUndefinedType('Undefined', this, getOrMakeEmptySourcePosition());
     voidType: HIRVoidType           = new HIRVoidType('Void', this, getOrMakeEmptySourcePosition());
@@ -2934,6 +2938,20 @@ export class HIRCoreTypes {
         this.coreValueList.push(['false', this.falseValue]);
         this.coreValueList.push(['true',  this.trueValue]);
         this.coreValueList.push(['nil',   this.nilValue]);
+
+        if(this.pointerSize == 4) {
+            this.sizeType        = this.uint32Type;
+            this.intPointerType  = this.int32Type;
+            this.uintPointerType = this.uint32Type;
+        } else {
+            this.sizeType        = this.uint64Type;
+            this.intPointerType  = this.int64Type;
+            this.uintPointerType = this.uint64Type;
+        }
+
+        this.coreValueList.push(['Size',  this.sizeType]);
+        this.coreValueList.push(['IntPointer', this.intPointerType]);
+        this.coreValueList.push(['UIntPointer', this.uintPointerType]);
 
         this.createCorePrimitiveMacros();
         this.createCorePrimitiveMetaBuilders();
@@ -3115,8 +3133,13 @@ export class HIRCoreTypes {
             return new HIRConstantLiteralIntegerValue(string.evaluateAsString().length, resultType, sourcePosition);
         }
 
+        function stringAsSymbol(string: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralSymbolValue(string.evaluateAsString(), resultType, sourcePosition);
+        }
+
         this.stringType.addPrimitiveMethod(new HIRPrimitiveFunction('at:', primitivePrefix + 'at:', this.getOrCreateSimpleFunctionType([this.stringType, this.getSizeType()], this.char8Type), stringAt, true, true, getOrMakeEmptySourcePosition()));
         this.stringType.addPrimitiveMethod(new HIRPrimitiveFunction('size', primitivePrefix + 'size', this.getOrCreateSimpleFunctionType([this.stringType], this.getSizeType()), stringSize, true, true, getOrMakeEmptySourcePosition()));
+        this.stringType.addPrimitiveMethod(new HIRPrimitiveFunction('asSymbol', primitivePrefix + 'asSymbol', this.getOrCreateSimpleFunctionType([this.stringType], this.symbolType), stringAsSymbol, true, true, getOrMakeEmptySourcePosition()));
     }
 
     createIntegerPrimitiveFunctions(integerType: HIRNominalType, isSigned: boolean) {
