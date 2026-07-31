@@ -324,7 +324,7 @@ export function runTests() {
     {
         setUp();
 
-        let mirFunction = compileFunctionToMir('public function stringConstant() => Symbol := #test');
+        let mirFunction = compileFunctionToMir('public function symbolConstant() => Symbol := #test');
         
         let result = mirFunction.evaluateWithArguments([]);
         assert.strictEqual(result, 'test');
