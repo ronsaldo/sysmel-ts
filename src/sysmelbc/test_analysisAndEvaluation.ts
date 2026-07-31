@@ -546,4 +546,14 @@ export function runTests() {
         assert.ok(value.evaluateAsBoolean());
     }
 
+    // String size
+    {
+        let value = evaluateTopLevelSourceString('"Hello World" size')
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual(value.evaluateAsInteger(), 11);
+
+        value = evaluateTopLevelSourceString('"Hello World" at: 1sz')
+        assert.ok(value.isConstantLiteralCharacterValue());
+        assert.strictEqual(value.evaluateAsInteger(), 101);
+    }
 }

@@ -2940,6 +2940,30 @@ export class HIRCoreTypes {
         this.createCorePrimitiveFunctions();
     }
 
+    getSizeType() {
+        if (this.pointerSize === 4) {
+            return this.uint32Type;
+        } else {
+            return this.uint64Type;
+        }
+    }
+
+    getUIntPointerType() {
+        if (this.pointerSize === 4) {
+            return this.uint32Type;
+        } else {
+            return this.uint64Type;
+        }
+    }
+
+    getIntPointerType() {
+        if (this.pointerSize === 4) {
+            return this.int32Type;
+        } else {
+            return this.int64Type;
+        }
+    }
+
     createCorePrimitiveMacros() {
         function error(macroContext: HIRMacroContext, errorMessage: parseTree.ParseTreeNode): parseTree.ParseTreeNode {
             return new parseTree.ParseTreeRuntimeErrorNode(macroContext.sourcePosition, errorMessage);
@@ -3009,6 +3033,7 @@ export class HIRCoreTypes {
     createCorePrimitiveFunctions() {
         this.createGlobalPrimitiveFunctions();
         this.createBooleanPrimitiveFunctions();
+        this.createStringPrimitiveFunctions();
 
         this.createIntegerPrimitiveFunctions(this.integerType, true);
         this.createIntegerPrimitiveFunctions(this.int32Type,  true);
@@ -3072,6 +3097,26 @@ export class HIRCoreTypes {
         this.boolean8Type.addPrimitiveMethod(new HIRPrimitiveFunction('not', primitivePrefix + 'not', this.getOrCreateSimpleFunctionType([this.boolean8Type], this.boolean8Type), booleanNot, true, true, getOrMakeEmptySourcePosition()))
         this.boolean8Type.addPrimitiveMacro(new HIRPrimitiveMacro('&&', this.primitiveMacroType, booleanAnd, getOrMakeEmptySourcePosition()))
         this.boolean8Type.addPrimitiveMacro(new HIRPrimitiveMacro('||', this.primitiveMacroType, booleanOr, getOrMakeEmptySourcePosition()))
+    }
+
+    createStringPrimitiveFunctions() {
+        let primitivePrefix = this.stringType.toString() + "::";
+
+        function stringAt(string: HIRValue, index: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            let stringValue = string.evaluateAsString();
+            let indexValue = index.evaluateAsInteger();
+            if(indexValue >= stringValue.length)
+                throw new Error('String #at: index is out of bounds');
+            
+            return new HIRConstantLiteralCharacterValue(stringValue.codePointAt(indexValue) as number, resultType, sourcePosition);
+        }
+
+        function stringSize(string: HIRValue, resultType: HIRType, sourcePosition: AbstractSourcePosition) {
+            return new HIRConstantLiteralIntegerValue(string.evaluateAsString().length, resultType, sourcePosition);
+        }
+
+        this.stringType.addPrimitiveMethod(new HIRPrimitiveFunction('at:', primitivePrefix + 'at:', this.getOrCreateSimpleFunctionType([this.stringType, this.getSizeType()], this.char8Type), stringAt, true, true, getOrMakeEmptySourcePosition()));
+        this.stringType.addPrimitiveMethod(new HIRPrimitiveFunction('size', primitivePrefix + 'size', this.getOrCreateSimpleFunctionType([this.stringType], this.getSizeType()), stringSize, true, true, getOrMakeEmptySourcePosition()));
     }
 
     createIntegerPrimitiveFunctions(integerType: HIRNominalType, isSigned: boolean) {
@@ -3309,6 +3354,11 @@ export class HIRCoreTypes {
 
         numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('f32', primitivePrefix + 'f32', this.getOrCreateSimpleFunctionType([numericalType], this.float32Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
         numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('f64', primitivePrefix + 'f64', this.getOrCreateSimpleFunctionType([numericalType], this.float64Type), asPrimitiveFloat, true, true, getOrMakeEmptySourcePosition()))
+
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('sz', primitivePrefix + 'sz', this.getOrCreateSimpleFunctionType([numericalType], this.getSizeType()), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('iptr', primitivePrefix + 'iptr', this.getOrCreateSimpleFunctionType([numericalType], this.getIntPointerType()), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+        numericalType.addPrimitiveMethod(new HIRPrimitiveFunction('uptr', primitivePrefix + 'uptr', this.getOrCreateSimpleFunctionType([numericalType], this.getUIntPointerType()), asPrimitiveInteger, true, true, getOrMakeEmptySourcePosition()))
+
     }
 
     getOrCreateSimpleFunctionType(argumentTypes: HIRType[], resultType: HIRType) : HIRSimpleFunctionType {
