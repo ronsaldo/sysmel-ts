@@ -201,6 +201,7 @@ export class MirContext {
         this.addBoolean8Primitives();
         this.addInt32Primitives();
         this.addUInt32Primitives();
+        this.addCalloutPrimitives()
     }
 
     addBoolean8Primitives(): void {
@@ -337,6 +338,31 @@ export class MirContext {
         });
     }
 
+    addCalloutPrimitives(): void {
+        this.addCalloutPrimitive('Integer::negated', '__sysmel_integer_negated', (x: number) => -x);
+        this.addCalloutPrimitive('Integer::bitInvert', '__sysmel_integer_bitInvert', (x: number) => 1 - x);
+
+        this.addCalloutPrimitive('Integer::+', '__sysmel_integer_add', (x: number, y: number) => x + y);
+        this.addCalloutPrimitive('Integer::-', '__sysmel_integer_sub', (x: number, y: number) => x - y);
+        this.addCalloutPrimitive('Integer::*', '__sysmel_integer_mul', (x: number, y: number) => x * y);
+        this.addCalloutPrimitive('Integer:://', '__sysmel_integer_div', (x: number, y: number) => Math.trunc(x / y));
+        this.addCalloutPrimitive('Integer::%', '__sysmel_integer_mod', (x: number, y: number) => x % y);
+
+        this.addCalloutPrimitive('Integer::&', '__sysmel_integer_and', (x: number, y: number) => x & y);
+        this.addCalloutPrimitive('Integer::|', '__sysmel_integer_or', (x: number, y: number) => x | y);
+        this.addCalloutPrimitive('Integer::^', '__sysmel_integer_xor', (x: number, y: number) => x ^ y);
+        this.addCalloutPrimitive('Integer::<<', '__sysmel_integer_shiftLeft', (x: number, y: number) => x << y);
+        this.addCalloutPrimitive('Integer::>>', '__sysmel_integer_shiftRight', (x: number, y: number) => x >> y);
+    }
+
+    addCalloutPrimitive(primitiveName: string, runtimeName: string, implementation: any): void {
+        let primitiveTranslator = (hir2mir: any, callInstruction: hir.HIRCallInstruction) => {
+            return hir2mir.callRuntimeFunctionWithNameAndImplementation(callInstruction, runtimeName, implementation)
+        }
+        
+        this.primitiveTranslatorMap[primitiveName] = primitiveTranslator;
+    }
+
     makeBuilderTranslator(translationFunction: any): (hir2mir: any, callInstruction: hir.HIRCallInstruction) => MirValue {
         return (hir2mir: any, callInstruction: hir.HIRCallInstruction) => {
             let callArguments: MirValue[] = [];
@@ -397,6 +423,7 @@ export class MirPackage extends MirValue {
     elementTable: MirPackageElement[] = [];
     anonSymbolCount: number = 0
     translatedFunctionMap: Map<hir.HIRFunction, MirFunction> = new Map();
+    translatedPrimitiveMap: Record<string, MirImportedFunction> = {}
 
     constructor(context: MirContext, name: string) {
         super();
@@ -431,6 +458,18 @@ export class MirPackage extends MirValue {
 
     getSymbolName(): string {
         return this.name;
+    }
+
+    getOrCreateRuntimePrimitiveNamedWithImplementation(primitiveName: string, implementation: any) : MirImportedFunction {
+        if (primitiveName in this.translatedPrimitiveMap)
+            return this.translatedPrimitiveMap[primitiveName] as MirImportedFunction;
+
+        let primitive = new MirImportedFunction(primitiveName);
+        primitive.isExternC = true;
+        primitive.implementation = implementation;
+        this.addElement(primitive);
+        this.translatedPrimitiveMap[primitiveName] = primitive;
+        return primitive;
     }
 
     fullPrintString(): string {
@@ -484,12 +523,25 @@ export abstract class MirPackageElement extends MirValue {
 }
 
 export class MirImportedFunction extends MirPackageElement {
+    implementation:any | null = null;
+
     accept(visitor: MirVisitor): any {
         return visitor.visitImportedFunction(this);
     }
 
     isImportedFunction(): boolean {
         return true;
+    }
+
+    evaluateWithArguments(callArguments: any[]): any {
+        if(!this.implementation)
+            throw new Error(`Imported funtion ${this.toString()} does not have an implementation.`);
+
+        return this.implementation(...callArguments);
+    }
+
+    toString(): string {
+        return this.getSymbolName();
     }
 
     fullPrintString(): string {

@@ -156,6 +156,47 @@ export function runTests() {
         tearDown();
     }
 
+    // Integer identity function
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function identity(value: Integer) => Integer := value");
+        let result = mirFunction.evaluateWithArguments([42]);
+        assert.strictEqual(result, 42);
+        tearDown();
+    }
+
+    // Integer sum function
+    {
+        setUp();
+        let mirFunction = compileFunctionToMir("public function sum(a: Integer. b: Integer) => Integer := a + b");
+        let result = mirFunction.evaluateWithArguments([1, 2]);
+        assert.strictEqual(result, 3);
+        tearDown();
+    }
+
+    // Integer arithmetic
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function arithmetic(a: Integer. b: Integer. c: Integer. d: Integer. e: Integer) => Integer := a negated + b - ((c * d) // e)");
+        let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5]);
+        assert.strictEqual(result, -1);
+        
+        tearDown();
+    }
+
+    // Integer bitwise
+    {
+        setUp();
+
+        let mirFunction = compileFunctionToMir("public function bitwise(a: Integer. b: Integer. c: Integer. d: Integer. e: Integer. f: Integer) => Integer := a bitInvert & b | c ^ d << e >> f");
+        
+        let result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6]);
+        assert.strictEqual(result, 3);
+        
+        tearDown();
+    }
+
     // Int32 identity function
     {
         setUp();

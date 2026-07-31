@@ -280,7 +280,6 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitMetaBuilder(metaBuilder: hir.HIRMetaBuilder): any {
         throw new Error('Not supported')
     }
-
 }
 
 export class HirFunction2Mir extends hir.HIRVisitor {
@@ -570,6 +569,28 @@ export class HirFunction2Mir extends hir.HIRVisitor {
 
         let callType = this.packageTranslator.translateValue(instruction.type) as mir.MirType;
         return callType.emitCallWithBuilder(this.builder, functional, instruction.sourcePosition);
+    }
+
+    callRuntimeFunctionWithNameAndImplementation(instruction: hir.HIRCallInstruction, runtimeName: string, implementation: any) {
+        let mirPackage = this.packageTranslator.currentMirPackage;
+        if(!mirPackage)
+            throw new Error('Expected a valid package.');
+
+        let primitive = mirPackage.getOrCreateRuntimePrimitiveNamedWithImplementation(runtimeName, implementation);
+        this.builder.beginCallAt(instruction.sourcePosition);
+        for(let i = 0; i < instruction.callArguments.length; ++i) {
+            let argument = instruction.callArguments[i];
+            if(!argument)
+                throw new Error('Expected an argument.');
+
+            let argumentValue = this.translateValue(argument);
+            
+            let argumentType = this.packageTranslator.translateValue(argument.getType()) as mir.MirType
+            argumentType.emitCallArgumentWithBuilder(this.builder, argumentValue as mir.MirTemporary, argument.sourcePosition)
+        }
+
+        let callType = this.packageTranslator.translateValue(instruction.type) as mir.MirType;
+        return callType.emitCallWithBuilder(this.builder, primitive, instruction.sourcePosition);
     }
 
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
