@@ -97,6 +97,16 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         return mirType;
     }
 
+    visitField(field: hir.HIRField) {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+    visitClass(field: hir.HIRClass) {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+    visitMetaclass(field: hir.HIRMetaclass) {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+
     visitDynamicType(type: hir.HIRDynamicType): any {
         return this.mirContext.gcPointerType
     }
@@ -405,6 +415,15 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
     visitNominalType(type: hir.HIRNominalType): any {
         throw new Error('TODO: HirFunction2Mir');
+    }
+    visitField(field: hir.HIRField) {
+        throw new Error('TODO: HirFunction2Mir')
+    }
+    visitClass(field: hir.HIRClass) {
+        throw new Error('TODO: HirFunction2Mir')
+    }
+    visitMetaclass(field: hir.HIRMetaclass) {
+        throw new Error('TODO: HirFunction2Mir')
     }
     visitDynamicType(type: hir.HIRDynamicType): any {
         throw new Error('TODO: HirFunction2Mir');

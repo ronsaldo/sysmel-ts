@@ -20,6 +20,10 @@ export abstract class HIRVisitor {
     abstract visitDependentFunctionType(type: HIRDependentFunctionType): any;
     abstract visitSimpleFunctionType(type: HIRSimpleFunctionType): any;
 
+    abstract visitField(field: HIRField): any;
+    abstract visitClass(field: HIRClass): any;
+    abstract visitMetaclass(field: HIRMetaclass): any;
+
     abstract visitConstantLiteralIntegerValue(constant: HIRConstantLiteralIntegerValue): any;
     abstract visitConstantLiteralFloatValue(constant: HIRConstantLiteralFloatValue): any;
     abstract visitConstantLiteralBooleanValue(constant: HIRConstantLiteralBooleanValue): any;
@@ -506,6 +510,46 @@ export class HIRNominalType extends HIRType {
         return this.name;
     }
 }
+
+export class HIRField extends HIRValue {
+    name: string | null;
+    fieldType: HIRType;
+    isPublic: boolean;
+    coreTypes: HIRCoreTypes;
+
+    constructor(name: string | null, fieldType: HIRType, isPublic: boolean, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition)
+        this.name = name;
+        this.fieldType = fieldType;
+        this.isPublic = isPublic;
+        this.coreTypes = coreTypes;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitField(this);
+    }
+
+    getType(): HIRType {
+        return this.coreTypes.fieldType;
+    }
+
+}
+
+export abstract class HIRBehavior extends HIRNominalType {
+
+}
+
+export class HIRClass extends HIRBehavior {
+    
+}
+
+export class HIRMetaclass extends HIRBehavior {
+    
+}
+
+//    abstract visitField(field: HIRField): any;
+//    abstract visitClass(field: HIRClass): any;
+//    abstract visitMetaclass(field: HIRMetaclass): any;
 
 export class HIRDynamicType extends HIRType {
     name: string;
@@ -2887,6 +2931,7 @@ export class HIRCoreTypes {
 
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
+    fieldType: HIRNominalType = new HIRNominalType('Fiedl', this, getOrMakeEmptySourcePosition());
     macroContextType: HIRNominalType = new HIRNominalType('MacroContext', this, getOrMakeEmptySourcePosition());
     primitiveMacroType: HIRNominalType = new HIRNominalType('PrimitiveMacro', this, getOrMakeEmptySourcePosition());
     metaBuilderFactoryType: HIRNominalType = new HIRNominalType('MetaBuilderFactory', this, getOrMakeEmptySourcePosition());
