@@ -200,6 +200,22 @@ export abstract class HIRValue {
         return false;
     }
 
+    isField(): boolean {
+        return false;
+    }
+
+    isBehavior(): boolean {
+        return false;
+    }
+
+    isClass(): boolean {
+        return false;
+    }
+
+    isMetaclass(): boolean {
+        return false;
+    }
+
     isConstantValue() : boolean {
         return false;
     }
@@ -516,6 +532,10 @@ export class HIRField extends HIRValue {
     fieldType: HIRType;
     isPublic: boolean;
     coreTypes: HIRCoreTypes;
+    offset: number = -1;
+    size: number = -1;
+    index: number = -1;
+    owner: HIRValue | null = null;
 
     constructor(name: string | null, fieldType: HIRType, isPublic: boolean, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(sourcePosition)
@@ -533,13 +553,29 @@ export class HIRField extends HIRValue {
         return this.coreTypes.fieldType;
     }
 
+    isField(): boolean {
+        return true;
+    }
+
 }
 
 export abstract class HIRBehavior extends HIRNominalType {
+    isBehavior(): boolean {
+        return true;
+    }
 
 }
 
 export class HIRClass extends HIRBehavior {
+    //metaClass: HIRMetaclass;
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitClass(this);
+    }
+
+    isClass(): boolean {
+        return true;
+    }
     
 }
 
