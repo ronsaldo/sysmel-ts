@@ -589,6 +589,44 @@ export class HIREnumType extends HIRType {
     isEnumType(): boolean {
         return true;   
     }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = evaluator.visitSymbolNode(node.selector);
+        if(selector in this.valueTable) {
+            return this.valueTable[selector] as HIRValue
+        }
+
+        if(selector === 'value:') {
+            let valueArgument = node.sendArguments[0];
+            if(!valueArgument)
+                throw new Error('Expected a single argument for enum #value:');
+
+
+            let value = evaluator.visitNodeWithExpectedType(valueArgument, this.baseType);
+            return new HIRConstantEnum(null, value, this, node.sourcePosition);
+        }
+
+        return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
+    analyzeAndEvaluateMessageSendNodeOnType(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = evaluator.visitSymbolNode(node.selector);
+        if(selector === 'value') {
+            if(!receiver.isConstantEnum())
+                throw new Error('Expected a constant enum for extracting its value.')
+            
+            let constantEnum = receiver as HIRConstantEnum;
+            return constantEnum.value;
+        }
+        
+        return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
+    }
+
+    toString(): string {
+        if(this.name)
+            return this.name;
+        return super.toString();
+    }
 }
 
 export class HIRField extends HIRValue {
