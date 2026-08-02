@@ -508,10 +508,27 @@ export class HIRType extends HIRValue {
 
 }
 
+export class HIRPendingDefinitionBody {
+    evaluationContext: HIREvaluationContext;
+    definitionBody: parseTree.ParseTreeNode;
+
+    constructor(evaluationContext: HIREvaluationContext, definitionBody: parseTree.ParseTreeNode) {
+        this.evaluationContext = evaluationContext;
+        this.definitionBody = definitionBody;
+    }
+
+    evaluateForOwner(owner: HIRValue) {
+        let bodyContext = this.evaluationContext.clone();
+        bodyContext.environment = new HIRLexicalEnvironment(new HIROwnerEnvironment(this.evaluationContext.environment, owner));
+        return new AnalysisAndEvaluationPass(bodyContext).visitDecayedNode(this.definitionBody);
+    }
+}
+
 export class HIRNominalType extends HIRType {
     name: string | null;
     methodDictionary: Record<string, HIRValue> = {}
     defaultValue: HIRConstant | null = null;
+    pendingDefinitionBodies: HIRPendingDefinitionBody[] = [];
 
     constructor(name:string | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
@@ -520,6 +537,25 @@ export class HIRNominalType extends HIRType {
 
     accept(visitor: HIRVisitor): any {
         return visitor.visitNominalType(this);
+    }
+
+    addPendingDefinitionBody(evaluationContext: HIREvaluationContext, definitionBody: parseTree.ParseTreeNode) {
+        this.pendingDefinitionBodies.push(new HIRPendingDefinitionBody(evaluationContext, definitionBody));
+    }
+
+    ensureAnalysis(): void {
+        super.ensureAnalysis();
+        while(this.pendingDefinitionBodies.length !== 0) {
+            let toAnalyze = this.pendingDefinitionBodies;
+            this.pendingDefinitionBodies = [];
+
+            for(let i = 0; i < toAnalyze.length; ++i) {
+                let body = toAnalyze[i];
+                if(!body)
+                    throw new Error('Expected a pending body to analyze.');
+                body.evaluateForOwner(this);
+            }
+        }
     }
 
     getName() : string | null {
@@ -2933,6 +2969,29 @@ export class HIRPackageEnvironment extends HIREnvironment {
 
     lookupProgramEntityOwner(): HIRValue | null {
         return this.packageValue;
+    }
+}
+
+export class HIROwnerEnvironment extends HIREnvironment {
+    parent: HIREnvironment;
+    owner: HIRValue;
+
+    constructor(parent: HIREnvironment, owner: HIRValue) {
+        super();
+        this.parent = parent;
+        this.owner = owner;
+    }
+
+    lookSymbolRecursively(symbol: string): HIRValue | null {
+        return this.parent.lookSymbolRecursively(symbol);
+    }
+
+    lookReturnTypeRecursively(): HIRType | null {
+        return this.parent.lookReturnTypeRecursively()
+    }
+
+    lookupProgramEntityOwner(): HIRValue | null {
+        return this.owner;
     }
 }
 
