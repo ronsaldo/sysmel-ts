@@ -97,6 +97,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         return mirType;
     }
 
+    visitEnumType(type: hir.HIREnumType) {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+
     visitField(field: hir.HIRField) {
         throw new Error('TODO: HirPackage2Mir')
     }
@@ -185,6 +189,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitConstantLiteralParseTree(constant: hir.HIRConstantLiteralParseTree): any {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+
+    visitConstantEnum(type: hir.HIRConstantEnum) {
         throw new Error('TODO: HirPackage2Mir')
     }
     
@@ -416,6 +424,10 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     visitNominalType(type: hir.HIRNominalType): any {
         throw new Error('TODO: HirFunction2Mir');
     }
+    visitEnumType(type: hir.HIREnumType) {
+        throw new Error('TODO: HirFunction2Mir');        
+    }
+
     visitField(field: hir.HIRField) {
         throw new Error('TODO: HirFunction2Mir')
     }
@@ -516,7 +528,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     visitConstantTuple(type: hir.HIRConstantTuple): any {
         throw new Error('TODO: HirFunction2Mir');
     }
-
+    visitConstantEnum(type: hir.HIRConstantEnum) {
+        throw new Error('TODO: HirFunction2Mir');
+    }
     visitMacroContext(context: hir.HIRMacroContext): any {
         throw new Error('TODO: HirFunction2Mir');
     }

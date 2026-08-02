@@ -20,6 +20,8 @@ export abstract class HIRVisitor {
     abstract visitDependentFunctionType(type: HIRDependentFunctionType): any;
     abstract visitSimpleFunctionType(type: HIRSimpleFunctionType): any;
 
+    abstract visitEnumType(type: HIREnumType): any;
+
     abstract visitField(field: HIRField): any;
     abstract visitClass(field: HIRClass): any;
     abstract visitMetaclass(field: HIRMetaclass): any;
@@ -37,6 +39,7 @@ export abstract class HIRVisitor {
     
     abstract visitConstantAssociation(type: HIRConstantAssociation): any;
     abstract visitConstantTuple(type: HIRConstantTuple): any;
+    abstract visitConstantEnum(type: HIRConstantEnum): any;
 
     abstract visitMacroContext(context: HIRMacroContext): any;
     abstract visitPrimitiveMacro(macro: HIRPrimitiveMacro): any;
@@ -200,6 +203,10 @@ export abstract class HIRValue {
         return false;
     }
 
+    isEnumType(): boolean {
+        return false;
+    }
+
     isField(): boolean {
         return false;
     }
@@ -265,6 +272,10 @@ export abstract class HIRValue {
     }
 
     isConstantAssociation() : boolean {
+        return false;
+    }
+
+    isConstantEnum() : boolean {
         return false;
     }
 
@@ -524,6 +535,38 @@ export class HIRNominalType extends HIRType {
         if (!this.name)
             return '<AnonimousType>';
         return this.name;
+    }
+}
+
+export class HIREnumType extends HIRType {
+    name: string;
+    baseType: HIRType;
+    values: HIRConstantEnum[] = [];
+    valueTable: Record<string, HIRConstantEnum> = {}
+
+    constructor(name: string, baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition)
+        this.name = name;
+        this.baseType = baseType;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitEnumType(this);
+    }
+
+    addElementAt(element: HIRConstantEnum, sourcePosition: AbstractSourcePosition) : void {
+        if(!element.name)
+            return;
+
+        if(element.name in this.valueTable)
+            throw new Error(sourcePosition.formatMessage(`enum has duplicated definitions for symbol #${element.name}`));
+
+        this.values.push(element);
+        this.valueTable[element.name] = element;
+    }
+
+    isEnumType(): boolean {
+        return true;   
     }
 }
 
@@ -1386,6 +1429,38 @@ export class HIRConstantTuple extends HIRConstant {
     toString(): string {
         return `tuple ${this.elements.toString()} `;
     }
+}
+
+export class HIRConstantEnum extends HIRConstant {
+    name: string | null;
+    value: HIRConstant;
+    type: HIREnumType;
+
+    constructor(name: string | null, value: HIRConstant, type: HIREnumType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.name = name;
+        this.value = value;
+        this.type = type;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantEnum(this);
+    }
+
+    isConstantEnum(): boolean {
+        return true;
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    toString(): string {
+        if(!this.name)
+            `enumValue(${this.value.toString()})`
+        return `enumValue(${this.name}: ${this.value.toString()})`
+    }
+    
 }
 
 export class HIRMacroContext extends HIRValue {
