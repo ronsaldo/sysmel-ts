@@ -121,6 +121,10 @@ export abstract class HIRValue {
         throw new Error(this.sourcePosition.formatMessage('Not a symbol value'))
     }
 
+    plusOne(): HIRValue {
+        throw new Error(this.sourcePosition.formatMessage('Not a numerical value.'))
+    }
+
     isType(): boolean {
         return false;
     }
@@ -505,6 +509,7 @@ export class HIRType extends HIRValue {
 export class HIRNominalType extends HIRType {
     name: string | null;
     methodDictionary: Record<string, HIRValue> = {}
+    defaultValue: HIRConstant | null = null;
 
     constructor(name:string | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition);
@@ -518,6 +523,12 @@ export class HIRNominalType extends HIRType {
     getName() : string | null {
         return this.name;
     }
+
+    getOrCreateDefaultValue() : HIRConstant {
+        if(!this.defaultValue)
+            throw new Error(this.sourcePosition.formatMessage(`Nominal type ${this.name} does not have a default value.`))
+        return this.defaultValue;
+    } 
 
     isNominalType(): boolean {
         return true;
@@ -1181,6 +1192,10 @@ export class HIRConstantLiteralIntegerValue extends HIRConstantLiteralValue {
 
     evaluateAsNumber(): number {
         return this.value;
+    }
+
+    plusOne(): HIRValue {
+        return new HIRConstantLiteralIntegerValue(this.value + 1, this.type, this.sourcePosition);
     }
 
     isConstantLiteralIntegerValue() : boolean {
@@ -3135,6 +3150,27 @@ export class HIRCoreTypes {
     nilValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition());
     
     constructor() {
+        this.characterType.defaultValue = new HIRConstantLiteralCharacterValue(0, this.characterType, getOrMakeEmptySourcePosition())
+        this.integerType.defaultValue = new HIRConstantLiteralIntegerValue(0, this.integerType, getOrMakeEmptySourcePosition())
+        this.floatType.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.floatType, getOrMakeEmptySourcePosition())
+
+        this.char8Type.defaultValue  = new HIRConstantLiteralCharacterValue(0, this.char8Type, getOrMakeEmptySourcePosition())
+        this.char16Type.defaultValue = new HIRConstantLiteralCharacterValue(0, this.char16Type, getOrMakeEmptySourcePosition())
+        this.char32Type.defaultValue = new HIRConstantLiteralCharacterValue(0, this.char32Type, getOrMakeEmptySourcePosition())
+
+        this.int8Type.defaultValue  = new HIRConstantLiteralIntegerValue(0, this.int8Type, getOrMakeEmptySourcePosition())
+        this.int16Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.int16Type, getOrMakeEmptySourcePosition())
+        this.int32Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.int32Type, getOrMakeEmptySourcePosition())
+        this.int64Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.int64Type, getOrMakeEmptySourcePosition())
+
+        this.uint8Type.defaultValue  = new HIRConstantLiteralIntegerValue(0, this.uint8Type, getOrMakeEmptySourcePosition())
+        this.uint16Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.uint16Type, getOrMakeEmptySourcePosition())
+        this.uint32Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.uint32Type, getOrMakeEmptySourcePosition())
+        this.uint64Type.defaultValue = new HIRConstantLiteralIntegerValue(0, this.uint64Type, getOrMakeEmptySourcePosition())
+
+        this.float32Type.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.float32Type, getOrMakeEmptySourcePosition())
+        this.float64Type.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.float64Type, getOrMakeEmptySourcePosition())
+
         this.coreTypeList.push(this.characterType);
         this.coreTypeList.push(this.integerType);
         this.coreTypeList.push(this.floatType);
@@ -4252,7 +4288,29 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
             throw new Error(node.sourcePosition.formatMessage('Expected a dictionary with the enum values.'));
 
         let valuesDictionary = valuesValue as HIRConstantDictionary;
-        console.log('valuesDictionary.associations.length', valuesDictionary.associations.length);
+        let nextImplicitValue = baseType.getOrCreateDefaultValue();
+        for(let i = 0; i < valuesDictionary.associations.length; ++i) {
+            let association = valuesDictionary.associations[i];
+            if(!association)
+                throw new Error('Expected an association.');
+
+            if(!association.key.isConstantLiteralSymbolValue())
+                throw new Error(association.sourcePosition.formatMessage('Expected symbols for the association names.'));
+
+            let associationName = association.key.evaluateAsSymbol();
+            let associationValue = nextImplicitValue;
+            if(association.value && !association.value.isConstantLiteralNilValue()) {
+                if(!baseType.isSatisfiedByValue(association.value))
+                    throw new Error(association.sourcePosition.formatMessage(`association elements must be of type ${baseType.toString()}.`))
+                associationValue = association.value;
+            }
+
+            let constantEnum = new HIRConstantEnum(associationName, associationValue, enumType, association.sourcePosition)
+            enumType.addElementAt(constantEnum, association.sourcePosition);
+
+            nextImplicitValue = associationValue.plusOne()
+        }
+        
         //
         return enumType;
     }

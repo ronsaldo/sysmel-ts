@@ -561,5 +561,20 @@ export function runTests() {
     {
         let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}')
         assert.ok(value.isEnumType());
+
+        let enumType = value as hir.HIREnumType;
+        assert.strictEqual(3, enumType.values.length);
+
+        let enumValue = enumType.values[0] as hir.HIRConstantEnum;
+        assert.strictEqual('First', enumValue.name);
+        assert.strictEqual(1, enumValue.value.evaluateAsInteger());
+
+        enumValue = enumType.values[1] as hir.HIRConstantEnum;
+        assert.strictEqual('Second', enumValue.name);
+        assert.strictEqual(2, enumValue.value.evaluateAsInteger());
+
+        enumValue = enumType.values[2] as hir.HIRConstantEnum;
+        assert.strictEqual('Third', enumValue.name);
+        assert.strictEqual(3, enumValue.value.evaluateAsInteger());
     }
 }
