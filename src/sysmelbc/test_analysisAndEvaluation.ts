@@ -556,4 +556,10 @@ export function runTests() {
         assert.ok(value.isConstantLiteralCharacterValue());
         assert.strictEqual(value.evaluateAsInteger(), 101);
     }
+
+    // Enum
+    {
+        let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}')
+        assert.ok(value.isEnumType());
+    }
 }

@@ -539,12 +539,12 @@ export class HIRNominalType extends HIRType {
 }
 
 export class HIREnumType extends HIRType {
-    name: string;
+    name: string | null;
     baseType: HIRType;
     values: HIRConstantEnum[] = [];
     valueTable: Record<string, HIRConstantEnum> = {}
 
-    constructor(name: string, baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+    constructor(name: string|null, baseType: HIRType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
         super(coreTypes, sourcePosition)
         this.name = name;
         this.baseType = baseType;
@@ -4163,7 +4163,24 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitEnumDefinitionNode(node: parseTree.ParseTreeEnumDefinitionNode) {
-        throw new Error('TODO: visitEnumDefinitionNode')
+        let name = this.visitOptionalSymbolNode(node.nameExpression)
+        let baseType: HIRType = this.evaluationContext.context.coreTypes.dynamicType;
+        if (node.baseTypeExpression)
+            baseType = this.visitNodeExpectingType(node.baseTypeExpression)
+
+        let enumType = new HIREnumType(name, baseType, this.evaluationContext.context.coreTypes, node.sourcePosition)
+        if(name) {
+            this.evaluationContext.environment.setNewSymbolBinding(name, enumType, node.sourcePosition);
+            if(node.isPublic) {
+                let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
+                if(!owner)
+                    throw new Error('Expected a program entity owner.');
+                owner.addPublicNamedElement(name, enumType, node.sourcePosition);
+            }
+        }
+
+        //
+        return enumType;
     }
 }
 
