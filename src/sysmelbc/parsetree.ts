@@ -47,6 +47,8 @@ export abstract class ParseTreeVisitor {
     abstract visitWhileDoNode(node: ParseTreeWhileDoNode): any;
     abstract visitDoWhileNode(node: ParseTreeDoWhileNode): any;
 
+    abstract visitEnumDefinitionNode(node: ParseTreeEnumDefinitionNode): any;
+
     visitNode(node: ParseTreeNode) : any {
         return node.accept(this)
     }
@@ -215,6 +217,10 @@ export abstract class ParseTreeNode {
     }
 
     isDoWhileNode(): boolean {
+        return false;
+    }
+
+    isEnumDefinitionNode(): boolean {
         return false;
     }
 
@@ -936,6 +942,31 @@ export class ParseTreeDoWhileNode extends ParseTreeNode {
     }
 }
 
+export class ParseTreeEnumDefinitionNode extends ParseTreeNode {
+    nameExpression: ParseTreeNode | null;
+    baseTypeExpression: ParseTreeNode;
+    valuesExpression: ParseTreeNode;
+    isPublic: boolean;
+
+    constructor(sourcePosition: AbstractSourcePosition, nameExpression: ParseTreeNode | null, baseTypeExpression: ParseTreeNode, valuesExpression: ParseTreeNode, isPublic: boolean)
+    {
+        super(sourcePosition);
+
+        this.nameExpression = nameExpression;
+        this.baseTypeExpression = baseTypeExpression;
+        this.valuesExpression = valuesExpression;
+        this.isPublic = isPublic;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitEnumDefinitionNode(this);
+    }
+
+    isEnumDefinitionNode(): boolean {
+        return true;
+    }
+}
+
 export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
     visitErrorNode(node: ParseTreeErrorNode): any {
     }
@@ -1080,6 +1111,12 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
         this.visitNode(node.bodyExpression);
         this.visitOptionalNode(node.continueExpression);
         this.visitNode(node.condition);
+    }
+
+    visitEnumDefinitionNode(node: ParseTreeEnumDefinitionNode) {
+        this.visitOptionalNode(node.nameExpression);
+        this.visitNode(node.baseTypeExpression);
+        this.visitNode(node.valuesExpression);
     }
 }
 

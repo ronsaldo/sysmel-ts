@@ -2952,6 +2952,27 @@ export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIREnumMetaBuilder extends HIRNamedMetaBuilder {
+    isPublic: boolean = false;
+
+    supportsSelector(selector: string): boolean {
+        return selector === 'baseType:values:'
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector === 'baseType:values:') {
+            let baseType = node.sendArguments[0];
+            let values = node.sendArguments[1];
+            if(!baseType || !values)
+                throw new Error('Expected parse tree nodes');
+            let enumNode = new parseTree.ParseTreeEnumDefinitionNode(node.sourcePosition, this.nameExpression, baseType, values, this.isPublic);
+            return evaluator.visitNode(enumNode);
+        }
+
+        return super.expandAndEvaluateMessage(evaluator, node, selector, receiver);
+    }
+}
+
 export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
     argumentDefinitions: parseTree.ParseTreeArgumentDefinitionNode[] = [];
     resultTypeExpression: parseTree.ParseTreeNode | null = null;
@@ -2984,7 +3005,7 @@ export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
 
 export class HIRPublicMetaBuilder extends HIRMetaBuilder {
     supportsSelector(selector: string): boolean {
-        return selector === 'function'
+        return (selector === 'function') || (selector === 'enum')
     }
 
     expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
@@ -2992,6 +3013,11 @@ export class HIRPublicMetaBuilder extends HIRMetaBuilder {
             let functionMetabuilder = new HIRFunctionMetaBuilder(this.coreTypes, this.sourcePosition);
             functionMetabuilder.isPublic = true;
             return functionMetabuilder;
+        }
+        else if(selector === 'enum') {
+            let enumMetabuilder = new HIREnumMetaBuilder(this.coreTypes, this.sourcePosition);
+            enumMetabuilder.isPublic = true;
+            return enumMetabuilder;
         }
         return this;
     }
@@ -3199,6 +3225,7 @@ export class HIRCoreTypes {
     }
 
     createCorePrimitiveMetaBuilders() {
+        this.coreValueList.push(['enum', new HIRMetaBuilderFactory(HIREnumMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['public', new HIRMetaBuilderFactory(HIRPublicMetaBuilder, this, getOrMakeEmptySourcePosition())]);
@@ -4134,6 +4161,10 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
 
         return this.evaluationContext.context.coreTypes.voidValue;
     }
+
+    visitEnumDefinitionNode(node: parseTree.ParseTreeEnumDefinitionNode) {
+        throw new Error('TODO: visitEnumDefinitionNode')
+    }
 }
 
 export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
@@ -4589,5 +4620,9 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         this.builder.hirFunction.addBasicBlock(loopMerge)
 
         return this.builder.context.coreTypes.voidValue;
+    }
+
+    visitEnumDefinitionNode(node: parseTree.ParseTreeEnumDefinitionNode) {
+        throw new Error('TODO: visitEnumDefinitionNode')
     }
 }
