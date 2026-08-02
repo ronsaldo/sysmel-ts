@@ -622,6 +622,15 @@ export class HIREnumType extends HIRType {
         return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
     }
 
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = builder.evaluateSymbolNode(node.selector);
+        if(selector in this.valueTable) {
+            return this.valueTable[selector] as HIRValue
+        }
+
+        return super.analyzeAndBuildMessageSendNode(builder, node, receiver);
+    }
+
     toString(): string {
         if(this.name)
             return this.name;
@@ -1978,6 +1987,11 @@ export class HIRFunction extends HIRConstant {
 
     evaluateWithArgumentsAndResultTypeAt(callArguments: HIRValue[], resultType: HIRType, callSourcePosition: AbstractSourcePosition): HIRValue {
         return this.evaluateWithArguments(callArguments)
+    }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        let [typecheckedArguments, resultType] = this.getType().evaluateAndTypecheckArguments(evaluator, node.applicationArguments, node.sourcePosition);
+        return this.evaluateWithArgumentsAndResultTypeAt(typecheckedArguments, resultType, node.sourcePosition)
     }
 
     isFunction(): boolean {

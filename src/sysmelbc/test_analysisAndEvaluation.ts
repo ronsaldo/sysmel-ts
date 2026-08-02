@@ -604,4 +604,11 @@ export function runTests() {
         assert.strictEqual(null, enumValue.name);
         assert.strictEqual(2, enumValue.value.evaluateAsInteger());
     }
+
+    // Enum function access
+    {
+        let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. {:: MyEnum | MyEnum First} ()')
+        assert.ok(value.isConstantEnum());
+    }
+
 }
