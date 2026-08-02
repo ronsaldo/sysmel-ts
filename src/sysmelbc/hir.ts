@@ -61,6 +61,8 @@ export abstract class HIRVisitor {
     abstract visitBranchInstruction(instruction: HIRBranchInstruction): any;
     abstract visitConditionalBranchInstruction(instruction: HIRConditionalBranchInstruction): any;
     abstract visitCallInstruction(instruction: HIRCallInstruction): any;
+    abstract visitEnumBoxValueInstruction(instruction: HIREnumBoxValueInstruction): any;
+    abstract visitEnumUnboxValueInstruction(instruction: HIREnumUnboxValueInstruction): any;
     abstract visitLoadInstruction(instruction: HIRLoadInstruction): any;
     abstract visitStoreInstruction(instruction: HIRStoreInstruction): any;
     abstract visitMakeAssociationInstruction(instruction: HIRMakeAssociationInstruction): any;
@@ -601,7 +603,6 @@ export class HIREnumType extends HIRType {
             if(!valueArgument)
                 throw new Error('Expected a single argument for enum #value:');
 
-
             let value = evaluator.visitNodeWithExpectedType(valueArgument, this.baseType);
             return new HIRConstantEnum(null, value, this, node.sourcePosition);
         }
@@ -628,7 +629,25 @@ export class HIREnumType extends HIRType {
             return this.valueTable[selector] as HIRValue
         }
 
+        if(selector === 'value:') {
+            let valueArgument = node.sendArguments[0];
+            if(!valueArgument)
+                throw new Error('Expected a single argument for enum #value:');
+
+            let value = builder.visitNodeWithExpectedType(valueArgument, this.baseType);
+            return builder.builder.enumBoxValue(value, this, node.sourcePosition);
+        }
+
         return super.analyzeAndBuildMessageSendNode(builder, node, receiver);
+    }
+
+    analyzeAndBuildMessageSendNodeOnType(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = buildPass.evaluateSymbolNode(node.selector);
+        if(selector === 'value') {
+            return buildPass.builder.enumUnboxValue(receiver, this.baseType, node.sourcePosition)
+        }
+        
+        return super.analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver);
     }
 
     toString(): string {
@@ -2388,6 +2407,55 @@ export class HIRCallInstruction extends HIRInstruction  {
     }
 }
 
+export class HIREnumBoxValueInstruction extends HIRInstruction {
+    value: HIRValue;
+
+    constructor(value: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.value = value;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitEnumBoxValueInstruction(this);
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := enumBox ${this.value.toString()} as ${this.type.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext): void {
+        let enumValue = this.value.getValueInEvaluationContext(context);
+        if(!enumValue.isConstantValue())
+            throw new Error('Expected a constant value.');
+        context.setCurrentInstructionValue(new HIRConstantEnum(null, enumValue as HIRConstant,this.type as HIREnumType, this.sourcePosition));
+    }
+};
+
+export class HIREnumUnboxValueInstruction extends HIRInstruction {
+    value: HIRValue;
+
+    constructor(value: HIRValue, type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.value = value;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitEnumBoxValueInstruction(this);
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := enumUnbox ${this.value.toString()} as ${this.type.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext): void {
+        let enumValue = this.value.getValueInEvaluationContext(context);
+        if(!enumValue.isConstantEnum())
+            throw new Error('Expected an enum value.');
+        
+        let enumConstant = enumValue as HIRConstantEnum;
+        context.setCurrentInstructionValue(enumConstant.value);
+    }
+};
 
 export class HIRLoadInstruction extends HIRInstruction  {
     storage: HIRValue;
@@ -2736,6 +2804,18 @@ export class HIRBuilder {
         if(instruction === simplified)
             this.addInstruction(instruction);
         return simplified;
+    }
+
+    enumBoxValue(value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition) : HIREnumBoxValueInstruction {
+        let instruction = new HIREnumBoxValueInstruction(value, type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    enumUnboxValue(value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition) : HIREnumBoxValueInstruction {
+        let instruction = new HIREnumUnboxValueInstruction(value, type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
     }
 
     load(type: HIRType, storage: HIRValue, sourcePosition: AbstractSourcePosition): HIRLoadInstruction {

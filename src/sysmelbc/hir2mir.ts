@@ -268,6 +268,12 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitCallInstruction(instruction: hir.HIRCallInstruction): any {
         throw new Error('Not supported')
     }
+    visitEnumBoxValueInstruction(instruction: hir.HIREnumBoxValueInstruction) {
+        throw new Error('Not supported')
+    }
+    visitEnumUnboxValueInstruction(instruction: hir.HIREnumUnboxValueInstruction) {
+        throw new Error('Not supported')
+    }
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
         throw new Error('Not supported')
     }
@@ -644,6 +650,14 @@ export class HirFunction2Mir extends hir.HIRVisitor {
 
         let callType = this.packageTranslator.translateValue(instruction.type) as mir.MirType;
         return callType.emitCallWithBuilder(this.builder, primitive, instruction.sourcePosition);
+    }
+
+    visitEnumBoxValueInstruction(instruction: hir.HIREnumBoxValueInstruction) {
+        throw new Error('TODO: HirFunction2Mir visitEnumBoxValueInstruction');
+    }
+
+    visitEnumUnboxValueInstruction(instruction: hir.HIREnumUnboxValueInstruction) {
+        throw new Error('TODO: HirFunction2Mir visitEnumUnboxValueInstruction');
     }
 
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {

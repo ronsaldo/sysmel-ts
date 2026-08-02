@@ -609,6 +609,25 @@ export function runTests() {
     {
         let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. {:: MyEnum | MyEnum First} ()')
         assert.ok(value.isConstantEnum());
+ 
+        let enumValue = value as hir.HIRConstantEnum;
+        assert.strictEqual('First', enumValue.name);
+        assert.strictEqual(1, enumValue.value.evaluateAsInteger());
     }
 
+    // Enum function value access
+    {
+        let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. {:(MyEnum)e :: Integer | e value} (MyEnum Second)')
+        assert.ok(value.isConstantLiteralIntegerValue());
+        assert.strictEqual(2, value.evaluateAsInteger());
+    }
+
+    // Enum function make value access
+    {
+        let value = evaluateTopLevelSourceString('enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. {:(Integer)x :: MyEnum | MyEnum value: x} (2)')
+        assert.ok(value.isConstantEnum());
+
+        let enumConstant = value as hir.HIRConstantEnum;
+        assert.strictEqual(2, enumConstant.value.evaluateAsInteger());
+    }
 }
