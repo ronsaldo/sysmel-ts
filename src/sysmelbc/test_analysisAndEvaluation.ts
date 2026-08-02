@@ -649,11 +649,27 @@ export function runTests() {
 
     // Empty class
     {
+        setUp();
+        
         let result = evaluateTopLevelSourceString('class MyClass definition: {}');
         assert.ok(result.isClass());
         
         let behavior = result as hir.HIRBehavior; 
         assert.strictEqual(0, behavior.getInstanceSize());
         assert.strictEqual(1, behavior.getInstanceAlignment());
+
+        tearDown();
     }
+
+    // Empty class instantiation
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {}. MyClass()');
+        assert.ok(result.isObjectValue());
+
+        tearDown();
+    }
+
+    
 }

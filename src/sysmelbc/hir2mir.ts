@@ -209,6 +209,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
 
+    visitObjectValue(type: hir.HIRObjectValue): any {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+
     visitMacroContext(context: hir.HIRMacroContext): any {
         throw new Error('TODO: HirPackage2Mir')
     }
@@ -548,6 +552,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
     visitConstantEnum(type: hir.HIRConstantEnum) {
         throw new Error('TODO: HirFunction2Mir');
+    }
+    visitObjectValue(type: hir.HIRObjectValue): any {
+        throw new Error('TODO: HirPackage2Mir')
     }
     visitMacroContext(context: hir.HIRMacroContext): any {
         throw new Error('TODO: HirFunction2Mir');

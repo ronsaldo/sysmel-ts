@@ -42,6 +42,7 @@ export abstract class HIRVisitor {
     abstract visitConstantDictionary(type: HIRConstantDictionary): any;
     abstract visitConstantTuple(type: HIRConstantTuple): any;
     abstract visitConstantEnum(type: HIRConstantEnum): any;
+    abstract visitObjectValue(type: HIRObjectValue): any;
 
     abstract visitMacroContext(context: HIRMacroContext): any;
     abstract visitPrimitiveMacro(macro: HIRPrimitiveMacro): any;
@@ -301,6 +302,10 @@ export abstract class HIRValue {
 
     isConstantTuple() : boolean {
         return false;
+    }
+
+    isObjectValue(): boolean {
+        return true;
     }
 
     isCompileTimeFunction(): boolean {
@@ -792,6 +797,36 @@ export class HIRClass extends HIRBehavior {
     
     getType(): HIRType {
         return this.metaClass;
+    }
+
+    analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        this.ensureLayout()
+
+        if(node.applicationArguments.length > this.allFields.length)
+            throw new Error(node.sourcePosition.formatMessage(`class construction can have at most ${this.allFields.length.toString()} arguments.`));
+
+        let objectFields: HIRValue[] = [];
+        for(let i = 0; i < this.allFields.length; ++i) {
+            let field = this.allFields[i] as HIRField;
+            if(i < node.applicationArguments.length) {
+                let fieldArgument = node.applicationArguments[i];
+                if(!fieldArgument)
+                    throw new Error('Expected a field argument.');
+                let fieldValue = evaluator.visitNodeWithExpectedType(fieldArgument, field.fieldType)
+
+            } else {
+                let fieldValue = field.fieldType.getOrCreateDefaultValue();
+                objectFields.push(fieldValue);
+            }
+        }
+
+        let objectValue = new HIRObjectValue(this, objectFields, node.sourcePosition);
+        let initializeMethod = this.lookupSelector('initialize');
+        if(initializeMethod) {
+            throw new Error('TODO: HIRClass initialize');
+        }
+
+        return objectValue;
     }
 }
 
@@ -1727,6 +1762,28 @@ export class HIRConstantEnum extends HIRConstant {
         return `enumValue(${this.name}: ${this.value.toString()})`
     }
     
+}
+
+export class HIRObjectValue extends HIRValue {
+    type: HIRBehavior;
+    fields: HIRValue[];
+    constructor(type: HIRBehavior, fields: HIRValue[], sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+        this.fields = fields;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitObjectValue(this);
+    }
+
+    getType(): HIRType {
+        return this.type;
+    }
+
+    isObjectValue(): boolean {
+        return true;
+    }
 }
 
 export class HIRMacroContext extends HIRValue {
