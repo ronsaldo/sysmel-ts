@@ -3374,9 +3374,17 @@ export class HIRCoreTypes {
     characterType: HIRClass;
     integerType: HIRClass;
     floatType: HIRClass;
-    stringType: HIRNominalType = new HIRNominalType('String', this, getOrMakeEmptySourcePosition());
-    symbolType: HIRNominalType = new HIRNominalType('Symbol', this, getOrMakeEmptySourcePosition());
-    parseTreeType: HIRNominalType = new HIRNominalType('ParseTree', this, getOrMakeEmptySourcePosition());
+    booleanType: HIRClass;
+    falseClass: HIRClass;
+    trueClass: HIRClass;
+
+    collectionClass: HIRClass;
+    sequenceableCollectionClass: HIRClass;
+    arrayedCollectionClass: HIRClass;
+
+    stringType: HIRClass;
+    symbolType: HIRClass;
+    parseTreeType: HIRClass;
 
     boolean8Type: HIRPrimitiveType = new HIRPrimitiveType('Boolean8', 1, 1, this, getOrMakeEmptySourcePosition());
 
@@ -3427,9 +3435,20 @@ export class HIRCoreTypes {
         this.magnitudeClass = this.makeCoreClassDefinition('Magnitude', this.objectClass, [], []);
         this.numberClass = this.makeCoreClassDefinition('Number', this.magnitudeClass, [], []);
 
+        this.collectionClass = this.makeCoreClassDefinition('Collection', this.numberClass, [], []);
+        this.sequenceableCollectionClass = this.makeCoreClassDefinition('SequenceableCollection', this.collectionClass, [], []);
+        this.arrayedCollectionClass = this.makeCoreClassDefinition('ArrayedCollection', this.sequenceableCollectionClass, [], []);
+
         this.characterType = this.makeCoreClassDefinition('Character', this.magnitudeClass, [], []);
         this.integerType = this.makeCoreClassDefinition('Integer', this.numberClass, [], []);
         this.floatType = this.makeCoreClassDefinition('Float', this.numberClass, [], []);
+        this.booleanType = this.makeCoreClassDefinition('Boolean', this.objectClass, [], []);
+        this.falseClass = this.makeCoreClassDefinition('False', this.booleanType, [], []);
+        this.trueClass = this.makeCoreClassDefinition('True', this.booleanType, [], []);
+
+        this.stringType = this.makeCoreClassDefinition('String', this.arrayedCollectionClass, [], []);
+        this.symbolType = this.makeCoreClassDefinition('Symbol', this.arrayedCollectionClass, [], []);
+        this.parseTreeType = this.makeCoreClassDefinition('ParseTree', this.objectClass, [], []);
 
         this.characterType.defaultValue = new HIRConstantLiteralCharacterValue(0, this.characterType, getOrMakeEmptySourcePosition())
         this.integerType.defaultValue = new HIRConstantLiteralIntegerValue(0, this.integerType, getOrMakeEmptySourcePosition())
@@ -3457,6 +3476,13 @@ export class HIRCoreTypes {
         this.coreTypeList.push(this.behaviorClass as HIRType);
         this.coreTypeList.push(this.classClass as HIRType);
         this.coreTypeList.push(this.metaclassClass as HIRType);
+
+        this.coreTypeList.push(this.magnitudeClass);
+        this.coreTypeList.push(this.numberClass);
+
+        this.coreTypeList.push(this.collectionClass);
+        this.coreTypeList.push(this.sequenceableCollectionClass);
+        this.coreTypeList.push(this.arrayedCollectionClass);
 
         this.coreTypeList.push(this.characterType);
         this.coreTypeList.push(this.integerType);
