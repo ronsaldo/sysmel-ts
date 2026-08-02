@@ -1,6 +1,10 @@
 import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
 import * as parseTree from "./parsetree.js"
 
+function alignedTo(offset: number, alignment: number): number {
+    return (offset + alignment - 1) & (-alignment)
+}
+
 export abstract class HIRVisitor {
     abstract visitType(type: HIRType): any;
     abstract visitNominalType(type: HIRNominalType): any;
@@ -98,6 +102,10 @@ export abstract class HIRValue {
 
     addPublicNamedElement(name: string, binding: HIRValue, sourcePosition: AbstractSourcePosition): void {
         throw Error(sourcePosition.formatMessage('Program entity owner does not support public members.'))
+    }
+
+    addField(field: HIRField): void {
+        throw Error(field.sourcePosition.formatMessage('Program entity owner does not support fields.'))
     }
 
     ensureAnalysis(): void {
@@ -515,6 +523,13 @@ export class HIRType extends HIRValue {
         return [this];
     }
 
+    getValueAlignment(): number {
+        return this.coreTypes.pointerAlignment
+    }
+
+    getValueSize(): number {
+        return this.coreTypes.pointerSize
+    }
 }
 
 export class HIRPendingDefinitionBody {
@@ -765,7 +780,54 @@ export abstract class HIRBehavior extends HIRNominalType {
         this.instanceSize = 0;
         this.instanceAlignment = 1;
         this.totalFieldCount = 0;
+        this.allFields = []
 
+        if(this.superclass) {
+            this.superclass.ensureLayout();
+
+            this.instanceSize = this.superclass.instanceSize
+            this.instanceAlignment = this.superclass.instanceAlignment
+            this.totalFieldCount = this.superclass.totalFieldCount
+            this.allFields.push(...this.superclass.allFields);
+        }
+        this.allFields.push(...this.fields);
+
+        for(let i = 0; i < this.fields.length; ++i) {
+            let field = this.fields[i] as HIRField;
+            field.index = this.totalFieldCount;
+            
+            let fieldAlignment = field.fieldType.getValueAlignment();
+            let fieldSize = field.fieldType.getValueSize();
+
+            this.instanceSize = alignedTo(this.instanceSize, fieldAlignment);
+            field.offset = this.instanceSize;
+            this.instanceSize += fieldSize;
+
+            this.instanceAlignment = Math.max(this.instanceAlignment, fieldAlignment)
+            ++this.totalFieldCount;
+        }
+
+        this.instanceSize = alignedTo(this.instanceSize, this.instanceAlignment)
+    }
+
+    addField(field: HIRField): void {
+        this.fields.push(field);
+        this.invalidateLayout();
+        field.owner = this;
+
+        if(field.name) {
+            this.fieldTable[field.name] = field;
+
+            if(field.isPublic) {
+                this.publicFields[field.name] = field;
+                this.publicFields[field.name + ':'] = field;
+            }
+        }
+    }
+
+    invalidateLayout() {
+        this.instanceSize = -1;
+        this.instanceAlignment = -1;
     }
 
     getInstanceSize(): number {
@@ -776,6 +838,16 @@ export abstract class HIRBehavior extends HIRNominalType {
     getInstanceAlignment(): number {
         this.ensureLayout();
         return this.instanceAlignment;
+    }
+
+    lookupSelector(selector: string): HIRValue | null {
+        if (selector in this.methodDictionary)
+            return this.methodDictionary[selector] as HIRValue;
+        if (selector in this.publicFields)
+            return this.publicFields[selector] as HIRValue;
+        if(this.superclass)
+            return this.superclass.lookupSelector(selector);
+        return null;
     }
 
 }
@@ -931,6 +1003,14 @@ export class HIRPrimitiveType extends HIRNominalType {
 
     isPrimitiveType(): boolean {
         return true;
+    }
+
+    getValueAlignment(): number {
+        return this.alignment;
+    }
+
+    getValueSize(): number {
+        return this.size;
     }
 }
 
@@ -3411,6 +3491,25 @@ export class HIREnumMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIRFieldMetaBuilder extends HIRNamedMetaBuilder {
+    typeExpression: parseTree.ParseTreeNode | null = null;
+    isPublic: boolean = false;
+
+    supportsSelector(selector: string): boolean {
+        return (selector === '=>') || (selector === 'type:')
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if((selector === '=>') || (selector === 'type:')) {
+            this.typeExpression = node.sendArguments[0] as parseTree.ParseTreeNode as parseTree.ParseTreeNode;
+            let fieldExpression = new parseTree.ParseTreeFieldDefinitionNode(node.sourcePosition, this.nameExpression, this.typeExpression, this.isPublic);
+            return evaluator.visitNode(fieldExpression);
+        }
+            
+        return super.expandAndEvaluateMessage(evaluator, node, selector, receiver);
+    }
+}
+
 export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
     argumentDefinitions: parseTree.ParseTreeArgumentDefinitionNode[] = [];
     resultTypeExpression: parseTree.ParseTreeNode | null = null;
@@ -3443,16 +3542,23 @@ export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
 
 export class HIRPublicMetaBuilder extends HIRMetaBuilder {
     supportsSelector(selector: string): boolean {
-        return (selector === 'function') || (selector === 'enum')
+        return (selector === 'class') || (selector === 'field') || (selector === 'function') || (selector === 'enum')
     }
 
     expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
-        if(selector === 'function') {
+        if(selector === 'class') {
+            let classMetabuilder = new HIRClassMetaBuilder(this.coreTypes, this.sourcePosition);
+            classMetabuilder.isPublic = true;
+            return classMetabuilder;
+        } else if(selector === 'field') {
+            let fieldMetabuilder = new HIRFieldMetaBuilder(this.coreTypes, this.sourcePosition);
+            fieldMetabuilder.isPublic = true;
+            return fieldMetabuilder;
+        } else if(selector === 'function') {
             let functionMetabuilder = new HIRFunctionMetaBuilder(this.coreTypes, this.sourcePosition);
             functionMetabuilder.isPublic = true;
             return functionMetabuilder;
-        }
-        else if(selector === 'enum') {
+        } else if(selector === 'enum') {
             let enumMetabuilder = new HIREnumMetaBuilder(this.coreTypes, this.sourcePosition);
             enumMetabuilder.isPublic = true;
             return enumMetabuilder;
@@ -3770,6 +3876,7 @@ export class HIRCoreTypes {
     createCorePrimitiveMetaBuilders() {
         this.coreValueList.push(['class', new HIRMetaBuilderFactory(HIRClassMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['enum', new HIRMetaBuilderFactory(HIREnumMetaBuilder, this, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['field', new HIRMetaBuilderFactory(HIRFieldMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['public', new HIRMetaBuilderFactory(HIRPublicMetaBuilder, this, getOrMakeEmptySourcePosition())]);
@@ -4768,6 +4875,21 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         return enumType;
     }
 
+    visitFieldDefinitionNode(node: parseTree.ParseTreeFieldDefinitionNode) {
+        let name = this.visitOptionalSymbolNode(node.nameExpression);
+        let type: HIRType = this.evaluationContext.context.coreTypes.dynamicType;
+        if(node.typeExpression)
+            type = this.visitNodeExpectingType(node.typeExpression);
+
+        let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
+        if(!owner)
+            throw new Error(node.sourcePosition.formatMessage('Field is being defined outside an owner scope.'));
+        
+        let field = new HIRField(name, type, node.isPublic, this.evaluationContext.context.coreTypes, node.sourcePosition);
+        owner.addField(field);
+        return field;
+    }
+
     visitClassDefinitionNode(node: parseTree.ParseTreeClassDefinitionNode) {
         let name = this.visitOptionalSymbolNode(node.nameExpression);
         let superclass: HIRClass | null = null;
@@ -5273,6 +5395,10 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
         throw new Error('TODO: visitEnumDefinitionNode')
     }
     
+    visitFieldDefinitionNode(node: parseTree.ParseTreeFieldDefinitionNode) {
+        throw new Error('TODO: visitFieldDefinitionNode');
+    }
+
     visitClassDefinitionNode(node: parseTree.ParseTreeClassDefinitionNode) {
         throw new Error('TODO: visitClassDefinitionNode')
     }

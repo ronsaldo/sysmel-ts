@@ -48,6 +48,7 @@ export abstract class ParseTreeVisitor {
     abstract visitDoWhileNode(node: ParseTreeDoWhileNode): any;
 
     abstract visitEnumDefinitionNode(node: ParseTreeEnumDefinitionNode): any;
+    abstract visitFieldDefinitionNode(node: ParseTreeFieldDefinitionNode): any;
     abstract visitClassDefinitionNode(node: ParseTreeClassDefinitionNode): any;
 
     visitNode(node: ParseTreeNode) : any {
@@ -222,6 +223,10 @@ export abstract class ParseTreeNode {
     }
 
     isEnumDefinitionNode(): boolean {
+        return false;
+    }
+
+    isFieldDefinitionNode() {
         return false;
     }
 
@@ -972,6 +977,27 @@ export class ParseTreeEnumDefinitionNode extends ParseTreeNode {
     }
 }
 
+export class ParseTreeFieldDefinitionNode extends ParseTreeNode {
+    nameExpression: ParseTreeNode | null;
+    typeExpression: ParseTreeNode | null;
+    isPublic: boolean;
+
+    constructor(sourcePosition: AbstractSourcePosition, nameExpression: ParseTreeNode | null, typeExpression: ParseTreeNode | null, isPublic: boolean) {
+        super(sourcePosition);
+        this.nameExpression = nameExpression;
+        this.typeExpression = typeExpression;
+        this.isPublic = isPublic;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitFieldDefinitionNode(this);
+    }
+
+    isFieldDefinitionNode() {
+        return true;
+    }
+}
+
 export class ParseTreeClassDefinitionNode extends ParseTreeNode {
     nameExpression: ParseTreeNode | null;
     superclassExpression: ParseTreeNode | null;
@@ -1147,6 +1173,11 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
         this.visitOptionalNode(node.nameExpression);
         this.visitNode(node.baseTypeExpression);
         this.visitNode(node.valuesExpression);
+    }
+
+    visitFieldDefinitionNode(node: ParseTreeFieldDefinitionNode) {
+        this.visitOptionalNode(node.nameExpression);
+        this.visitOptionalNode(node.typeExpression);
     }
 
     visitClassDefinitionNode(node: ParseTreeClassDefinitionNode) {

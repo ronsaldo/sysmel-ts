@@ -671,5 +671,17 @@ export function runTests() {
         tearDown();
     }
 
-    
+    // Class with field
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}');
+        assert.ok(result.isClass());
+        
+        let behavior = result as hir.HIRBehavior; 
+        assert.strictEqual(8, behavior.getInstanceSize());
+        assert.strictEqual(8, behavior.getInstanceAlignment());
+
+        tearDown();
+    }
 }
