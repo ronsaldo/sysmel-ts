@@ -16,6 +16,7 @@ export abstract class HIRVisitor {
     abstract visitReferenceType(type: HIRReferenceType): any;
     abstract visitMutableValueBoxType(type: HIRMutableValueBoxType): any;
     abstract visitAssociationType(type: HIRAssociationType): any;
+    abstract visitDictionaryType(type: HIRDictionaryType): any;
     abstract visitTupleType(type: HIRTupleType): any;
     abstract visitDependentFunctionType(type: HIRDependentFunctionType): any;
     abstract visitSimpleFunctionType(type: HIRSimpleFunctionType): any;
@@ -38,6 +39,7 @@ export abstract class HIRVisitor {
     abstract visitConstantLiteralParseTree(constant: HIRConstantLiteralParseTree): any;
     
     abstract visitConstantAssociation(type: HIRConstantAssociation): any;
+    abstract visitConstantDictionary(type: HIRConstantDictionary): any;
     abstract visitConstantTuple(type: HIRConstantTuple): any;
     abstract visitConstantEnum(type: HIRConstantEnum): any;
 
@@ -199,6 +201,10 @@ export abstract class HIRValue {
         return false;
     }
 
+    isDictionaryType() : boolean {
+        return false;
+    }
+
     isTupleType() : boolean {
         return false;
     }
@@ -272,6 +278,10 @@ export abstract class HIRValue {
     }
 
     isConstantAssociation() : boolean {
+        return false;
+    }
+
+    isConstantDictionary() : boolean {
         return false;
     }
 
@@ -958,6 +968,23 @@ export class HIRAssociationType extends HIRType {
     }
 }
 
+export class HIRDictionaryType extends HIRType {
+    associationType: HIRAssociationType;
+
+    constructor(associationType: HIRAssociationType, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(coreTypes, sourcePosition);
+        this.associationType = associationType
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitDictionaryType(this);
+    }
+
+    isDictioanryType(): boolean {
+        return true;
+    }
+}
+
 export class HIRTupleType extends HIRType {
     elements: HIRType[];
 
@@ -1403,6 +1430,31 @@ export class HIRConstantAssociation extends HIRConstant {
         return `association ${this.key.toString()} `;
     }
 }
+
+export class HIRConstantDictionary extends HIRConstant {
+    associations: HIRConstantAssociation[];
+    dictionaryType: HIRDictionaryType;
+
+    constructor(associations: HIRConstantAssociation[], dictionaryType: HIRDictionaryType, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+
+        this.associations = associations;
+        this.dictionaryType = dictionaryType;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitConstantDictionary(this);
+    }
+
+    getType(): HIRType {
+        return this.dictionaryType;
+    }
+
+    isConstantDictionary(): boolean {
+        return true;
+    }
+
+};
 
 export class HIRConstantTuple extends HIRConstant {
     elements: HIRValue[];
@@ -3066,6 +3118,9 @@ export class HIRCoreTypes {
     voidType: HIRVoidType           = new HIRVoidType('Void', this, getOrMakeEmptySourcePosition());
     controlFlowEscapeType: HIRControlFlowEscapeType  = new HIRControlFlowEscapeType('ControlFlowEscape', this, getOrMakeEmptySourcePosition());
 
+    dynamicAssociationType: HIRAssociationType = new HIRAssociationType(this.dynamicType, this.dynamicType, this, getOrMakeEmptySourcePosition());
+    dynamicDictionaryType: HIRDictionaryType = new HIRDictionaryType(this.dynamicAssociationType, this, getOrMakeEmptySourcePosition());
+
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
     fieldType: HIRNominalType = new HIRNominalType('Fiedl', this, getOrMakeEmptySourcePosition());
@@ -3895,7 +3950,20 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
     }
 
     visitDictionaryNode(node: parseTree.ParseTreeDictionaryNode): any {
-        throw new Error('TODO ParseTreeDictionaryNode AnalysisAndEvaluationPass');
+        let associations: HIRConstantAssociation[] = [];
+        for(let i = 0; i < node.elements.length; ++i) {
+            let associationExpression = node.elements[i];
+            if(!associationExpression)
+                throw new Error('Expected an expression');
+
+            let association = this.visitDecayedNode(associationExpression);
+            if(!association.isConstantAssociation()) {
+                throw new Error('Expected an association.');
+            }
+            associations.push(association as HIRConstantAssociation);
+        }
+        let dictionaryType = this.evaluationContext.context.coreTypes.dynamicDictionaryType;
+        return new HIRConstantDictionary(associations, dictionaryType, node.sourcePosition)
     }
     
     visitIdentifierReferenceNode(node: parseTree.ParseTreeIdentifierReferenceNode): any {
@@ -4174,11 +4242,17 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
             if(node.isPublic) {
                 let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
                 if(!owner)
-                    throw new Error('Expected a program entity owner.');
+                    throw new Error(node.sourcePosition.formatMessage('Expected a program entity owner.'));
                 owner.addPublicNamedElement(name, enumType, node.sourcePosition);
             }
         }
 
+        let valuesValue = this.visitDecayedNode(node.valuesExpression);
+        if(!valuesValue.isConstantDictionary())
+            throw new Error(node.sourcePosition.formatMessage('Expected a dictionary with the enum values.'));
+
+        let valuesDictionary = valuesValue as HIRConstantDictionary;
+        console.log('valuesDictionary.associations.length', valuesDictionary.associations.length);
         //
         return enumType;
     }

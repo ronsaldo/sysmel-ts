@@ -147,6 +147,9 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitAssociationType(type: hir.HIRAssociationType): any {
         throw new Error('TODO: HirPackage2Mir')
     }
+    visitDictionaryType(type: hir.HIRDictionaryType): any {
+        throw new Error('TODO: HirPackage2Mir')
+    }
     visitTupleType(type: hir.HIRTupleType): any {
         throw new Error('TODO: HirPackage2Mir')
     }
@@ -197,6 +200,9 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     }
     
     visitConstantAssociation(type: hir.HIRConstantAssociation): any {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+    visitConstantDictionary(type: hir.HIRConstantDictionary): any {
         throw new Error('TODO: HirPackage2Mir')
     }
     visitConstantTuple(type: hir.HIRConstantTuple): any {
@@ -473,6 +479,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     visitAssociationType(type: hir.HIRAssociationType): any {
         throw new Error('TODO: HirFunction2Mir');
     }
+    visitDictionaryType(type: hir.HIRDictionaryType) {
+        throw new Error('TODO: HirFunction2Mir');
+    }
     visitTupleType(type: hir.HIRTupleType): any {
         throw new Error('TODO: HirFunction2Mir');
     }
@@ -523,6 +532,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
     
     visitConstantAssociation(type: hir.HIRConstantAssociation): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitConstantDictionary(type: hir.HIRConstantDictionary) {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitConstantTuple(type: hir.HIRConstantTuple): any {
