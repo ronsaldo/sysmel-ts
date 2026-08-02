@@ -1,6 +1,5 @@
 import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
 import * as parseTree from "./parsetree.js"
-import { error } from "node:console";
 
 export abstract class HIRVisitor {
     abstract visitType(type: HIRType): any;
@@ -91,6 +90,10 @@ export abstract class HIRValue {
 
     abstract getType(): HIRType;
     abstract accept(visitor: HIRVisitor): any;
+
+    addAnonymousElement(element: HIRValue): void {
+        throw Error(this.sourcePosition.formatMessage('Program entity owner does not support anonymous members.'))
+    }
 
     addPublicNamedElement(name: string, binding: HIRValue, sourcePosition: AbstractSourcePosition): void {
         throw Error(sourcePosition.formatMessage('Program entity owner does not support public members.'))
@@ -747,6 +750,27 @@ export abstract class HIRBehavior extends HIRNominalType {
 
     getSupertype(): HIRType | null {
         return this.superclass
+    }
+
+    ensureLayout(): void {
+        this.ensureAnalysis();
+        if(this.instanceSize >= 0)
+            return;
+
+        this.instanceSize = 0;
+        this.instanceAlignment = 1;
+        this.totalFieldCount = 0;
+
+    }
+
+    getInstanceSize(): number {
+        this.ensureLayout();
+        return this.instanceSize;
+    }
+
+    getInstanceAlignment(): number {
+        this.ensureLayout();
+        return this.instanceAlignment;
     }
 
 }
@@ -3283,6 +3307,32 @@ export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIRClassMetaBuilder extends HIRNamedMetaBuilder {
+    superclassExpression: parseTree.ParseTreeNode | null = null;
+    isPublic: boolean = false;
+
+    supportsSelector(selector: string): boolean {
+        return (selector === 'superclass:') || (selector === 'definition:') || (selector === 'superclass:definition:')
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector === 'superclass:') {
+            this.superclassExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+            return this;
+        } else if(selector === 'definition:') {
+            let definitionBody = node.sendArguments[0] as parseTree.ParseTreeNode;
+            let classNode = new parseTree.ParseTreeClassDefinitionNode(node.sourcePosition, this.nameExpression, this.superclassExpression, definitionBody, this.isPublic);
+            return evaluator.visitNode(classNode);
+        } else if(selector === 'superclass:definition:') {
+            this.superclassExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+            let definitionBody = node.sendArguments[1] as parseTree.ParseTreeNode;
+            let classNode = new parseTree.ParseTreeClassDefinitionNode(node.sourcePosition, this.nameExpression, this.superclassExpression, definitionBody, this.isPublic);
+            return evaluator.visitNode(classNode);
+        }
+        return super.expandAndEvaluateMessage(evaluator, node, selector, receiver);
+    }
+}
+
 export class HIREnumMetaBuilder extends HIRNamedMetaBuilder {
     isPublic: boolean = false;
 
@@ -3661,6 +3711,7 @@ export class HIRCoreTypes {
     }
 
     createCorePrimitiveMetaBuilders() {
+        this.coreValueList.push(['class', new HIRMetaBuilderFactory(HIRClassMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['enum', new HIRMetaBuilderFactory(HIREnumMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
@@ -4659,6 +4710,51 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         //
         return enumType;
     }
+
+    visitClassDefinitionNode(node: parseTree.ParseTreeClassDefinitionNode) {
+        let name = this.visitOptionalSymbolNode(node.nameExpression);
+        let superclass: HIRClass | null = null;
+        if(node.superclassExpression) {
+            let superclassValue = this.visitDecayedNode(node.superclassExpression);
+            if(!superclassValue.isClass())
+                throw new Error(node.sourcePosition.formatMessage('A class superclass must be another class.'))
+            superclass = superclassValue as HIRClass;
+        } else {
+            superclass = this.evaluationContext.context.coreTypes.objectClass;
+        }
+
+        // Make the metaclass
+        let metaclassSuper: HIRBehavior | null = null;
+        if(superclass)
+            metaclassSuper = superclass.metaClass;
+
+        let metaclass = new HIRMetaclass(this.evaluationContext.context.coreTypes.metaclassClass, metaclassSuper, this.evaluationContext.context.coreTypes, node.sourcePosition)
+
+        // Make the class
+        let clazz = new HIRClass(name, metaclass, superclass, this.evaluationContext.context.coreTypes, node.sourcePosition);
+        metaclass.thisClass = clazz;
+
+        // Pending analysis.
+        this.evaluationContext.context.addEntityWithPendingAnalysis(metaclass);
+        this.evaluationContext.context.addEntityWithPendingAnalysis(clazz);
+
+        if(name) {
+            this.evaluationContext.environment.setNewSymbolBinding(name, clazz, node.sourcePosition);
+        }
+        if(node.isPublic) {
+            let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
+            if(!owner)
+                throw new Error('Expected an entity owner.');
+            
+            if(!name)
+                owner.addAnonymousElement(clazz);
+            else
+                owner.addPublicNamedElement(name, clazz, node.sourcePosition);
+        }
+        if(node.definitionBody)
+            clazz.addPendingDefinitionBody(this.evaluationContext, node.definitionBody)
+        return clazz;
+    }
 }
 
 export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
@@ -5119,4 +5215,9 @@ export class AnalysisAndBuildPass extends parseTree.ParseTreeVisitor {
     visitEnumDefinitionNode(node: parseTree.ParseTreeEnumDefinitionNode) {
         throw new Error('TODO: visitEnumDefinitionNode')
     }
+    
+    visitClassDefinitionNode(node: parseTree.ParseTreeClassDefinitionNode) {
+        throw new Error('TODO: visitClassDefinitionNode')
+    }
+
 }

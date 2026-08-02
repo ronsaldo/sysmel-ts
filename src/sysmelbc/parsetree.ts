@@ -48,6 +48,7 @@ export abstract class ParseTreeVisitor {
     abstract visitDoWhileNode(node: ParseTreeDoWhileNode): any;
 
     abstract visitEnumDefinitionNode(node: ParseTreeEnumDefinitionNode): any;
+    abstract visitClassDefinitionNode(node: ParseTreeClassDefinitionNode): any;
 
     visitNode(node: ParseTreeNode) : any {
         return node.accept(this)
@@ -221,6 +222,10 @@ export abstract class ParseTreeNode {
     }
 
     isEnumDefinitionNode(): boolean {
+        return false;
+    }
+
+    isClassDefinitionNode(): boolean {
         return false;
     }
 
@@ -967,6 +972,31 @@ export class ParseTreeEnumDefinitionNode extends ParseTreeNode {
     }
 }
 
+export class ParseTreeClassDefinitionNode extends ParseTreeNode {
+    nameExpression: ParseTreeNode | null;
+    superclassExpression: ParseTreeNode | null;
+    definitionBody: ParseTreeNode | null;
+    isPublic: boolean;
+
+    constructor(sourcePosition: AbstractSourcePosition, nameExpression: ParseTreeNode | null, superclassExpression: ParseTreeNode | null, definitionBody: ParseTreeNode, isPublic: boolean)
+    {
+        super(sourcePosition);
+
+        this.nameExpression = nameExpression;
+        this.superclassExpression = superclassExpression;
+        this.definitionBody = definitionBody;
+        this.isPublic = isPublic;
+    }
+
+    accept(visitor: ParseTreeVisitor) {
+        return visitor.visitClassDefinitionNode(this);
+    }
+
+    isClassDefinitionNode(): boolean {
+        return true;
+    }
+}
+
 export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
     visitErrorNode(node: ParseTreeErrorNode): any {
     }
@@ -1117,6 +1147,12 @@ export class ParseTreeSequentialVisitor extends ParseTreeVisitor {
         this.visitOptionalNode(node.nameExpression);
         this.visitNode(node.baseTypeExpression);
         this.visitNode(node.valuesExpression);
+    }
+
+    visitClassDefinitionNode(node: ParseTreeClassDefinitionNode) {
+        this.visitOptionalNode(node.nameExpression);
+        this.visitOptionalNode(node.superclassExpression);
+        this.visitOptionalNode(node.definitionBody);
     }
 }
 

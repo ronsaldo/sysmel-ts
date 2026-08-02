@@ -646,4 +646,14 @@ export function runTests() {
         assert.ok(metaClass.superclass === classClass);
         assert.ok(metaClass.metaclassType?.isClass());
     }
+
+    // Empty class
+    {
+        let result = evaluateTopLevelSourceString('class MyClass definition: {}');
+        assert.ok(result.isClass());
+        
+        let behavior = result as hir.HIRBehavior; 
+        assert.strictEqual(0, behavior.getInstanceSize());
+        assert.strictEqual(1, behavior.getInstanceAlignment());
+    }
 }
