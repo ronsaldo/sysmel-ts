@@ -1,5 +1,6 @@
 import {AbstractSourcePosition, getOrMakeEmptySourcePosition, SourceCode} from "./source_code.js"
 import * as parseTree from "./parsetree.js"
+import { error } from "node:console";
 
 export abstract class HIRVisitor {
     abstract visitType(type: HIRType): any;
@@ -726,14 +727,36 @@ export class HIRField extends HIRValue {
 }
 
 export abstract class HIRBehavior extends HIRNominalType {
+    superclass: HIRBehavior | null;
+    fields: HIRField[] = [];
+    fieldTable: Record<string, HIRField> = {}
+    allFields: HIRField[] = [];
+    publicFields: Record<string, HIRField> = {}
+    instanceSize: number = -1;
+    instanceAlignment: number = -1
+    totalFieldCount: number = -1;
+
+    constructor(name: string|null, superclass: HIRBehavior | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(name, coreTypes, sourcePosition)
+        this.superclass = superclass;
+    }
+
     isBehavior(): boolean {
         return true;
+    }
+
+    getSupertype(): HIRType | null {
+        return this.superclass
     }
 
 }
 
 export class HIRClass extends HIRBehavior {
-    //metaClass: HIRMetaclass;
+    metaClass: HIRMetaclass;
+    constructor(name: string|null, metaClass: HIRMetaclass, superclass: HIRBehavior | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(name, superclass, coreTypes, sourcePosition);
+        this.metaClass = metaClass;
+    }
 
     accept(visitor: HIRVisitor) {
         return visitor.visitClass(this);
@@ -743,15 +766,65 @@ export class HIRClass extends HIRBehavior {
         return true;
     }
     
+    getType(): HIRType {
+        return this.metaClass;
+    }
 }
 
 export class HIRMetaclass extends HIRBehavior {
-    
-}
+    metaclassType: HIRClass | null;
+    thisClass: HIRClass | null = null;
 
-//    abstract visitField(field: HIRField): any;
-//    abstract visitClass(field: HIRClass): any;
-//    abstract visitMetaclass(field: HIRMetaclass): any;
+    constructor(metaclassType: HIRClass | null, superclass: HIRBehavior | null, coreTypes: HIRCoreTypes, sourcePosition: AbstractSourcePosition) {
+        super(null, superclass, coreTypes, sourcePosition);
+        this.metaclassType = metaclassType;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitMetaclass(this);
+    }
+
+    isMetaclass(): boolean {
+        return true;
+    }
+
+    getType(): HIRType {
+        if(!this.metaclassType)
+            throw new Error(this.sourcePosition.formatMessage(`${this.toString()} has incomplete meta-hierarchy.`))
+        return this.metaclassType;
+    }
+
+    toString(): string {
+        if(this.thisClass)
+            return this.thisClass.toString() + ' class';
+        return '<anon metaclass>';
+    }
+
+    analyzeAndEvaluateMessageSendNodeOnType(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = evaluator.visitSymbolNode(node.selector);
+
+        // FIXME: Remove this hack by using a method dictionary
+        if(selector === '=>') {
+            let functionArguments = receiver.asArrowArguments();
+            let resultType = evaluator.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
+            return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
+        }
+
+        return super.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver);
+    }
+
+    analyzeAndBuildMessageSendNodeOnType(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let selector = buildPass.evaluateSymbolNode(node.selector);
+
+        // FIXME: Remove this hack by using a method dictionary
+        if(selector === '=>') {
+            let functionArguments = receiver.asArrowArguments();
+            let resultType = buildPass.visitNodeExpectingType(node.sendArguments[0] as parseTree.ParseTreeNode);
+            return this.coreTypes.getOrCreateSimpleFunctionType(functionArguments, resultType);
+        }
+        return super.analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver);
+    }
+}
 
 export class HIRDynamicType extends HIRType {
     name: string;
@@ -3289,9 +3362,18 @@ export class HIRCoreTypes {
     corePrimitiveMacros: HIRPrimitiveMacro[] = [];
     universeLevels: Record<number, HIRUniverseType> = {};
 
-    characterType: HIRNominalType = new HIRNominalType('Character', this, getOrMakeEmptySourcePosition());
-    integerType: HIRNominalType = new HIRNominalType('Integer', this, getOrMakeEmptySourcePosition());
-    floatType: HIRNominalType = new HIRNominalType('Float', this, getOrMakeEmptySourcePosition());
+    protoObjectClass: HIRClass | null = null;
+    objectClass: HIRClass | null = null;
+    behaviorClass: HIRClass | null = null;
+    classClass: HIRClass | null = null;
+    metaclassClass: HIRClass | null = null;
+
+    magnitudeClass: HIRClass;
+    numberClass: HIRClass;
+
+    characterType: HIRClass;
+    integerType: HIRClass;
+    floatType: HIRClass;
     stringType: HIRNominalType = new HIRNominalType('String', this, getOrMakeEmptySourcePosition());
     symbolType: HIRNominalType = new HIRNominalType('Symbol', this, getOrMakeEmptySourcePosition());
     parseTreeType: HIRNominalType = new HIRNominalType('ParseTree', this, getOrMakeEmptySourcePosition());
@@ -3341,6 +3423,14 @@ export class HIRCoreTypes {
     nilValue: HIRConstantLiteralVoidValue = new HIRConstantLiteralNilValue(this.undefinedType, getOrMakeEmptySourcePosition());
     
     constructor() {
+        this.createCoreClassDefinitions();
+        this.magnitudeClass = this.makeCoreClassDefinition('Magnitude', this.objectClass, [], []);
+        this.numberClass = this.makeCoreClassDefinition('Number', this.magnitudeClass, [], []);
+
+        this.characterType = this.makeCoreClassDefinition('Character', this.magnitudeClass, [], []);
+        this.integerType = this.makeCoreClassDefinition('Integer', this.numberClass, [], []);
+        this.floatType = this.makeCoreClassDefinition('Float', this.numberClass, [], []);
+
         this.characterType.defaultValue = new HIRConstantLiteralCharacterValue(0, this.characterType, getOrMakeEmptySourcePosition())
         this.integerType.defaultValue = new HIRConstantLiteralIntegerValue(0, this.integerType, getOrMakeEmptySourcePosition())
         this.floatType.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.floatType, getOrMakeEmptySourcePosition())
@@ -3361,6 +3451,12 @@ export class HIRCoreTypes {
 
         this.float32Type.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.float32Type, getOrMakeEmptySourcePosition())
         this.float64Type.defaultValue = new HIRConstantLiteralFloatValue(0.0, this.float64Type, getOrMakeEmptySourcePosition())
+
+        this.coreTypeList.push(this.protoObjectClass as HIRType);
+        this.coreTypeList.push(this.objectClass as HIRType);
+        this.coreTypeList.push(this.behaviorClass as HIRType);
+        this.coreTypeList.push(this.classClass as HIRType);
+        this.coreTypeList.push(this.metaclassClass as HIRType);
 
         this.coreTypeList.push(this.characterType);
         this.coreTypeList.push(this.integerType);
@@ -3420,6 +3516,38 @@ export class HIRCoreTypes {
         this.createCorePrimitiveMacros();
         this.createCorePrimitiveMetaBuilders();
         this.createCorePrimitiveFunctions();
+    }
+    createCoreClassDefinitions() {
+        this.protoObjectClass = this.makeCoreClassDefinition('ProtoObject', null, [], []);
+        this.objectClass = this.makeCoreClassDefinition('Object', this.protoObjectClass, [], []);
+        this.behaviorClass = this.makeCoreClassDefinition('Behavior', this.objectClass, [], []);
+        this.classClass = this.makeCoreClassDefinition('Class', this.behaviorClass, [], []);
+        this.metaclassClass = this.makeCoreClassDefinition('Metaclass', this.behaviorClass, [], []);
+
+        // Short circuit.
+        this.protoObjectClass.metaClass.superclass = this.classClass;
+
+        this.fixupMetaclassTypes(this.protoObjectClass);
+        this.fixupMetaclassTypes(this.objectClass);
+        this.fixupMetaclassTypes(this.behaviorClass);
+        this.fixupMetaclassTypes(this.classClass);
+        this.fixupMetaclassTypes(this.metaclassClass);
+    }
+
+    fixupMetaclassTypes(typeToFixup: HIRClass) {
+        let metaClass = typeToFixup.metaClass;
+        metaClass.metaclassType = this.metaclassClass;
+    }
+
+    makeCoreClassDefinition(name: string, superclass: HIRBehavior | null, fields: HIRField[], metaFields: HIRField[]): HIRClass {
+        let metaClassSuper: HIRBehavior | null = null;
+        if(superclass)
+            metaClassSuper = superclass.getType() as HIRBehavior;
+        let metaclass = new HIRMetaclass(this.metaclassClass, metaClassSuper, this, getOrMakeEmptySourcePosition());
+
+        let clazz = new HIRClass(name, metaclass, superclass, this, getOrMakeEmptySourcePosition());
+        metaclass.thisClass = clazz;
+        return clazz;
     }
 
     getSizeType() {

@@ -104,11 +104,11 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitField(field: hir.HIRField) {
         throw new Error('TODO: HirPackage2Mir')
     }
-    visitClass(field: hir.HIRClass) {
-        throw new Error('TODO: HirPackage2Mir')
+    visitClass(clazz: hir.HIRClass) {
+        return this.visitNominalType(clazz);
     }
-    visitMetaclass(field: hir.HIRMetaclass) {
-        throw new Error('TODO: HirPackage2Mir')
+    visitMetaclass(metaclass: hir.HIRMetaclass) {
+        return this.visitNominalType(metaclass);
     }
 
     visitDynamicType(type: hir.HIRDynamicType): any {

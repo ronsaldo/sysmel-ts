@@ -630,4 +630,20 @@ export function runTests() {
         let enumConstant = value as hir.HIRConstantEnum;
         assert.strictEqual(2, enumConstant.value.evaluateAsInteger());
     }
+
+    // Class accesses
+    {
+        let classClass = evaluateTopLevelSourceString('Class');
+        assert.ok(classClass.isClass());
+
+        let value = evaluateTopLevelSourceString('ProtoObject');
+        assert.ok(value.isClass());
+
+        let clazz = value as hir.HIRClass;
+        assert.ok(clazz.metaClass.isMetaclass());
+
+        let metaClass = clazz.metaClass as hir.HIRMetaclass;
+        assert.ok(metaClass.superclass === classClass);
+        assert.ok(metaClass.metaclassType?.isClass());
+    }
 }
