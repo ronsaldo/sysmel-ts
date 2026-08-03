@@ -621,6 +621,7 @@ export class HIRNominalType extends HIRType {
     }
 
     lookupSelector(selector: string): HIRValue | null {
+        this.ensureAnalysis();
         if (selector in this.methodDictionary)
             return this.methodDictionary[selector] as HIRValue;
         return null;
@@ -896,6 +897,7 @@ export abstract class HIRBehavior extends HIRNominalType {
 
 
     lookupSelector(selector: string): HIRValue | null {
+        this.ensureAnalysis();
         if (selector in this.methodDictionary)
             return this.methodDictionary[selector] as HIRValue;
         if (selector in this.publicFields)
@@ -938,7 +940,7 @@ export class HIRClass extends HIRBehavior {
             if(i < node.applicationArguments.length) {
                 let fieldArgument = node.applicationArguments[i];
                 if(!fieldArgument)
-                    throw new Error('Expected a field argument.');
+                    throw new Error('ExpectedF a field argument.');
                 let fieldValue = buildPass.visitNodeWithExpectedType(fieldArgument, field.fieldType)
                 objectFields.push(fieldValue);
             } else {
@@ -2392,6 +2394,14 @@ export class HIRFunction extends HIRConstant {
         allArguments.push(...node.sendArguments);
         let [typecheckedArguments, resultType] = this.getType().evaluateAndTypecheckArguments(evaluator, allArguments, node.sourcePosition);
         return this.evaluateWithArgumentsAndResultTypeAt(typecheckedArguments, resultType, node.sourcePosition)
+    }
+
+    analyzeAndBuildMessageSendNode(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let allArguments: parseTree.ParseTreeNode[] = [receiverNode];
+        allArguments.push(...node.sendArguments);
+        let [typecheckedArguments, resultType] = this.getType().analyzeBuildAndTypecheckArguments(buildPass, allArguments, node.sourcePosition);
+        return buildPass.builder.call(this, typecheckedArguments, resultType, node.sourcePosition);
     }
 
     isFunction(): boolean {

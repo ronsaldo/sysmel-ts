@@ -807,4 +807,22 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Superclass message send
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString(`
+            class SuperClass definition: {
+                method intMethod => Integer := 1.
+            }.
+                                            
+            {:(SuperClass)sc :: Integer | sc intMethod}
+
+       `) as hir.HIRFunction;
+       console.log(result.fullPrintString());
+        //assert.ok(result.isObjectValue());
+
+        tearDown();
+    }
 }
