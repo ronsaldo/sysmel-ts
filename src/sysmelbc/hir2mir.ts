@@ -160,6 +160,10 @@ export class HirPackage2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirPackage2Mir')
     }
 
+    visitImplicitFieldAccess(access: hir.HIRImplicitFieldAccess) {
+        throw new Error('TODO: HirPackage2Mir')
+    }
+
     visitConstantLiteralIntegerValue(constant: hir.HIRConstantLiteralIntegerValue): any {
         return new mir.MirIntegerConstantValue(constant.value);
     }
@@ -503,6 +507,10 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     }
     visitSimpleFunctionType(type: hir.HIRSimpleFunctionType): any {
         throw new Error('TODO: HirFunction2Mir');
+    }
+
+    visitImplicitFieldAccess(access: hir.HIRImplicitFieldAccess) {
+        throw new Error('TODO: HirFunction2Mir')
     }
 
     visitConstantLiteralIntegerValue(constant: hir.HIRConstantLiteralIntegerValue): any {

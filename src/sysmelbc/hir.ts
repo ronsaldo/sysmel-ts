@@ -31,6 +31,8 @@ export abstract class HIRVisitor {
     abstract visitClass(field: HIRClass): any;
     abstract visitMetaclass(field: HIRMetaclass): any;
 
+    abstract visitImplicitFieldAccess(access: HIRImplicitFieldAccess): any;
+
     abstract visitConstantLiteralIntegerValue(constant: HIRConstantLiteralIntegerValue): any;
     abstract visitConstantLiteralFloatValue(constant: HIRConstantLiteralFloatValue): any;
     abstract visitConstantLiteralBooleanValue(constant: HIRConstantLiteralBooleanValue): any;
@@ -520,6 +522,10 @@ export class HIRType extends HIRValue {
         throw new Error(sourcePosition.formatMessage('Receiver type is non-functional.'))
     }
 
+    lookupField(name: string) : HIRField | null {
+        return null;
+    }
+
     lookupSelector(selector: string) : HIRValue | null {
         return null;
     }
@@ -878,6 +884,15 @@ export abstract class HIRBehavior extends HIRNominalType {
         this.ensureLayout();
         return this.instanceAlignment;
     }
+
+    lookupField(name: string) : HIRField | null {
+        if (name in this.fieldTable)
+            return this.fieldTable[name] as HIRField;
+        if(this.superclass)
+            return this.superclass.lookupField(name);
+        return null;
+    }
+
 
     lookupSelector(selector: string): HIRValue | null {
         if (selector in this.methodDictionary)
@@ -3372,6 +3387,31 @@ export class HIRDependentFunctionTypeAnalysisEnvironment extends HIRLexicalEnvir
 
 }
 
+export class HIRImplicitFieldAccess extends HIRValue {
+    type: HIRType;
+    aggregate: HIRValue;
+    field: HIRField;
+
+    constructor(type: HIRType, aggregate: HIRValue, field: HIRField, sourcePosition: AbstractSourcePosition) {
+        super(sourcePosition);
+        this.type = type;
+        this.aggregate = aggregate;
+        this.field = field;
+    }
+    
+    accept(visitor: HIRVisitor) {
+        return visitor.visitImplicitFieldAccess(this);
+    }
+
+    getType(): HIRType {
+        return this.type
+    }
+
+    analyzeAndBuildIdentifierReferenceNode(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeIdentifierReferenceNode): HIRValue {
+        return buildPass.builder.extractFieldReference(this.type, this.aggregate, this.field, node.sourcePosition);
+    }
+}
+
 export class HIRFunctionAnalysisEnvironment extends HIRLexicalEnvironment {
     returnType: HIRType;
     receiverValue: HIRValue | null;
@@ -3394,6 +3434,14 @@ export class HIRFunctionAnalysisEnvironment extends HIRLexicalEnvironment {
         if (symbol in this.symbolTable) {
             let binding = this.symbolTable[symbol];
             return binding as HIRValue;
+        }
+
+        if(this.receiverValue) {
+            let field = this.receiverValue.getType().lookupField(symbol);
+            if(field) {
+                let fieldReferenceType = this.context.coreTypes.getOrCreateReferenceType(field.fieldType);
+                return new HIRImplicitFieldAccess(fieldReferenceType, this.receiverValue, field, getOrMakeEmptySourcePosition());
+            }
         }
 
         // Captures
