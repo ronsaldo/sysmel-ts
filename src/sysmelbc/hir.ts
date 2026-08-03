@@ -97,15 +97,19 @@ export abstract class HIRValue {
     abstract accept(visitor: HIRVisitor): any;
 
     addAnonymousElement(element: HIRValue): void {
-        throw Error(this.sourcePosition.formatMessage('Program entity owner does not support anonymous members.'))
+        throw new Error(this.sourcePosition.formatMessage('Program entity owner does not support anonymous members.'))
     }
 
     addPublicNamedElement(name: string, binding: HIRValue, sourcePosition: AbstractSourcePosition): void {
-        throw Error(sourcePosition.formatMessage('Program entity owner does not support public members.'))
+        throw new Error(sourcePosition.formatMessage('Program entity owner does not support public members.'))
+    }
+
+    withSelectorAddMethod(name:string, method: HIRValue): void {
+        throw new Error(method.sourcePosition.formatMessage('Program entity owner does not support methods.'))
     }
 
     addField(field: HIRField): void {
-        throw Error(field.sourcePosition.formatMessage('Program entity owner does not support fields.'))
+        throw new Error(field.sourcePosition.formatMessage('Program entity owner does not support fields.'))
     }
 
     ensureAnalysis(): void {
@@ -1376,6 +1380,10 @@ export class HIRDependentFunctionType extends HIRType {
         return true;
     }
 
+    copyWithImplicitArgument(implicitArgument: HIRArgument) : HIRDependentFunctionType {
+        return new HIRDependentFunctionType([implicitArgument].concat(this.functionArguments), this.resultType, this.coreTypes, this.sourcePosition);
+    }
+
     asSimplifiedType() : HIRType {
         if (!this.canSimplifiy())
             return this;
@@ -2306,6 +2314,14 @@ export class HIRFunction extends HIRConstant {
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
         let [typecheckedArguments, resultType] = this.getType().evaluateAndTypecheckArguments(evaluator, node.applicationArguments, node.sourcePosition);
+        return this.evaluateWithArgumentsAndResultTypeAt(typecheckedArguments, resultType, node.sourcePosition)
+    }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let receiverNode = new parseTree.ParseTreeLiteralValueNode(node.sourcePosition, receiver);
+        let allArguments: parseTree.ParseTreeNode[] = [receiverNode];
+        allArguments.push(...node.sendArguments);
+        let [typecheckedArguments, resultType] = this.getType().evaluateAndTypecheckArguments(evaluator, allArguments, node.sourcePosition);
         return this.evaluateWithArgumentsAndResultTypeAt(typecheckedArguments, resultType, node.sourcePosition)
     }
 
@@ -3470,6 +3486,42 @@ export class HIRLetMetaBuilder extends HIRNamedMetaBuilder {
     }
 }
 
+export class HIRMethodMetaBuilder extends HIRMetaBuilder {
+    selectorExpression: parseTree.ParseTreeNode | null = null;
+    argumentDefinitions: parseTree.ParseTreeArgumentDefinitionNode[] = [];
+    resultTypeExpression: parseTree.ParseTreeNode | null = null;
+    isPublic: boolean = false;
+
+    supportsSelector(selector: string): boolean {
+        return selector === '=>';
+    }
+
+    expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
+        if(selector === '=>')
+            this.resultTypeExpression = node.sendArguments[0] as parseTree.ParseTreeNode;
+        return this;
+    }
+
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        if(!this.selectorExpression) {
+            this.selectorExpression = node.selector;
+            this.argumentDefinitions = node.sendArguments.map((argumentNode: parseTree.ParseTreeNode): parseTree.ParseTreeArgumentDefinitionNode => argumentNode.parseAsArgumentDefinition());
+            return this;
+        }
+
+        return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
+    makeFunctionType(): parseTree.ParseTreeFunctionTypeNode {
+        return new parseTree.ParseTreeFunctionTypeNode(this.sourcePosition, this.argumentDefinitions, this.resultTypeExpression);
+    }
+
+    analyzeAndEvaluateAssignment(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeAssignmentNode): HIRValue {
+        let functionNode = new parseTree.ParseTreeFunctionNode(node.sourcePosition, this.selectorExpression, this.makeFunctionType(), node.value, this.isPublic, true);
+        return evaluator.visitNode(functionNode);
+    }
+}
+
 export class HIRClassMetaBuilder extends HIRNamedMetaBuilder {
     superclassExpression: parseTree.ParseTreeNode | null = null;
     isPublic: boolean = false;
@@ -3568,7 +3620,7 @@ export class HIRFunctionMetaBuilder extends HIRNamedMetaBuilder {
 
 export class HIRPublicMetaBuilder extends HIRMetaBuilder {
     supportsSelector(selector: string): boolean {
-        return (selector === 'class') || (selector === 'field') || (selector === 'function') || (selector === 'enum')
+        return (selector === 'class') || (selector === 'field') || (selector === 'function') || (selector === 'enum') || (selector === 'method')
     }
 
     expandAndEvaluateMessage(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, selector: string, receiver: HIRValue): HIRValue {
@@ -3588,6 +3640,10 @@ export class HIRPublicMetaBuilder extends HIRMetaBuilder {
             let enumMetabuilder = new HIREnumMetaBuilder(this.coreTypes, this.sourcePosition);
             enumMetabuilder.isPublic = true;
             return enumMetabuilder;
+        } else if(selector === 'method') {
+            let methodMetabuilder = new HIRMethodMetaBuilder(this.coreTypes, this.sourcePosition);
+            methodMetabuilder.isPublic = true;
+            return methodMetabuilder;
         }
         return this;
     }
@@ -3905,6 +3961,7 @@ export class HIRCoreTypes {
         this.coreValueList.push(['field', new HIRMetaBuilderFactory(HIRFieldMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['function', new HIRMetaBuilderFactory(HIRFunctionMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['let', new HIRMetaBuilderFactory(HIRLetMetaBuilder, this, getOrMakeEmptySourcePosition())]);
+        this.coreValueList.push(['method', new HIRMetaBuilderFactory(HIRMethodMetaBuilder, this, getOrMakeEmptySourcePosition())]);
         this.coreValueList.push(['public', new HIRMetaBuilderFactory(HIRPublicMetaBuilder, this, getOrMakeEmptySourcePosition())]);
     }
     
@@ -4632,8 +4689,16 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
         let name = this.visitOptionalSymbolNode(node.nameExpression);
         let dependentFunctionType = this.visitNode(node.functionType) as HIRDependentFunctionType;
 
+        let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
         if(node.isMethod) {
-            throw new Error('TODO ParseTreeFunctionNode isMethod');
+            if(!owner)
+                throw new Error('Expected an owner for the method.');
+
+            if(owner.isType()) {
+                let selfArgument = new HIRArgument(owner as HIRType, 'self', node.sourcePosition);
+                selfArgument.isSelf = true;
+                dependentFunctionType = dependentFunctionType.copyWithImplicitArgument(selfArgument);
+            }
         }
 
         let hirFunction = new HIRFunction(name, dependentFunctionType, node.sourcePosition);
@@ -4646,9 +4711,10 @@ export class AnalysisAndEvaluationPass extends parseTree.ParseTreeVisitor {
             this.evaluationContext.environment.setNewSymbolBinding(name, hirFunction, node.sourcePosition);
             // TODO: add method and public functions
             if(node.isMethod) {
-                throw new Error('TODO: visitFunctionNode isMethod')
+                if(!owner)
+                    throw new Error('Expected an owner for the method')
+                owner.withSelectorAddMethod(name, hirFunction);
             } else if(node.isPublic) { 
-                let owner = this.evaluationContext.environment.lookupProgramEntityOwner();
                 if(!owner)
                     throw Error(node.sourcePosition.formatMessage('Location does not have a program entity owner.'))
                 owner.addPublicNamedElement(name, hirFunction, node.sourcePosition)

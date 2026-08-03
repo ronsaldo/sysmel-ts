@@ -723,4 +723,15 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Empty class with method
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {method getInteger ::=> Integer := 42}. MyClass() getInteger');
+        assert.ok(result.isConstantLiteralIntegerValue);
+        assert.strictEqual(42, result.evaluateAsInteger());
+
+        tearDown();
+    }
 }
