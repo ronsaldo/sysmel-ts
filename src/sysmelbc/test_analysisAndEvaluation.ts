@@ -789,4 +789,22 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Test make class 2
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString(`
+            class TestPair definition: {
+                public field first type: Integer.
+                public field second type: Integer.
+            }.
+                                            
+            { :: TestPair | TestPair(1. 2)}()
+
+       `);
+        assert.ok(result.isObjectValue());
+
+        tearDown();
+    }
 }
