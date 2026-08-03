@@ -68,6 +68,7 @@ export abstract class HIRVisitor {
     abstract visitCallInstruction(instruction: HIRCallInstruction): any;
     abstract visitEnumBoxValueInstruction(instruction: HIREnumBoxValueInstruction): any;
     abstract visitEnumUnboxValueInstruction(instruction: HIREnumUnboxValueInstruction): any;
+    abstract visitExtractFieldReferenceInstruction(instruction: HIRExtractFieldReferenceInstruction): any;
     abstract visitLoadInstruction(instruction: HIRLoadInstruction): any;
     abstract visitStoreInstruction(instruction: HIRStoreInstruction): any;
     abstract visitMakeAssociationInstruction(instruction: HIRMakeAssociationInstruction): any;
@@ -751,6 +752,12 @@ export class HIRField extends HIRValue {
         return true;
     }
 
+    getValidIndex(): number {
+        if(this.index < 0)
+            throw new Error('Field has an invalid index');
+        return this.index;
+    }
+
     analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
         if(node.sendArguments.length === 0) {
             return receiver.loadValueAtIndex(this.index);
@@ -761,6 +768,22 @@ export class HIRField extends HIRValue {
         }
 
         return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
+    analyzeAndBuildMessageSendNode(builder: AnalysisAndBuildPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        let fieldReferenceType = builder.builder.context.getOrCreateReferenceType(this.fieldType);
+
+        if(node.sendArguments.length === 0) {
+            let fieldReference = builder.builder.extractFieldReference(fieldReferenceType, receiver, this, node.sourcePosition);
+            return builder.builder.load(this.fieldType, fieldReference, node.sourcePosition);
+        } else if(node.sendArguments.length === 1) {
+            let fieldValue = builder.visitNodeWithExpectedType(node.sendArguments[0] as parseTree.ParseTreeNode, this.fieldType);
+            let fieldReference = builder.builder.extractFieldReference(fieldReferenceType, receiver, this, node.sourcePosition);
+            builder.builder.store(fieldReference, fieldValue, node.sourcePosition);
+            return fieldReference;
+        }
+        
+        return super.analyzeAndBuildMessageSendNode(builder, node, receiver);
     }
 
 }
@@ -2769,6 +2792,37 @@ export class HIREnumUnboxValueInstruction extends HIRInstruction {
     }
 };
 
+export class HIRExtractFieldReferenceInstruction extends HIRInstruction {
+    aggregate: HIRValue;
+    field: HIRField;
+
+    constructor(type: HIRType, aggregate: HIRValue, field: HIRField, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.aggregate = aggregate;
+        this.field = field;
+    }
+
+    accept(visitor: HIRVisitor) {
+        return visitor.visitExtractFieldReferenceInstruction(this);
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := extractFieldReference ${this.aggregate.toString()} field ${this.field.toString()} as ${this.type.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext): void {
+        let aggregateValue = this.aggregate.getValueInEvaluationContext(context);
+        if(this.type.isReferenceType()) {
+            let fieldReference = new HIRReferenceValue(this.type, aggregateValue, this.field.getValidIndex(), this.sourcePosition);
+            context.setCurrentInstructionValue(fieldReference);
+        } else {
+            let fieldReference = new HIRPointerValue(this.type, aggregateValue, this.field.getValidIndex(), this.sourcePosition);
+            context.setCurrentInstructionValue(fieldReference);
+        }
+    }
+
+}
+
 export class HIRLoadInstruction extends HIRInstruction  {
     storage: HIRValue;
 
@@ -3126,6 +3180,12 @@ export class HIRBuilder {
 
     enumUnboxValue(value: HIRValue, type: HIRType, sourcePosition: AbstractSourcePosition) : HIREnumBoxValueInstruction {
         let instruction = new HIREnumUnboxValueInstruction(value, type, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    extractFieldReference(type: HIRType, aggregate: HIRValue, field: HIRField, sourcePosition: AbstractSourcePosition) : HIRExtractFieldReferenceInstruction {
+        let instruction = new HIRExtractFieldReferenceInstruction(type, aggregate, field, null, sourcePosition);
         this.addInstruction(instruction);
         return instruction;
     }

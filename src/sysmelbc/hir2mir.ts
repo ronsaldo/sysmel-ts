@@ -278,6 +278,9 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitEnumUnboxValueInstruction(instruction: hir.HIREnumUnboxValueInstruction) {
         throw new Error('Not supported')
     }
+    visitExtractFieldReferenceInstruction(instruction: hir.HIRExtractFieldReferenceInstruction) {
+        throw new Error('Not supported')
+    }
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
         throw new Error('Not supported')
     }
@@ -666,7 +669,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
     visitEnumUnboxValueInstruction(instruction: hir.HIREnumUnboxValueInstruction) {
         throw new Error('TODO: HirFunction2Mir visitEnumUnboxValueInstruction');
     }
-
+    visitExtractFieldReferenceInstruction(instruction: hir.HIRExtractFieldReferenceInstruction) {
+        throw new Error('TODO: HirFunction2Mir visitExtractFieldReferenceInstruction');
+    }
     visitLoadInstruction(instruction: hir.HIRLoadInstruction): any {
         throw new Error('TODO: HirFunction2Mir');
     }

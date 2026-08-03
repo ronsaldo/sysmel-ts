@@ -734,4 +734,22 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Test pair explicit
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString(`
+            class MyClass definition: {
+                public field first => Integer.
+                public field second => Integer.
+
+                method setSecond: (value: Integer) ::=> Void := {self second: value . void}.
+                method sumExplicit => Integer := self first + self second.
+            }. MyClass(1. 2) setSecond: 5; sumExplicit`);
+        assert.ok(result.isConstantLiteralIntegerValue);
+        assert.strictEqual(6, result.evaluateAsInteger());
+
+        tearDown();
+    }
 }
