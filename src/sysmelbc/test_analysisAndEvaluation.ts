@@ -684,4 +684,22 @@ export function runTests() {
 
         tearDown();
     }
+
+    // Instantiate class with field
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}. MyClass(42)');
+        assert.ok(result.isObjectValue());
+        
+        let object = result as hir.HIRObjectValue; 
+        assert.strictEqual(1, object.fields.length);
+        
+        let field = object.fields[0] as hir.HIRValue;
+        assert.ok(field.isConstantLiteralIntegerValue())
+        assert.strictEqual(42, field.evaluateAsInteger());
+
+        tearDown();
+    }
+
 }

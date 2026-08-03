@@ -885,7 +885,7 @@ export class HIRClass extends HIRBehavior {
                 if(!fieldArgument)
                     throw new Error('Expected a field argument.');
                 let fieldValue = evaluator.visitNodeWithExpectedType(fieldArgument, field.fieldType)
-
+                objectFields.push(fieldValue);
             } else {
                 let fieldValue = field.fieldType.getOrCreateDefaultValue();
                 objectFields.push(fieldValue);
@@ -1847,6 +1847,7 @@ export class HIRConstantEnum extends HIRConstant {
 export class HIRObjectValue extends HIRValue {
     type: HIRBehavior;
     fields: HIRValue[];
+
     constructor(type: HIRBehavior, fields: HIRValue[], sourcePosition: AbstractSourcePosition) {
         super(sourcePosition);
         this.type = type;
