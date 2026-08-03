@@ -76,6 +76,7 @@ export abstract class HIRVisitor {
     abstract visitMakeAssociationInstruction(instruction: HIRMakeAssociationInstruction): any;
     abstract visitMakeClosureInstruction(instruction: HIRMakeClosureInstruction): any;
     abstract visitMakeTupleInstruction(instruction: HIRMakeTupleInstruction): any;
+    abstract visitMakeObjectInstruction(instruction: HIRMakeObjectInstruction): any;
     abstract visitPhiInstruction(instruction: HIRPhiInstruction): any;
     abstract visitPhiSourceInstruction(instruction: HIRPhiSourceInstruction): any;
     abstract visitReturnInstruction(instruction: HIRReturnInstruction): any;
@@ -923,6 +924,36 @@ export class HIRClass extends HIRBehavior {
     
     getType(): HIRType {
         return this.metaClass;
+    }
+
+    analyzeAndBuildApplicationNode(buildPass: AnalysisAndBuildPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
+        this.ensureLayout();
+
+        if(node.applicationArguments.length > this.allFields.length)
+            throw new Error(node.sourcePosition.formatMessage(`class construction can have at most ${this.allFields.length.toString()} arguments.`));
+
+        let objectFields: HIRValue[] = [];
+        for(let i = 0; i < this.allFields.length; ++i) {
+            let field = this.allFields[i] as HIRField;
+            if(i < node.applicationArguments.length) {
+                let fieldArgument = node.applicationArguments[i];
+                if(!fieldArgument)
+                    throw new Error('Expected a field argument.');
+                let fieldValue = buildPass.visitNodeWithExpectedType(fieldArgument, field.fieldType)
+                objectFields.push(fieldValue);
+            } else {
+                let fieldValue = field.fieldType.getOrCreateDefaultValue();
+                objectFields.push(fieldValue);
+            }
+        }
+
+        let objectValue = buildPass.builder.makeObject(this, objectFields, node.sourcePosition);
+        let initializeMethod = this.lookupSelector('initialize');
+        if(initializeMethod) {
+            throw new Error('TODO: Invoke initialize method.');
+        }
+
+        return objectValue;
     }
 
     analyzeAndEvaluateApplicationNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeApplicationNode, functional: HIRValue): HIRValue {
@@ -2959,6 +2990,30 @@ export class HIRMakeClosureInstruction extends HIRInstruction  {
     }
 }
 
+export class HIRMakeObjectInstruction extends HIRInstruction  {
+    initialElements: HIRValue[];
+
+    constructor(initialElements: HIRValue[], type: HIRBehavior, name: string | null, sourcePosition: AbstractSourcePosition) {
+        super(type, name, sourcePosition);
+        this.initialElements = initialElements;
+    }
+
+    accept(visitor: HIRVisitor): any {
+        return visitor.visitMakeObjectInstruction(this);
+    }
+
+    fullPrintString(): string {
+        return `${this.toString()} := makeObject ${this.type.toString()} initialElements ${this.initialElements.toString()}`
+    }
+
+    evaluateInActivationContext(context: HIRFunctionActivationContext) : void {
+        let objectType = this.type as HIRBehavior;
+        let initialElements = this.initialElements.map((value: HIRValue) : HIRValue => value.getValueInEvaluationContext(context));
+        let object = new HIRObjectValue(objectType, initialElements, this.sourcePosition);
+        context.setCurrentInstructionValue(object);
+    }
+}
+
 export class HIRPhiInstruction extends HIRInstruction  {
     constructor(type: HIRType, name: string | null, sourcePosition: AbstractSourcePosition) {
         super(type, name, sourcePosition)
@@ -3234,6 +3289,14 @@ export class HIRBuilder {
         this.addInstruction(instruction);
         return instruction;
     }
+
+    makeObject(objectType: HIRBehavior, objectFields: HIRValue[], sourcePosition: AbstractSourcePosition): HIRMakeObjectInstruction {
+        let instruction = new HIRMakeObjectInstruction(objectFields, objectType, null, sourcePosition);
+        this.addInstruction(instruction);
+        return instruction;
+    }
+
+    //initialElements: HIRValue;
 
     phi(type: HIRType, sourcePosition: AbstractSourcePosition) : HIRPhiInstruction {
         let instruction = new HIRPhiInstruction(type, null, sourcePosition);

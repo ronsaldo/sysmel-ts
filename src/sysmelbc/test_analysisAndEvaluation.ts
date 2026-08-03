@@ -766,8 +766,26 @@ export function runTests() {
                 method setSecond: (value: Integer) ::=> Void := {second := value . void}.
                 method sumExplicit => Integer := first + second.
             }. MyClass(1. 2) setSecond: 5; sumExplicit`);
-        assert.ok(result.isConstantLiteralIntegerValue);
+        assert.ok(result.isConstantLiteralIntegerValue());
         assert.strictEqual(6, result.evaluateAsInteger());
+
+        tearDown();
+    }
+
+    // Test make class
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString(`
+            class TestPair definition: {
+                public field first type: Integer.
+                public field second type: Integer.
+            }.
+                                            
+            { :: TestPair | TestPair()}()
+
+       `);
+        assert.ok(result.isObjectValue());
 
         tearDown();
     }

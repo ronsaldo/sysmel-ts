@@ -300,6 +300,9 @@ export class HirPackage2Mir extends hir.HIRVisitor {
     visitMakeTupleInstruction(instruction: hir.HIRMakeTupleInstruction): any {
         throw new Error('Not supported')
     }
+    visitMakeObjectInstruction(instruction: hir.HIRMakeObjectInstruction) {
+        throw new Error('Not supported')
+    }
     visitPhiInstruction(instruction: hir.HIRPhiInstruction): any {
         throw new Error('Not supported')
     }
@@ -693,6 +696,9 @@ export class HirFunction2Mir extends hir.HIRVisitor {
         throw new Error('TODO: HirFunction2Mir');
     }
     visitMakeTupleInstruction(instruction: hir.HIRMakeTupleInstruction): any {
+        throw new Error('TODO: HirFunction2Mir');
+    }
+    visitMakeObjectInstruction(instruction: hir.HIRMakeObjectInstruction) {
         throw new Error('TODO: HirFunction2Mir');
     }
 
