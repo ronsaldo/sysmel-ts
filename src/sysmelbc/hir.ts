@@ -747,6 +747,18 @@ export class HIRField extends HIRValue {
         return true;
     }
 
+    analyzeAndEvaluateMessageSendNode(evaluator: AnalysisAndEvaluationPass, node: parseTree.ParseTreeMessageSendNode, receiver: HIRValue): HIRValue {
+        if(node.sendArguments.length === 0) {
+            return receiver.loadValueAtIndex(this.index);
+        } else if(node.sendArguments.length === 1) {
+            let newValue = evaluator.visitNodeWithExpectedType(node.sendArguments[0] as parseTree.ParseTreeNode, this.fieldType);
+            receiver.storeValueAtIndex(newValue, this.index);
+            return newValue;
+        }
+
+        return super.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver);
+    }
+
 }
 
 export abstract class HIRBehavior extends HIRNominalType {
@@ -1864,6 +1876,19 @@ export class HIRObjectValue extends HIRValue {
 
     isObjectValue(): boolean {
         return true;
+    }
+
+    storeValueAtIndex(valueToStore: HIRValue, index: number): void {
+        if (index >= this.fields.length)
+            throw new Error(this.sourcePosition.formatMessage('Invalid field index for storing in an object value'));
+        this.fields[index] = valueToStore;
+    }
+
+    loadValueAtIndex(index: number): HIRValue {
+        if (index >= this.fields.length)
+            throw new Error(this.sourcePosition.formatMessage('Invalid field index for loading from an object value'));
+
+        return this.fields[index] as HIRValue;
     }
 }
 
@@ -3633,7 +3658,7 @@ export class HIRCoreTypes {
 
     packageType: HIRNominalType = new HIRNominalType('Package', this, getOrMakeEmptySourcePosition());
     basicBlockType: HIRNominalType = new HIRNominalType('BasicBlock', this, getOrMakeEmptySourcePosition());
-    fieldType: HIRNominalType = new HIRNominalType('Fiedl', this, getOrMakeEmptySourcePosition());
+    fieldType: HIRNominalType = new HIRNominalType('Field', this, getOrMakeEmptySourcePosition());
     macroContextType: HIRNominalType = new HIRNominalType('MacroContext', this, getOrMakeEmptySourcePosition());
     primitiveMacroType: HIRNominalType = new HIRNominalType('PrimitiveMacro', this, getOrMakeEmptySourcePosition());
     metaBuilderFactoryType: HIRNominalType = new HIRNominalType('MetaBuilderFactory', this, getOrMakeEmptySourcePosition());

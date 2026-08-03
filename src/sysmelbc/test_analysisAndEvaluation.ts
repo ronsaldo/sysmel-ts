@@ -702,4 +702,25 @@ export function runTests() {
         tearDown();
     }
 
+    // Instantiate class with field access
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {public field first => Integer. public field second => Integer}. MyClass(1. 2) second');
+        assert.ok(result.isConstantLiteralIntegerValue);
+        assert.strictEqual(2, result.evaluateAsInteger());
+
+        tearDown();
+    }
+
+    // Instantiate class with field access
+    {
+        setUp();
+        
+        let result = evaluateTopLevelSourceString('class MyClass definition: {public field first => Integer. public field second => Integer}. MyClass(1. 2) second: 42; second');
+        assert.ok(result.isConstantLiteralIntegerValue);
+        assert.strictEqual(42, result.evaluateAsInteger());
+
+        tearDown();
+    }
 }
